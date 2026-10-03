@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>We Will Boil The Claw</title>
+    <meta name="description" content="A brainrot cat-meme arcade for deathclaw1551. We will boil the Claw." />
+    <meta name="theme-color" content="#12041f" />
+    <meta property="og:title" content="We Will Boil The Claw" />
+    <meta property="og:description" content="A brainrot cat-meme arcade. Boil the Claw. Dunk the Claw. Farm aura." />
+    <meta property="og:image" content="assets/claw-full-leaf.webp" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <button id="mute" class="mute" type="button" aria-label="Toggle sound">🔊</button>
+
+    <main id="hub">
+      <header class="hero">
+        <img src="assets/claw-leaf.png" class="hero-sticker left" alt="" />
+        <div class="hero-text">
+          <p class="kicker">a deathclaw1551 production</p>
+          <h1 class="title"><span>WE WILL</span> <span>BOIL</span> <span>THE CLAW</span></h1>
+          <p class="counter">
+            Claw has been boiled <b id="boil-count">0</b> times and dunked <b id="dunk-count">0</b> times on this device.
+          </p>
+        </div>
+        <img src="assets/claw-alien.png" class="hero-sticker right" alt="" />
+      </header>
+
+      <section class="cards" aria-label="Games">
+        <a class="card featured" href="#boil">
+          <img src="assets/claw-stand.png" alt="" class="card-art tall" />
+          <div class="card-body">
+            <span class="tag">MAIN EVENT</span>
+            <h2>Boil the Claw</h2>
+            <p>Keep the pot simmering, stop Claw from escaping, season with meme cats. 3 pots. 1 Claw. 0 mercy.</p>
+            <span class="best" data-best="boil"></span>
+          </div>
+        </a>
+        <a class="card" href="#flappy">
+          <img src="assets/claw-alien.png" alt="" class="card-art" />
+          <div class="card-body">
+            <h2>Flappy Glorp</h2>
+            <p>Alien Claw vs towers of spinning Maxwells. Don't fall in the soup.</p>
+            <span class="best" data-best="flappy"></span>
+          </div>
+        </a>
+        <a class="card" href="#whack">
+          <img src="assets/claw-leaf.png" alt="" class="card-art" />
+          <div class="card-body">
+            <h2>Dunk-a-Claw</h2>
+            <p>Whack-a-mole but it's pots. Dunk Claw. Spare Banana Cat.</p>
+            <span class="best" data-best="whack"></span>
+          </div>
+        </a>
+        <a class="card" href="#aura">
+          <span class="card-art icon" id="aura-icon"></span>
+          <div class="card-body">
+            <h2>Aura Farmer</h2>
+            <p>Click Claw for aura. Hire Popcat, OIIA Cat and Maxwell to farm it for you.</p>
+            <span class="best" data-best="aura"></span>
+          </div>
+        </a>
+      </section>
+
+      <canvas id="council" aria-hidden="true"></canvas>
+
+      <footer>
+        No real cats were harmed. Claw consented (probably). Made for deathclaw1551 with glorp.
+      </footer>
+    </main>
+
+    <section id="stage" hidden>
+      <div class="stage-bar">
+        <a href="#" class="btn small">← Menu</a>
+        <h2 id="stage-title"></h2>
+        <span class="spacer"></span>
+      </div>
+      <div id="stage-body"></div>
+    </section>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

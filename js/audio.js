@@ -1,0 +1,103 @@
+// All sounds are synthesized with WebAudio, so there are no audio files to host.
+import { read, write } from './scores.js';
+
+let ac = null;
+let muted = read('muted', false);
+
+function audio() {
+  if (muted) return null;
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ac = new AC();
+  }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+export const isMuted = () => muted;
+
+export function toggleMuted() {
+  muted = !muted;
+  write('muted', muted);
+  return muted;
+}
+
+// Browsers only allow audio after a user gesture.
+export function unlockAudio() {
+  audio();
+}
+
+function tone({ type = 'sine', f = 440, f2, dur = 0.15, vol = 0.18, delay = 0 }) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + delay;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(a.destination);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+
+let noiseBuf = null;
+function noise({ dur = 0.2, vol = 0.2, type = 'lowpass', f = 1000, f2, q = 1, delay = 0 }) {
+  const a = audio();
+  if (!a) return;
+  if (!noiseBuf) {
+    noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t = a.currentTime + delay;
+  const src = a.createBufferSource();
+  src.buffer = noiseBuf;
+  const filt = a.createBiquadFilter();
+  filt.type = type;
+  filt.Q.value = q;
+  filt.frequency.setValueAtTime(f, t);
+  if (f2) filt.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(filt).connect(g).connect(a.destination);
+  src.start(t);
+  src.stop(t + dur + 0.02);
+}
+
+export const sfx = {
+  click: () => tone({ type: 'square', f: 520, f2: 760, dur: 0.06, vol: 0.06 }),
+  stoke: () => noise({ dur: 0.22, f: 400, f2: 2400, vol: 0.22 }),
+  splash: () => {
+    noise({ dur: 0.35, type: 'bandpass', f: 2200, f2: 300, q: 0.8, vol: 0.45 });
+    tone({ f: 260, f2: 90, dur: 0.18, vol: 0.12 });
+  },
+  bubble: () => tone({ f: 300 + Math.random() * 500, f2: 900 + Math.random() * 400, dur: 0.05, vol: 0.05 }),
+  glorp: () => {
+    tone({ type: 'sine', f: 380, f2: 70, dur: 0.35, vol: 0.25 });
+    tone({ type: 'triangle', f: 190, f2: 40, dur: 0.35, vol: 0.12 });
+  },
+  pop: () => tone({ type: 'square', f: 900, f2: 300, dur: 0.07, vol: 0.12 }),
+  ding: () => {
+    tone({ type: 'triangle', f: 880, dur: 0.18, vol: 0.15 });
+    tone({ type: 'triangle', f: 1320, dur: 0.25, vol: 0.12, delay: 0.08 });
+  },
+  oiia: () => {
+    tone({ type: 'sawtooth', f: 420, f2: 900, dur: 0.12, vol: 0.07 });
+    tone({ type: 'sawtooth', f: 900, f2: 350, dur: 0.16, vol: 0.07, delay: 0.12 });
+  },
+  flap: () => tone({ f: 380, f2: 720, dur: 0.08, vol: 0.1 }),
+  fail: () => {
+    tone({ type: 'sawtooth', f: 330, f2: 60, dur: 0.6, vol: 0.14 });
+    tone({ type: 'square', f: 165, f2: 40, dur: 0.6, vol: 0.06 });
+  },
+  win: () => [523, 659, 784, 1046].forEach((f, i) => tone({ type: 'triangle', f, dur: 0.22, vol: 0.14, delay: i * 0.11 })),
+  boom: () => {
+    noise({ dur: 0.6, f: 900, f2: 60, vol: 0.5 });
+    tone({ f: 120, f2: 30, dur: 0.5, vol: 0.25 });
+  },
+};
