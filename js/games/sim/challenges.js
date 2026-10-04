@@ -37,6 +37,10 @@ export const CHALLENGES = [
   { id: 'shrine', name: 'Find the secret Vash Shrine and pay respects' },
   { id: 'arena', name: 'Pet Arena champion: beat all 5 trainers (Winty is last)' },
   { id: 'hunt', name: 'Hampter Hunt: find all 6 hampters hiding in Glorp Park' },
+  { id: 'clicky1', name: "Clicky's break: bring a Glorp Café mug to Clicky the wizard (Winter's Castle)" },
+  { id: 'clicky2', name: "Find Clicky's 4 lost spell pages", goal: 4 },
+  { id: 'clicky3', name: 'Wake the 3 summoning stones for Clicky', goal: 3 },
+  { id: 'kaiju', name: 'Survive the Battle of Ohio' },
 ];
 
 export const MUTATORS = [

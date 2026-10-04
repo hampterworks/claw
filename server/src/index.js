@@ -17,6 +17,12 @@ const HS_SEEK = 150000;
 const HS_TAG_RANGE = 6; // metres; a little slack for latency
 const DUEL_ACTS = ['ask', 'yes', 'no', 'mv', 'quit'];
 const DUEL_MOVES = ['bonk', 'guard', 'special'];
+// The Battle of Ohio (Clicky's kaiju): timings in ms, same song clock as the client
+const EV_LEAD = 2500; // so everyone starts together
+const EV_DECIDE = 60000; // the crowd's verdict, just before the finale (bar 38)
+const EV_LEN = 80000;
+const EV_COOLDOWN = 10 * 60 * 1000;
+const kaijuWinner = (m, g) => (g > m * 1.5 + 10 ? 'g' : 'm');
 const int = (v, hi) => (Number.isInteger(v) && v >= 0 && v <= hi ? v : 0);
 
 const num = (v, lo = -BOUND, hi = BOUND) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0);
@@ -48,6 +54,8 @@ export class Ohio extends DurableObject {
     this.lastS = new Map(); // propId -> latest streamed transform (for releases on leave)
     this.rate = new Map(); // ws -> { n, t }
     this.hs = null; // the Hide and Seek round, if any (memory only: a hibernation just ends it)
+    this.ev = null; // the Battle of Ohio, if one is on
+    this.evNext = 0;
     // after hibernation, rebuild who is connected from the socket attachments
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment();
@@ -134,13 +142,14 @@ export class Ohio extends DurableObject {
       for (const [pid, o] of this.owners) owners[pid] = o.by;
       const players = [];
       for (const [pid, pl] of this.players) if (pid !== id) players.push({ id: pid, name: pl.name, skin: pl.skin, pet: pl.pet, d: pl.d });
-      this.send(ws, { t: 'welcome', you: id, players, owners, props, hs: this.hsSnap(), now: Date.now() });
+      this.send(ws, { t: 'welcome', you: id, players, owners, props, hs: this.hsSnap(), ev: this.evSnap(), now: Date.now() });
       this.broadcast({ t: 'join', id, name: p.name, skin: p.skin, pet: p.pet }, ws);
       return;
     }
     if (!me) return; // everything else needs a hello first
     const id = me.id;
     this.hsTick();
+    this.evTick();
 
     switch (m.t) {
       case 'p': {
@@ -237,6 +246,9 @@ export class Ohio extends DurableObject {
       case 'hs':
         this.hsMessage(ws, id, m);
         break;
+      case 'ev':
+        this.evMessage(ws, id, m);
+        break;
       case 'chat': {
         const s = text(m.text, 80);
         if (s) this.broadcast({ t: 'chat', id, text: s });
@@ -248,6 +260,42 @@ export class Ohio extends DurableObject {
         break;
       }
     }
+  }
+
+  // ---------- the Battle of Ohio: start time, seed, cheers and the verdict ----------
+  evSnap() {
+    const e = this.ev;
+    return e ? { start: e.start, seed: e.seed, host: e.host, m: e.m, g: e.g, winner: e.winner } : null;
+  }
+
+  evTick() {
+    const e = this.ev;
+    if (!e) return;
+    const now = Date.now();
+    if (!e.winner && now >= e.start + EV_DECIDE) {
+      e.winner = kaijuWinner(e.m, e.g);
+      this.broadcast({ t: 'ev', ev: 'end', winner: e.winner, m: e.m, g: e.g, now });
+    }
+    if (now >= e.start + EV_LEN + 5000) this.ev = null;
+  }
+
+  evMessage(ws, id, m) {
+    const now = Date.now();
+    const e = this.ev;
+    if (m.a === 'start') {
+      if (e || now < this.evNext) return this.send(ws, { t: 'ev', ev: 'busy', wait: e ? e.start + EV_LEN - now : this.evNext - now, now });
+      this.ev = { start: now + EV_LEAD, seed: Math.floor(Math.random() * 2147483647), host: id, m: 0, g: 0, winner: null };
+      this.evNext = now + EV_COOLDOWN;
+      this.broadcast({ t: 'ev', ev: 'start', by: id, s: this.evSnap(), now });
+      return;
+    }
+    if (m.a === 'cheer') {
+      if (!e || e.winner || now < e.start) return;
+      e.m += int(m.m, 40);
+      e.g += int(m.g, 40);
+      this.broadcast({ t: 'ev', ev: 'cheer', m: e.m, g: e.g, now }); // clients batch to 1/s each
+    }
+    // 'tick' needs nothing: evTick already ran
   }
 
   // ---------- Hide and Seek: the server is the referee ----------

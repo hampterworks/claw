@@ -1857,3 +1857,158 @@ footer {
 .sim-wrap.touch .sim-invite {
   top: 38%;
 }
+
+/* ---------- Clicky ---------- */
+.clicky-steps {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+  text-align: left;
+  font-weight: 700;
+  font-size: 15px;
+}
+.clicky-steps li {
+  margin: 4px 0;
+}
+.clicky-steps li.done {
+  opacity: 0.6;
+}
+
+/* ---------- the Battle of Ohio (letterbox, titan health bars, cheer meter) ---------- */
+.kj-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  font-family: var(--display);
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #111;
+}
+.kj-ui[hidden] {
+  display: none;
+}
+.kj-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  min-height: 56px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 12px;
+  animation: kj-in 0.8s ease-out;
+}
+.kj-bar.top {
+  top: 0;
+}
+.kj-bar.bottom {
+  bottom: 0;
+}
+@keyframes kj-in {
+  from { transform: scaleY(0); }
+}
+.kj-hp {
+  flex: 1;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kj-hp b {
+  font-size: clamp(14px, 2.4vw, 22px);
+  font-weight: normal;
+}
+.kj-hp.m b {
+  color: var(--yellow);
+}
+.kj-hp.g {
+  align-items: flex-end;
+}
+.kj-hp.g b {
+  color: #5fc8ff;
+}
+.kj-hp span {
+  width: 100%;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #3a1d3a;
+  display: flex;
+}
+.kj-hp.g span {
+  justify-content: flex-end;
+}
+.kj-hp i {
+  display: block;
+  height: 100%;
+  transition: width 0.4s;
+}
+.kj-hp.m i {
+  background: linear-gradient(#fff08a, #ffb300);
+}
+.kj-hp.g i {
+  background: linear-gradient(#9fe2ff, #2a8adf);
+}
+.kj-vs {
+  font-size: clamp(22px, 4vw, 36px);
+  color: var(--pink);
+}
+.kj-cheer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(12px, 2vw, 17px);
+  width: min(720px, 100%);
+}
+.kj-cheer em {
+  font-style: normal;
+  white-space: nowrap;
+}
+.kj-cheer em.m {
+  color: var(--yellow);
+}
+.kj-cheer em.g {
+  color: #5fc8ff;
+}
+.kj-cheer span {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: #2a8adf;
+  overflow: hidden;
+  display: flex;
+}
+.kj-cheer i {
+  background: #ffb300;
+  height: 100%;
+  transition: width 0.3s;
+}
+/* while the letterbox is up, the regular HUD gets out of the way */
+.sim-wrap.kj-on .sim-map,
+.sim-wrap.kj-on .sim-energy,
+.sim-wrap.kj-on .sim-prompt,
+.sim-wrap.kj-on .sim-touch .sim-stick {
+  opacity: 0;
+}
+.sim-wrap.kj-on .sim-banner {
+  top: 16vh;
+}
+.sim-wrap.kj-on .sim-score,
+.sim-wrap.kj-on .sim-top-right {
+  opacity: 0.25;
+}
+@media (max-width: 560px) {
+  .kj-cheer em {
+    font-size: 11px;
+  }
+}
+/* the page's own buttons step back during the battle (they'd cover Godzilla's health bar) */
+body:has(.sim-wrap.kj-on) .to-arcade,
+body:has(.sim-wrap.kj-on) .mute {
+  opacity: 0.15;
+}

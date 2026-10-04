@@ -830,6 +830,19 @@ export function buildDistricts(ctx) {
         scene.add(f, pic);
       });
     }
+    // Clicky's corner of the courtyard: Winter's (very underpaid) wizard
+    {
+      const cx = C.x + 8.5;
+      const cz = C.z + 7.6;
+      solidBox(cx, 0.35, cz - 1.4, 2.4, 0.7, 0.9, '#4a2f6b'); // desk
+      solidBox(cx, 0.73, cz - 1.4, 2.6, 0.06, 1.05, '#2a1a3d', { collide: false });
+      sign(['WIZARD SERVICES', 'est. 1726 · no breaks'], cx, 0.38, cz - 1.86, Math.PI, 2.2, 0.55, { size: 40, color: '#ffe14d', bg: '#2a1450', border: '#b48cff', colors: ['#ffe14d', '#b48cff'] });
+      const back = C.z + HD - T / 2 - 0.02;
+      sign(['EMPLOYEE OF THE MONTH', '(NOT CLICKY)'], cx - 2.6, 2.6, back, Math.PI, 2.4, 1.0, { size: 40, color: '#1a1420', bg: '#fff6d8', border: '#c9a227', colors: ['#1a1420', '#c0182f'] });
+      sign(['PUNCH CLOCK', 'IN: 1726', 'OUT: never'], cx + 2.4, 2.2, back, Math.PI, 1.4, 1.1, { size: 34, color: '#dff4ff', bg: '#3a3f4f', border: '#9fd4ff' });
+      sign(['WIZARDS UNITE', '(please)'], cx + 0.2, 3.3, back, Math.PI, 2.0, 0.7, { size: 40, color: '#ff4f6d', bg: '#fff', border: '#ff4f6d', colors: ['#ff4f6d', '#9aa0a8'] });
+      out.clickyHome = new THREE.Vector3(cx, 0, cz);
+    }
     out.castle = {
       center: C.clone(),
       bookcase: new THREE.Vector3(C.x - 7.75, 0, C.z - 7.0), // slides +z to open

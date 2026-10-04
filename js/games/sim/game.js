@@ -32,6 +32,8 @@ import { createCastle } from './castle.js';
 import { createLoans } from './loan.js';
 import { createBattles } from './battle.js';
 import { createHideSeek } from './hideseek.js';
+import { createClicky } from './clicky.js';
+import { createKaiju } from './kaiju.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -100,6 +102,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   ]);
   if (isCancelled()) return null;
   // the Hampter Works gallery (small, loaded alongside)
+  // Clicky the wizard and Mega Matt (Kenney Mini Characters)
+  const [clickyGltf, megaMattGltf] = await Promise.all([loader.loadAsync('assets/models/clicky.glb'), loader.loadAsync('assets/models/megamatt.glb')]);
   const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
   const winterArt = await Promise.all([1, 2, 3, 4].map((i) => loadTexture(`assets/sim-winter-${i}.webp`)));
   onStatus('Building Ohio...');
@@ -194,7 +198,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     music.setEnabled(on);
     write('simmusic', on);
     hud.setMusic(on);
-    if (on) music.start(); // also counts as the user gesture some browsers need
+    if (on && !kaiju?.active) music.start(); // also counts as the user gesture some browsers need
+    kaiju?.refreshMusic();
   }
   claw.setGlow(read('simglow', true));
 
@@ -398,6 +403,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (!m && !castle.shelfOpen && Math.hypot(p.x - castle.shelfAt.x, p.z - castle.shelfAt.z) < 1.5) m = 'bookcase';
     const pk = S.park;
     if (!m && Math.hypot(p.x - pk.arenaDesk.x, p.z - pk.arenaDesk.z) < 2.2 && p.y < 2) m = 'arena';
+    if (!m && Math.hypot(p.x - S.districts.clickyHome.x, p.z - S.districts.clickyHome.z) < 3.0 && p.y < 2.5) m = 'clicky';
     if (!m && Math.hypot(p.x - pk.hsBoard.x, p.z - pk.hsBoard.z) < 2.2 && p.y < 2) m = 'hideseek';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
@@ -446,7 +452,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
     market: MEOWTOWN, windmill: WINDMILL, wish: MEOWTOWN, golf: GOLF,
     fishing: LAKE, golden: LAKE,
-    arena: ARENA, hunt: MAZE,
+    arena: ARENA, hunt: MAZE, clicky1: CAFE, clicky2: null, clicky3: null, kaiju: CASTLE,
     mugs: CAFE, fish: LAKE, headphones: CAT_TREE, vashshelf: MATT_HOUSE, shrine: null, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
   };
   let mapT = 0;
@@ -455,7 +461,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (mapT > 0) return;
     mapT = 0.12;
     const p = claw.position();
-    const pois = [];
+    const pois = [...clicky.pois()];
     for (const [id, spot] of Object.entries(QUEST_SPOTS)) if (spot && !ch.isDone(id)) pois.push({ x: spot.x, z: spot.z });
     hud.updateMap(p.x, p.z, claw.st.yaw, pois);
   }
@@ -548,6 +554,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         else ch.chaos(10, 'BONK', '#5ff2ff');
       }
     }
+    clicky.onBonk(p); // summoning stones
     if (dist2(p, WINDMILL.x, WINDMILL.z) < 5 && p.y < 5) {
       S.town.windmill.spin = 14;
       sfx.boom();
@@ -817,6 +824,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     pets.update(dt);
     vash.update(dt, t);
     hampter.update(dt, t);
+    clicky.update(dt, t, { props: W.props, mine, reset, online: !!net?.connected });
+    kaiju.control(dt);
     romni.update(dt, t);
     castle.update(dt);
     loans.update(dt);
@@ -889,6 +898,42 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   // Pet Battles (arena) and Hide and Seek (maze), both work offline and online
   const fx = (text) => net?.connected && net.send({ t: 'fx', text });
   const battles = createBattles({ wallet, hud, sfx, ch, net, players, openPanel, onFx: fx });
+  // Clicky the Wizard (Winter's Castle) and the Battle of Ohio his quest chain ends in
+  const D = S.districts;
+  const clicky = createClicky({
+    scene,
+    world,
+    RAPIER,
+    gltf: clickyGltf,
+    hud,
+    sfx,
+    ch,
+    claw,
+    home: D.clickyHome,
+    pageSpots: [
+      new THREE.Vector3(BANK.x + 4.0, 1.5, BANK.z + 3.2), // in the bank, by the vault
+      new THREE.Vector3(MAZE.x, 2.0, MAZE.z), // over the hedge maze fountain
+      new THREE.Vector3(CAT_TREE.x, D.treeTop + 0.9, CAT_TREE.z), // the Cat Tree crown
+      new THREE.Vector3(UFO.x, 1.3, UFO.z), // under the UFO
+    ],
+    stoneSpots: [
+      Object.assign(new THREE.Vector3(ARENA.x, 0.4, ARENA.z), { ry: Math.PI }), // centre of the arena
+      Object.assign(new THREE.Vector3(LAKE.x + 11, 0, LAKE.z - 19), { ry: 0.3 }), // the lake shore
+      Object.assign(new THREE.Vector3(TOWER.x + 5.5, 0, TOWER.z + 1), { ry: -0.6 }), // the radio tower
+    ],
+    onSummon: () => {
+      const err = kaiju.summon();
+      if (!err) setTimeout(closeMenu, 400);
+      return err;
+    },
+  });
+  MACHINES.clicky = { prompt: '🧙 TALK TO CLICKY', title: 'CLICKY THE WIZARD', open: () => clicky.panel(!!net?.connected) };
+  var kaiju = createKaiju( // var: setMusic and updateCamera above may run first
+    { scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf: megaMattGltf, mattTex: matt, applyMutators, net, players, onFx: fx });
+  if (net) {
+    net.on('ev', (m) => kaiju.onEv(m));
+    net.on('welcome', (m) => kaiju.onWelcome(m));
+  }
   const hs = createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, players, park: S.park, feed: (t, c) => mpUi?.feed(t, c), onFx: fx, closePanel: () => closeMenu() });
   if (net) {
     net.on('duel', (m) => battles.onDuel(m));
@@ -956,6 +1001,14 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   // ---------- camera ----------
   function updateCamera(dt, input) {
+    if (kaiju?.camera(cam, dt)) {
+      // locked on the titans while Claw flies around
+      const p = claw.position();
+      cam.target.set(p.x, p.y + 0.55, p.z);
+      hideBlockingTrees();
+      sunAt.set(p.x, p.y, p.z);
+      return;
+    }
     const sens = touch ? 0.006 : 0.0035;
     cam.yaw -= input.lookX * sens;
     cam.pitch = Math.max(-0.25, Math.min(1.2, cam.pitch + input.lookY * sens));
@@ -1011,6 +1064,13 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const t = timer.getElapsed();
     if (playing && !menuOpen) {
       const input = controls.consume();
+      if (kaiju.frozen) {
+        // the Battle of Ohio: you're along for the ride. BONK cheers for Matt, LICK for Godzilla.
+        if (input.bonk) kaiju.cheer('m');
+        if (input.lick) kaiju.cheer('g');
+        input.moveX = input.moveY = 0;
+        input.jump = input.bonk = input.lick = input.flop = input.zoom = false;
+      }
       if (hs.frozen) {
         // the blindfolded Hide and Seek seeker waits (looking around is fine, it's all black anyway)
         input.moveX = input.moveY = 0;
@@ -1067,6 +1127,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     S.trampMat.scale.y += (1 - S.trampMat.scale.y) * Math.min(1, dt * 8);
     W.update(dt, t);
+    kaiju.update(dt);
     sky.position.copy(camera.position);
     // Behind a menu, panel or the start screen the world barely shows: render a fraction of
     // the frames. Nothing at all in a background tab.
@@ -1271,7 +1332,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Clicky as Winter’s wizard (former). Mega Matt and Mega Godzilla as themselves. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets, Mini Characters), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
@@ -1310,7 +1371,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1373,6 +1434,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       pets.dispose();
       vash.dispose();
       hampter.dispose();
+      clicky.dispose();
+      kaiju.dispose();
       romni.dispose();
       castle.dispose();
       hs.dispose();

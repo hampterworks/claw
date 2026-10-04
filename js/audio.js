@@ -153,4 +153,31 @@ export const sfx = {
     }
     noise({ dur: 1.1, type: 'bandpass', f: 3200, f2: 2400, q: 2, vol: 0.12 });
   },
+  // ---------- the Battle of Ohio ----------
+  // kaiju roar: a growling saw sweep over rumbling noise
+  roar: () => {
+    for (let i = 0; i < 6; i++) tone({ type: 'sawtooth', f: 210 - i * 8 + Math.random() * 20, f2: 70, dur: 1.4, vol: 0.07, delay: i * 0.03 });
+    tone({ type: 'square', f: 95, f2: 45, dur: 1.5, vol: 0.08 });
+    noise({ dur: 1.6, type: 'bandpass', f: 700, f2: 220, q: 0.7, vol: 0.4 });
+  },
+  // air-raid siren: two slow wails
+  siren: () => {
+    for (let i = 0; i < 2; i++) {
+      tone({ type: 'sawtooth', f: 330, f2: 660, dur: 1.2, vol: 0.05, delay: i * 2 });
+      tone({ type: 'sawtooth', f: 660, f2: 320, dur: 0.8, vol: 0.05, delay: i * 2 + 1.2 });
+    }
+  },
+  // atomic breath: rising charge, then a long hissing blast
+  beam: () => {
+    tone({ type: 'sine', f: 200, f2: 1400, dur: 0.6, vol: 0.12 });
+    noise({ dur: 1.8, type: 'highpass', f: 1200, f2: 3000, q: 0.5, vol: 0.25, delay: 0.5 });
+    tone({ type: 'sawtooth', f: 160, f2: 120, dur: 1.8, vol: 0.06, delay: 0.5 });
+  },
+  // ground-shaking thud (titan footsteps, landings, punches)
+  quake: () => {
+    noise({ dur: 0.9, f: 260, f2: 40, vol: 0.6 });
+    tone({ f: 70, f2: 24, dur: 0.8, vol: 0.35 });
+  },
+  // the crowd goes wild
+  cheer: () => noise({ dur: 0.5, type: 'bandpass', f: 1500 + Math.random() * 800, f2: 900, q: 0.6, vol: 0.12 }),
 };

@@ -64,6 +64,11 @@ in `server/wrangler.jsonc`.
 **Local testing:** `cd server && npx wrangler dev` (runs the Worker + Durable Object locally), serve the
 site, and open `glorp/?mp=ws://localhost:8787/ws` in two browser windows. `?mp=off` forces single-player.
 
+**Clicky and the Battle of Ohio:** Clicky, Winter's grumpy castle wizard, wants out. Bring him a coffee, find his 4
+spell pages and bonk 3 summoning stones awake, and he quits by summoning a kaiju. Mega Matt drops from the sky to
+fight Mega Godzilla to an original battle theme (every hit lands on the beat). Everyone online is flung into the air
+with the camera locked on the fight; BONK cheers for Matt, LICK for Godzilla, and the crowd decides who wins.
+
 **Loans:** borrow at the Bank of Romni (20% interest). Pay back within 5 minutes of play; 30 seconds after
 that Winty comes to collect, takes what you owe and locks you in the dungeon of Winter's Castle. Respawn (menu) to escape, or
 in multiplayer a friend pulls the lever outside your cell. The castle also hides a secret room behind a bookcase.
