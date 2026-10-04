@@ -13,6 +13,7 @@ is drawn in code.
 | **Boil the Claw** (main event) | Keep the heat in the green zone to fill the Boil-o-meter. Tap low on the screen (or Space) to stoke the fire. Tap Claw when he jumps out. Tap floating meme cats to season the soup (not Grumpy Cat). 3 pots: Kitchen, Witch Cauldron, Ohio Volcano. |
 | **Flappy Glorp** | Tap / Space to flap alien Claw through towers of spinning Maxwells. Grab Nyan Cat for bonus points. Don't fall in the soup. |
 | **Dunk-a-Claw** | Whack-a-mole with pots. Dunk Claw, spare Banana Cat, Huh Cat and Smudge. 30 seconds. |
+| **Claw Simulator** (3D, `glorp/`) | Goat-Simulator-style open world. WASD + mouse (or touch controls): knock things over, finish Claw-lenges, play the Glorp Casino, fish, collect pets, help Vash. "← Arcade" (or the pause menu) goes back to the hub. |
 | **Aura Farmer** | Clicker. Tap Claw for aura, hire meme cats to farm it for you. Saves on your device. |
 
 High scores, the "boiled" counter and Aura Farmer progress live in `localStorage` (per device, per browser).

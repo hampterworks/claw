@@ -953,7 +953,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         },
         { label: 'Skins & Pets', onClick: () => openPanel('SKINS & PETS', casino.wardrobe()) },
         { label: 'Credits', onClick: openCredits },
-        { label: 'Arcade', onClick: exitToArcade },
+        { label: '← Back to Arcade', onClick: exitToArcade },
       ],
     });
   }

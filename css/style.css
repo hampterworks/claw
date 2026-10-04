@@ -200,6 +200,10 @@ a {
   border-color: var(--yellow);
   box-shadow: 0 6px 0 #a38a00, 0 0 34px rgba(255, 225, 77, 0.25);
 }
+.card.sim-card {
+  border-color: #b48cff;
+  box-shadow: 0 6px 0 #5a2cc9, 0 0 34px rgba(180, 140, 255, 0.3);
+}
 .card-art {
   width: 96px;
   height: 96px;
@@ -454,6 +458,36 @@ footer {
 .glorp-page.touch .mute {
   bottom: auto;
   top: 60px;
+}
+.to-arcade {
+  position: fixed;
+  z-index: 50;
+  bottom: 10px;
+  right: 58px;
+  height: 38px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  border-radius: 19px;
+  border: 3px solid #111;
+  background: var(--yellow);
+  color: #111;
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  box-shadow: 0 3px 0 #111;
+}
+.to-arcade:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+.glorp-page.touch .to-arcade {
+  bottom: auto;
+  top: 60px;
+}
+.glorp-page.locked .to-arcade {
+  display: none;
 }
 #stage-body[data-game='sim'] {
   padding: 0 0 8px;

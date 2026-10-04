@@ -1,10 +1,13 @@
-// Entry for CLAW SIMULATOR. three.js + Rapier load only when this route opens.
+// Entry for CLAW SIMULATOR (glorp/). three.js + Rapier load only when this page opens.
 import { showOverlay } from '../../engine.js';
 
 export const meta = { id: 'sim', title: 'Claw Simulator' };
 
+// The arcade hub sits one folder up from glorp/. Works for /claw/glorp/, /claw/glorp and /claw/glorp/index.html.
+export const arcadeUrl = () => location.origin + location.pathname.replace(/glorp(\/(index\.html)?)?$/, '');
+
 export function mount(el, { fullscreen = false } = {}) {
-  const exitToArcade = () => (location.href = new URL('./', document.baseURI).href);
+  const exitToArcade = () => (location.href = arcadeUrl());
   const wrap = document.createElement('div');
   wrap.className = 'sim-wrap';
   el.appendChild(wrap);
