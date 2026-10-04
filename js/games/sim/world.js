@@ -609,6 +609,27 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   prop('k_cardboardBoxOpen', 11, 0, 9, 0.8, { density: 0.25, kind: 'box' });
   prop('k_cardboardBoxClosed', -2, 0, -9, 0.2, { density: 0.25, kind: 'box' });
 
+  // MEGA BOX: a hollow, open-top cardboard box Claw can actually jump INTO.
+  // One dynamic body with 5 colliders (floor + 4 walls), so it can still be shoved around.
+  {
+    const S3 = 3;
+    const t = template('k_cardboardBoxOpen');
+    const mesh = new THREE.Mesh(t.geo, t.mat);
+    mesh.scale.setScalar(S3);
+    const half = 0.23 * S3; // body footprint without the flaps
+    const wallH = 0.5 * S3;
+    const hy = (t.size.y * S3) / 2;
+    const th = 0.05;
+    const C = RAPIER.ColliderDesc;
+    const mega = addBody(mesh, C.cuboid(half, th, half).setTranslation(0, -hy + th, 0), -8, 0, 3.6, 0.3, hy, { density: 0.35, kind: 'box', extra: { mega: true } });
+    const wallY = -hy + wallH / 2;
+    for (const [hx, hz, x, z] of [[th, half, half - th, 0], [th, half, -(half - th), 0], [half, th, 0, half - th], [half, th, 0, -(half - th)]]) {
+      world.createCollider(C.cuboid(hx, wallH / 2, hz).setTranslation(x, wallY, z).setDensity(0.35).setFriction(0.7), mega.body);
+    }
+    mega.half = new THREE.Vector3(half, hy, half);
+    special.megaBox = mega;
+  }
+
   // the cactus patch of eastern Ohio
   for (let i = 0; i < 9; i++) staticModel('n_Cactus_1', 84 - rand() * 6, 0, 30 + rand() * 30, rand() * 6, 1 + rand() * 0.6);
 

@@ -449,7 +449,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
     // if I fits I sits
     st.sitCd -= dt;
-    let sitting = false;
+    let sitting = null;
     if (claw.st.speed < 1.2) {
       for (const pr of W.props) {
         if (pr.kind !== 'box') continue;
@@ -459,16 +459,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         v3.set(p.x - tr.x, p.y - tr.y, p.z - tr.z).applyQuaternion(q);
         const h = pr.half;
         if (Math.abs(v3.x) < h.x + 0.15 && Math.abs(v3.z) < h.z + 0.15 && v3.y > -h.y && v3.y < h.y + 0.6) {
-          sitting = true;
-          break;
+          sitting = pr;
+          // inside beats on top: keep looking in case Claw is in the MEGA BOX
+          if (pr.mega) break;
         }
       }
     }
     st.sitT = sitting ? st.sitT + dt : 0;
-    if (st.sitT > 1 && st.sitCd <= 0) {
+    if (sitting && st.sitT > 1 && st.sitCd <= 0) {
       st.sitCd = 6;
       sfx.purr();
-      ch.chaos(100, 'IF I FITS I SITS', '#7CFF4F');
+      const inside = sitting.mega && p.y - sitting.body.translation().y < 0;
+      ch.chaos(inside ? 300 : 100, inside ? 'ABSOLUTE UNIT OF A BOX' : 'IF I FITS I SITS', '#7CFF4F');
       ch.complete('box');
     }
 

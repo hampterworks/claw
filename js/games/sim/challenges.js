@@ -9,7 +9,7 @@ export const CHALLENGES = [
   { id: 'tower', name: 'Phone home from the radio tower' },
   { id: 'news', name: 'Go live on Glorp Cat News' },
   { id: 'flop', name: 'Flop for 5 seconds straight' },
-  { id: 'box', name: 'If I fits, I sits (cardboard box)' },
+  { id: 'box', name: 'If I fits, I sits (try the MEGA BOX by the front door)' },
   { id: 'maxwell', name: 'Bonk the Maxwell statue' },
   { id: 'sky', name: 'Trampoline higher than the tower' },
   { id: 'huh', name: 'Find Huh Cat in the Ohio corn' },
