@@ -141,11 +141,21 @@ export function createHud(wrap, { onMenu, onMusic }) {
       while (popups.children.length > 4) popups.firstChild.remove();
       setTimeout(() => p.remove(), 1600);
     },
-    banner(title, sub = '') {
+    banner(title, sub = '', { pog = false } = {}) {
       banner.innerHTML = '';
       const h = document.createElement('b');
       h.textContent = title;
       banner.appendChild(h);
+      banner.classList.toggle('pog', pog);
+      if (pog) {
+        for (const side of ['left', 'right']) {
+          const img = document.createElement('img');
+          img.src = 'assets/sim-matt.png';
+          img.alt = '';
+          img.className = 'sim-pog ' + side;
+          banner.appendChild(img);
+        }
+      }
       if (sub) {
         const s = document.createElement('span');
         s.textContent = sub;

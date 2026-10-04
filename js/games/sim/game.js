@@ -14,7 +14,24 @@ import { createGraphics, createSky, applyWind } from './graphics.js';
 import { createMusic } from './music.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
-import { bump, read, write } from '../../scores.js';
+import { bump, read, write, stat } from '../../scores.js';
+
+const CLAW_ROASTS = [
+  'Claw is 85% soup by volume.',
+  "Claw was not consulted about any of this. Claw's opinion was not needed.",
+  'ArcticGemstone beat this game before Claw did. In a game about Claw.',
+  'Claw lost a staring contest to a Baby Glorp.',
+  "Claw's aura: lukewarm. Like his bath water.",
+  'Claw once tried to be the main character. He was cast as an ingredient.',
+  'Doctors say Claw is legally a vegetable. A soup vegetable.',
+  'Claw thinks "glorp" is a personality. It is.',
+  'Claw needed a tutorial to sit in a box.',
+  'Every great soup starts with one green cat.',
+  'Claw fell in Lake Meowchigan and blamed the lake.',
+  'Matt pogged at everyone in Ohio except Claw.',
+  'Claw is the reason the pot needs a bigger lid.',
+  'Skill issue: Claw.',
+];
 
 const KNOCK = ['KNOCKED IT OFF THE TABLE', 'GRAVITY CHECK', 'IT WAS IN MY WAY', 'OOPS (NOT SORRY)', 'CAT BEHAVIOR', 'SIGMA SWIPE'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -804,12 +821,33 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       box.appendChild(el);
       return el;
     };
+    const pogs = document.createElement('div');
+    pogs.className = 'credits-pogs';
+    for (let i = 0; i < 5; i++) {
+      const img = document.createElement('img');
+      img.src = 'assets/sim-matt.png';
+      img.alt = i === 2 ? 'Mattpog' : '';
+      img.style.animationDelay = `${-i * 0.18}s`;
+      pogs.appendChild(img);
+    }
+    box.appendChild(pogs);
     add('p', 'HALL OF FAME', 'credits-label');
     add('p', '🏆 ArcticGemstone 🏆', 'credits-champ');
     add('p', 'First to play Claw Simulator. First to beat it.', 'credits-sub');
     add('p', 'CLAW MUST BE BOILED', 'credits-boil');
+    add('h3', 'Claw facts (verified by Matt)');
+    const facts = [...CLAW_ROASTS].sort(() => Math.random() - 0.5).slice(0, 4);
+    facts.push(`Times Claw has been boiled: ${stat('boiled')}. Not enough.`);
+    const ul = document.createElement('ul');
+    ul.className = 'credits-roasts';
+    for (const f of facts) {
+      const li = document.createElement('li');
+      li.textContent = f;
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, the glorp. Matt as the Mayor of Ohio. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');

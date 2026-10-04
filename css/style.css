@@ -785,6 +785,47 @@ footer {
   margin: 12px 0 2px;
   font-size: 20px;
 }
+.credits-pogs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.credits-pogs img {
+  width: clamp(40px, 9vw, 64px);
+  height: auto;
+  animation: pog-bounce 0.9s ease-in-out infinite;
+}
+.credits-pogs img:nth-child(3) {
+  width: clamp(56px, 13vw, 88px);
+}
+.sim-credits .credits-roasts {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+  font-size: 15px;
+}
+.sim-credits .credits-roasts li::before {
+  content: '🍲 ';
+}
+.sim-banner.pog {
+  padding-left: 76px;
+  padding-right: 76px;
+}
+.sim-pog {
+  position: absolute;
+  top: calc(50% - 31px);
+  width: 62px;
+  height: 62px;
+  animation: pog-bounce 0.7s ease-in-out infinite;
+}
+.sim-pog.left {
+  left: 8px;
+}
+.sim-pog.right {
+  right: 8px;
+  animation-delay: -0.35s;
+}
 .sim-credits .credits-label {
   font-family: var(--display);
   letter-spacing: 2px;
@@ -835,6 +876,15 @@ footer {
   100% {
     opacity: 0;
     transform: rotate(var(--rot)) translateY(-30px);
+  }
+}
+@keyframes pog-bounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
   }
 }
 @keyframes score-bump {

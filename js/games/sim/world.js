@@ -482,11 +482,13 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   }
 
   // ---------- billboards ----------
-  function billboard(tex, x, z, rotY, w = 4.4, h = 3.3) {
+  // o.cutout: image with transparency (e.g. Matt), shown unlit over a coloured board
+  function billboard(tex, x, z, rotY, w = 4.4, h = 3.3, o = {}) {
     const g = new THREE.Group();
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex }));
+    const faceMat = o.cutout ? new THREE.MeshBasicMaterial({ map: tex, transparent: true }) : new THREE.MeshStandardMaterial({ map: tex });
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(w, h), faceMat);
     board.position.y = 2.2 + h / 2;
-    const back = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.15), new THREE.MeshStandardMaterial({ color: '#222' }));
+    const back = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.15), new THREE.MeshStandardMaterial({ color: o.back || '#222' }));
     back.position.set(0, 2.2 + h / 2, -0.09);
     const postMat = new THREE.MeshStandardMaterial({ color: '#555' });
     for (const dx of [-w / 3, w / 3]) {
@@ -502,6 +504,13 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     return g;
   }
   if (textures.forp) billboard(textures.forp, -28, -12, 0.9);
+  if (textures.matt) {
+    // downtown, facing the road: you cannot escape the pog
+    billboard(textures.matt, -2, -61, 0, 5.2, 5.2, { cutout: true, back: '#ffe14d' });
+    const cap = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.1), new THREE.MeshBasicMaterial({ map: signTexture(['MATT POGS AT YOU'], { w: 512, h: 104, size: 54, color: '#ffe14d' }) }));
+    cap.position.set(-2, 1.55, -60.9);
+    scene.add(cap);
+  }
 
   // Matt: giant head watching over Ohio + employee of the month in the living room
   if (textures.matt) {

@@ -68,7 +68,7 @@ export function createChallenges(hud) {
     const c = CHALLENGES.find((x) => x.id === id);
     const n = count();
     const unlocked = MUTATORS.find((m) => m.need === n);
-    hud.banner(`CLAW-LENGE COMPLETE`, c.name + (unlocked ? `  ·  UNLOCKED: ${unlocked.name.toUpperCase()}` : ''));
+    hud.banner(`CLAW-LENGE COMPLETE`, c.name + (unlocked ? `  ·  UNLOCKED: ${unlocked.name.toUpperCase()}` : ''), { pog: true });
     sfx.win();
     addPoints(500, null);
     if (n === CHALLENGES.length) setTimeout(() => hud.banner('ALL CLAW-LENGES DONE', 'Claw has ascended. Glorp forever.'), 3500);
