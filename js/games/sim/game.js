@@ -9,6 +9,7 @@ import { createHud } from './hud.js';
 import { createChallenges } from './challenges.js';
 import { loadTexture } from './textures.js';
 import { createGraphics, createSky, applyWind } from './graphics.js';
+import { createMusic } from './music.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write } from '../../scores.js';
@@ -25,7 +26,7 @@ function loadImage(src) {
   });
 }
 
-export async function startGame(wrap, { onStatus, isCancelled }) {
+export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitToArcade }) {
   const touch = isTouchDevice();
   wrap.classList.toggle('touch', touch);
   const params = new URLSearchParams(location.search);
@@ -69,7 +70,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
 
   function resize() {
     const top = wrap.getBoundingClientRect().top;
-    const h = Math.max(320, window.innerHeight - Math.max(0, top) - 8);
+    const h = Math.max(320, window.innerHeight - Math.max(0, top) - (fullscreen ? 0 : 8));
     wrap.style.height = h + 'px';
     const w = wrap.clientWidth;
     renderer.setSize(w, h, false);
@@ -115,7 +116,13 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
   }
   W.syncAll();
 
+  const music = createMusic();
+  music.setEnabled(read('simmusic', true));
+  claw.setGlow(read('simglow', true));
+
   const propByHandle = new Map(W.props.map((p) => [p.body.handle, p]));
+  // big furniture blocks the camera like walls do, so it never ends up inside a table
+  const camBlockers = new Set(W.props.filter((p) => p.half && p.half.x * p.half.y * p.half.z > 0.04).map((p) => p.body.handle));
 
   // tongue
   const tongue = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1, 6), new THREE.MeshStandardMaterial({ color: '#ff6f9a', roughness: 0.4 }));
@@ -189,7 +196,10 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
       const pr = propByHandle.get(b.handle);
       if (pr && !pr.bonked) {
         pr.bonked = true;
-        if (pr.kind === 'matt') ch.chaos(67, 'MATT GOT BONKED', '#ffe14d');
+        if (pr.kind === 'matt') {
+          ch.chaos(67, 'MATT GOT BONKED', '#ffe14d');
+          sfx.meow(900);
+        }
         else if (mut.popcat) ch.chaos(15, 'POP', '#ffe14d');
         else ch.chaos(10, 'BONK', '#5ff2ff');
       }
@@ -312,6 +322,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
       st.launchT = 1.3;
       sfx.splash();
       sfx.boom();
+      sfx.meow(700);
       bump('boiled');
       ch.chaos(200, 'SELF-BOILED', '#ff9a3c');
       ch.complete('boil');
@@ -378,6 +389,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
     st.sitT = sitting ? st.sitT + dt : 0;
     if (st.sitT > 1 && st.sitCd <= 0) {
       st.sitCd = 6;
+      sfx.purr();
       ch.chaos(100, 'IF I FITS I SITS', '#7CFF4F');
       ch.complete('box');
     }
@@ -448,6 +460,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
         ch.chaos(40 * n, `OIIA SPIN x${n}`, '#ff7bf2');
       }
       st.spin = 0;
+      if (air > 1.5) sfx.mrrp();
       if (air > 0.9) ch.chaos(Math.round(air * 30), air > 2 ? 'SKIBIDI AIRTIME' : 'BIG AIR', '#5ff2ff');
     },
   };
@@ -472,7 +485,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
     let d = cam.dist;
     camRay.origin = { x: cam.target.x, y: cam.target.y, z: cam.target.z };
     camRay.dir = { x: dir.x, y: dir.y, z: dir.z };
-    const hit = world.castRay(camRay, d, true, undefined, undefined, undefined, claw.body, (c) => !c.parent() || c.parent().isFixed());
+    const hit = world.castRay(camRay, d, true, undefined, undefined, undefined, claw.body, (c) => !c.parent() || c.parent().isFixed() || camBlockers.has(c.parent().handle));
     if (hit) d = Math.max(0.6, hit.timeOfImpact - 0.25);
     camera.position.copy(cam.target).addScaledVector(dir, d);
     camera.lookAt(cam.target);
@@ -638,6 +651,28 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
       gfxRow.appendChild(b);
     }
     box.appendChild(gfxRow);
+    const h4 = document.createElement('h3');
+    h4.textContent = 'Settings';
+    box.appendChild(h4);
+    const setRow = document.createElement('div');
+    setRow.className = 'sim-mutators';
+    const toggles = [
+      ['Music', music.enabled, (v) => { music.setEnabled(v); write('simmusic', v); }],
+      ['Antenna glow', read('simglow', true), (v) => { claw.setGlow(v); write('simglow', v); }],
+    ];
+    for (const [label, on, set] of toggles) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn small' + (on ? ' primary' : '');
+      b.textContent = `${label}: ${on ? 'On' : 'Off'}`;
+      b.addEventListener('click', () => {
+        set(!on);
+        sfx.click();
+        openMenu();
+      });
+      setRow.appendChild(b);
+    }
+    box.appendChild(setRow);
     const help = document.createElement('p');
     help.className = 'sim-help';
     help.textContent = touch
@@ -650,6 +685,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
   function openMenu() {
     if (!playing) return;
     menuOpen = true;
+    music.duck(true);
     controls.setEnabled(false);
     showOverlay(wrap, {
       title: 'PAUSED',
@@ -664,7 +700,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
             closeMenu();
           },
         },
-        { label: 'Arcade', onClick: () => (location.hash = '') },
+        { label: 'Arcade', onClick: exitToArcade },
       ],
     });
   }
@@ -672,6 +708,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
   function closeMenu() {
     hideOverlay(wrap);
     menuOpen = false;
+    music.duck(false);
     controls.setEnabled(true);
     controls.requestLock();
   }
@@ -695,7 +732,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
@@ -703,6 +740,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
   const start = () => {
     hideOverlay(wrap);
     playing = true;
+    music.start();
     controls.setEnabled(true);
     controls.requestLock();
     hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off tables.' : 'Click to lock the mouse. Go knock stuff off tables.', 5000);
@@ -723,6 +761,7 @@ export async function startGame(wrap, { onStatus, isCancelled }) {
       claw.dispose();
       W.dispose();
       gfx.dispose();
+      music.dispose();
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         if (o.material) [].concat(o.material).forEach((m) => m.dispose());

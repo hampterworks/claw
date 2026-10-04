@@ -1,11 +1,13 @@
 // All sounds are synthesized with WebAudio, so there are no audio files to host.
 import { read, write } from './scores.js';
+import { meow, mrrp, purr } from './catvoice.js';
 
 let ac = null;
 let muted = read('muted', false);
+const muteListeners = new Set();
 
-function audio() {
-  if (muted) return null;
+// The shared AudioContext, created on demand (even while muted, for the music).
+export function getAudioContext() {
   if (!ac) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
@@ -15,12 +17,23 @@ function audio() {
   return ac;
 }
 
+function audio() {
+  if (muted) return null;
+  return getAudioContext();
+}
+
 export const isMuted = () => muted;
 
 export function toggleMuted() {
   muted = !muted;
   write('muted', muted);
+  muteListeners.forEach((f) => f(muted));
   return muted;
+}
+
+export function onMuteChange(fn) {
+  muteListeners.add(fn);
+  return () => muteListeners.delete(fn);
 }
 
 // Browsers only allow audio after a user gesture.
@@ -98,6 +111,18 @@ export const sfx = {
   boing: () => {
     tone({ type: 'sine', f: 140, f2: 620, dur: 0.35, vol: 0.2 });
     tone({ type: 'triangle', f: 280, f2: 900, dur: 0.25, vol: 0.06, delay: 0.05 });
+  },
+  meow: (pitch) => {
+    const a = audio();
+    if (a) meow(a, a.destination, a.currentTime, { pitch: pitch || 480 + Math.random() * 200, vol: 0.28 });
+  },
+  mrrp: () => {
+    const a = audio();
+    if (a) mrrp(a, a.destination, a.currentTime, { pitch: 300 + Math.random() * 80 });
+  },
+  purr: () => {
+    const a = audio();
+    if (a) purr(a, a.destination, a.currentTime, { len: 1.2, vol: 0.3 });
   },
   win: () => [523, 659, 784, 1046].forEach((f, i) => tone({ type: 'triangle', f, dur: 0.22, vol: 0.14, delay: i * 0.11 })),
   boom: () => {

@@ -201,6 +201,10 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
     lungeNow() {
       st.lunge = 1;
     },
+    setGlow(on) {
+      ballMat.emissiveIntensity = on ? 3 : 0;
+      ballMat.color.set(on ? '#b6ff5c' : '#7cd650');
+    },
 
     // Before the physics step: read input, set velocity.
     control(dt, input, camYaw, events) {

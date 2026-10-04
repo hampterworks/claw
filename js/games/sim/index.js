@@ -3,11 +3,12 @@ import { showOverlay } from '../../engine.js';
 
 export const meta = { id: 'sim', title: 'Claw Simulator' };
 
-export function mount(el) {
+export function mount(el, { fullscreen = false } = {}) {
+  const exitToArcade = () => (location.href = new URL('./', document.baseURI).href);
   const wrap = document.createElement('div');
   wrap.className = 'sim-wrap';
   el.appendChild(wrap);
-  wrap.style.height = Math.max(320, window.innerHeight - wrap.getBoundingClientRect().top - 8) + 'px';
+  wrap.style.height = Math.max(320, window.innerHeight - wrap.getBoundingClientRect().top - (fullscreen ? 0 : 8)) + 'px';
 
   let cancelled = false;
   let game = null;
@@ -21,6 +22,8 @@ export function mount(el) {
       m.startGame(wrap, {
         onStatus: (s) => (status.textContent = s),
         isCancelled: () => cancelled,
+        fullscreen,
+        exitToArcade,
       })
     )
     .then((g) => {
@@ -49,7 +52,7 @@ export function mount(el) {
       showOverlay(wrap, {
         title: 'GLORP MALFUNCTION',
         text: ['Claw Simulator needs WebGL and a modern browser.', String(err && err.message ? err.message : err)],
-        buttons: [{ label: 'Back to arcade', primary: true, onClick: () => (location.hash = '') }],
+        buttons: [{ label: 'Back to arcade', primary: true, onClick: exitToArcade }],
       });
     });
 

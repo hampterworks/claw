@@ -7,9 +7,8 @@ import * as boil from './games/boil.js';
 import * as flappy from './games/flappy.js';
 import * as whack from './games/whack.js';
 import * as aura from './games/aura.js';
-import * as sim from './games/sim/index.js';
 
-const GAMES = { boil, sim, flappy, whack, aura };
+const GAMES = { boil, flappy, whack, aura };
 
 const $ = (sel) => document.querySelector(sel);
 const hub = $('#hub');

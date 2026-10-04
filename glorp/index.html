@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Every relative URL on this page resolves from the site root. -->
+    <base href="../" />
+    <title>Claw Simulator</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#12041f" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body class="glorp-page">
+    <button id="mute" class="mute" type="button" aria-label="Toggle sound">🔊</button>
+    <main id="glorp"></main>
+    <script type="module" src="js/glorp.js"></script>
+  </body>
+</html>

@@ -11,28 +11,11 @@ is drawn in code.
 | Game | How to play |
 | --- | --- |
 | **Boil the Claw** (main event) | Keep the heat in the green zone to fill the Boil-o-meter. Tap low on the screen (or Space) to stoke the fire. Tap Claw when he jumps out. Tap floating meme cats to season the soup (not Grumpy Cat). 3 pots: Kitchen, Witch Cauldron, Ohio Volcano. |
-| **Claw Simulator** (3D) | Goat Simulator, but you're Claw. Knock things off tables, lick and fling stuff, flop like liquid, boil yourself in the giant soup pot. 10 Claw-lenges unlock mutators (Glorp Gravity, Cursed Face, Big Claw, OIIA Mode, Popcat Mode). |
 | **Flappy Glorp** | Tap / Space to flap alien Claw through towers of spinning Maxwells. Grab Nyan Cat for bonus points. Don't fall in the soup. |
 | **Dunk-a-Claw** | Whack-a-mole with pots. Dunk Claw, spare Banana Cat, Huh Cat and Smudge. 30 seconds. |
 | **Aura Farmer** | Clicker. Tap Claw for aura, hire meme cats to farm it for you. Saves on your device. |
 
 High scores, the "boiled" counter and Aura Farmer progress live in `localStorage` (per device, per browser).
-
-### Claw Simulator controls
-
-| Action | Desktop | Phone |
-| --- | --- | --- |
-| Move | WASD / arrows | left stick |
-| Look | mouse (click to lock) or drag | drag anywhere |
-| Jump / glorp double jump | Space (x2) | JUMP |
-| Bonk | F or left click | BONK |
-| Lick (grab, again to fling) | E or right click | LICK |
-| Flop (ragdoll) | R | FLOP |
-| Zoomies | hold Shift | hold ZOOM |
-| Menu (challenges, mutators, graphics) | P / Tab | ☰ |
-
-Graphics has High (bloom, shadows, color grade, FXAA) and Low. Phones start on Low, and High drops to Low on its own if the frame rate tanks.
-Add `?debug` to the URL to expose `window.__clawSim` for poking at things, and `?hq` to force High graphics.
 
 ## Run it locally
 
@@ -59,7 +42,7 @@ All paths are relative, so it works under the `/claw/` sub-path. `.nojekyll` sto
 ```
 index.html          hub page
 css/style.css       neon brainrot theme
-js/main.js          hub + hash router (#boil, #sim, #flappy, #whack, #aura)
+js/main.js          hub + hash router (#boil, #flappy, #whack, #aura)
 js/engine.js        canvas scaling, game loop, input, popups, particles, overlays
 js/cats.js          code-drawn cat memes
 js/props.js         pot, fire, water, Bliss background
@@ -67,7 +50,7 @@ js/audio.js         WebAudio sound effects (no audio files)
 js/scores.js        localStorage helpers
 js/brainrot.js      popup phrases (add group-chat lore here)
 js/games/*.js       one file per game, each exports meta + mount(el)
-js/games/sim/       Claw Simulator (3D): game loop, world, Claw, controls, HUD, challenges, shaders
+js/games/sim/       a 3D side project (see glorp/README.md)
 assets/             Claw sprites + meme pictures
 assets/models/      3D models (CC0, see assets/models/CREDITS.md)
 vendor/three/       three.js 0.186.1 + the few addons used (MIT)
@@ -75,7 +58,7 @@ vendor/rapier/      Rapier 0.21.0 physics, WASM inlined (Apache-2.0)
 ```
 
 three.js and Rapier are vendored (pinned copies in the repo) so the site needs no CDN and no build step.
-They only load when Claw Simulator is opened, so the menu and 2D games stay fast.
+They're only used by the 3D side project, so the arcade itself stays light.
 
 ## Adding a game
 
