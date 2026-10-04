@@ -53,7 +53,8 @@ Quests, coins, the casino and fishing stay per player.
 3. GitHub repo → Settings → Secrets and variables → Actions → add
    `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 4. Actions → **Deploy multiplayer server** → Run workflow (it also runs on any push to `server/`).
-   The log ends with the URL, like `https://claw-ohio.<you>.workers.dev`.
+   The log ends with the URL, like `https://claw-ohio.<subdomain>.workers.dev` (ours: `claw-ohio.hampterworks.workers.dev`).
+   The Action replaces a personal account subdomain with a group name (see `WANTED` in the workflow).
 5. Put it in `js/games/sim/net-config.js`: `export const MP_URL = 'wss://claw-ohio.<you>.workers.dev/ws';`
    then run `node tools/stamp.mjs` and push.
 
