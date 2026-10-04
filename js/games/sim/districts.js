@@ -354,7 +354,9 @@ export function buildDistricts(ctx) {
     scene.add(water);
     // island with a palm
     solidBox(L.x + 10, 0.3, L.z + 4, 6, 0.6, 5, '#ecd9a5', { shadow: false });
-    staticModel('n_PalmTree_2', L.x + 10, 0.6, L.z + 4, 1.2, 0.8);
+    // visual palm + trunk-only collider (a full bounding box would swallow the whole island)
+    deco('n_PalmTree_2', L.x + 10, 0.6, L.z + 4, 1.2, 0.8);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(1.6, 0.3), fixed(L.x + 10, 0.6 + 1.6, L.z + 4));
     for (let i = 0; i < 6; i++) deco('n_Lilypad', L.x - 14 + rand() * 24, WATER_Y + 0.02, L.z + rand() * 12 - 6, rand() * 6, 0.9, false);
     // dock
     const dx = L.x - 10;
@@ -477,7 +479,7 @@ export function buildDistricts(ctx) {
       [MATT_HOUSE.x + 1.6, 1.4, MATT_HOUSE.z - 1.9],
       [UFO.x, 6.5, UFO.z],
       [RACE.x, 0.9, RACE.z],
-      [LAKE.x + 10, 1.5, LAKE.z + 4],
+      [LAKE.x + 11.6, 1.5, LAKE.z + 5],
       [out.treePlatforms[11].x, out.treePlatforms[11].y + 0.7, out.treePlatforms[11].z],
       [-46, 0.9, -70.5],
     ];
