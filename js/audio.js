@@ -12,6 +12,12 @@ export function getAudioContext() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ac = new AC();
+    // iPhones silence web audio when the ring switch is on silent, unless the page asks for "playback".
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    } catch {
+      /* not supported */
+    }
   }
   if (ac.state === 'suspended') ac.resume();
   return ac;

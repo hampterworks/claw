@@ -203,6 +203,12 @@ export function createMusic({ context } = {}) {
     get enabled() {
       return enabled;
     },
+    get playing() {
+      return playing;
+    },
+    get output() {
+      return master;
+    },
     duck(v) {
       ducked = v;
       applyLevel();

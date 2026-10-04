@@ -533,6 +533,12 @@ footer {
   cursor: pointer;
   box-shadow: 0 3px 0 #111;
 }
+.sim-chip.music {
+  color: var(--green);
+}
+.sim-chip.music.off {
+  color: var(--muted);
+}
 .sim-chip.menu {
   background: var(--green);
   color: #111;

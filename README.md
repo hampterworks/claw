@@ -60,6 +60,11 @@ vendor/rapier/      Rapier 0.21.0 physics, WASM inlined (Apache-2.0)
 three.js and Rapier are vendored (pinned copies in the repo) so the site needs no CDN and no build step.
 They're only used by the 3D side project, so the arcade itself stays light.
 
+## Updating the site
+
+After editing any JS, run `node tools/stamp.mjs` before committing. GitHub Pages lets browsers reuse files
+for 10 minutes; the script adds a content hash to every module URL so changed files are always fetched fresh.
+
 ## Adding a game
 
 1. Create `js/games/mygame.js` exporting `meta = { id, title }` and `mount(el)` that returns a cleanup function.

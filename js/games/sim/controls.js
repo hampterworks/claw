@@ -5,7 +5,7 @@ export function isTouchDevice() {
   return window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 }
 
-export function createControls(wrap, canvas, { touch, onMenu }) {
+export function createControls(wrap, canvas, { touch, onMenu, onMusic }) {
   const keys = new Set();
   const s = {
     lookX: 0,
@@ -31,6 +31,10 @@ export function createControls(wrap, canvas, { touch, onMenu }) {
     if (e.code === 'KeyP' || e.code === 'Tab') {
       e.preventDefault();
       onMenu();
+      return;
+    }
+    if (e.code === 'KeyM' && !e.repeat) {
+      onMusic?.();
       return;
     }
     if (KEYMAP[e.code] && !e.repeat) s[KEYMAP[e.code]] = true;

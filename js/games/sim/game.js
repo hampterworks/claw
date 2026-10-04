@@ -117,7 +117,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   W.syncAll();
 
   const music = createMusic();
-  music.setEnabled(read('simmusic', true));
+  function setMusic(on) {
+    music.setEnabled(on);
+    write('simmusic', on);
+    hud.setMusic(on);
+    if (on) music.start(); // also counts as the user gesture some browsers need
+  }
   claw.setGlow(read('simglow', true));
 
   const propByHandle = new Map(W.props.map((p) => [p.body.handle, p]));
@@ -134,9 +139,11 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   let playing = false;
   const mut = { gravity: false, cursed: false, big: false, oiia: false, popcat: false };
 
-  const hud = createHud(wrap, { onMenu: () => openMenu() });
+  const hud = createHud(wrap, { onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
   const ch = createChallenges(hud);
-  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu() });
+  music.setEnabled(read('simmusic', true));
+  hud.setMusic(music.enabled);
+  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
 
   ch.state.babies.forEach((i) => S.babies[i] && (S.babies[i].visible = false));
 
@@ -657,7 +664,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const setRow = document.createElement('div');
     setRow.className = 'sim-mutators';
     const toggles = [
-      ['Music', music.enabled, (v) => { music.setEnabled(v); write('simmusic', v); }],
+      ['Music', music.enabled, setMusic],
       ['Antenna glow', read('simglow', true), (v) => { claw.setGlow(v); write('simglow', v); }],
     ];
     for (const [label, on, set] of toggles) {
@@ -677,7 +684,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     help.className = 'sim-help';
     help.textContent = touch
       ? 'Stick: move · Drag: look · JUMP x2: glorp jump · BONK · LICK grabs/throws · FLOP ragdoll · hold ZOOM'
-      : 'WASD move · Mouse look (click to lock) · Space jump x2 · F / click bonk · E / right-click lick · R flop · Shift zoomies · P menu';
+      : 'WASD move · Mouse look (click to lock) · Space jump x2 · F / click bonk · E / right-click lick · R flop · Shift zoomies · M music · P menu';
     box.appendChild(help);
     return box;
   }

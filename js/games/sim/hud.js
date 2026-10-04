@@ -1,11 +1,12 @@
 // DOM heads-up display layered over the 3D canvas.
-export function createHud(wrap, { onMenu }) {
+export function createHud(wrap, { onMenu, onMusic }) {
   const el = document.createElement('div');
   el.className = 'sim-hud';
   el.innerHTML = `
     <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="combo"></span></div>
     <div class="sim-top-right">
       <button type="button" class="sim-chip trophies">🏆 0/10</button>
+      <button type="button" class="sim-chip music" aria-label="Toggle music">♪ ON</button>
       <button type="button" class="sim-chip menu" aria-label="Menu">☰</button>
     </div>
     <div class="sim-popups"></div>
@@ -24,6 +25,11 @@ export function createHud(wrap, { onMenu }) {
   const hint = $('.sim-hint');
   $('.menu').addEventListener('click', onMenu);
   trophies.addEventListener('click', onMenu);
+  const musicBtn = $('.music');
+  musicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onMusic();
+  });
 
   let bannerTimer = 0;
   let hintTimer = 0;
@@ -40,6 +46,11 @@ export function createHud(wrap, { onMenu }) {
     },
     setCombo(m) {
       combo.textContent = m > 1 ? `MEWTIPLIER x${m}` : '';
+    },
+    setMusic(on) {
+      musicBtn.textContent = on ? '♪ ON' : '♪ OFF';
+      musicBtn.classList.toggle('off', !on);
+      musicBtn.setAttribute('aria-pressed', String(on));
     },
     setTrophies(done, total) {
       trophies.textContent = `🏆 ${done}/${total}`;

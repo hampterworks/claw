@@ -17,6 +17,7 @@ You play Claw: knock things off tables, lick and fling stuff, flop like liquid, 
 | Lick (grab, again to fling) | E or right click | LICK |
 | Flop (ragdoll) | R | FLOP |
 | Zoomies | hold Shift | hold ZOOM |
+| Music on/off | M | ♪ |
 | Menu (challenges, mutators, graphics, settings) | P / Tab | ☰ |
 
 ## Music
@@ -32,6 +33,8 @@ The pause menu has Graphics (High: bloom, shadows, color grade, FXAA; Low: fast)
 
 ## Dev notes
 
+- After editing any JS, run `node tools/stamp.mjs` before committing. It fingerprints module URLs
+  in the import maps so browsers don't keep serving the old files from GitHub Pages' 10-minute cache.
 - Code: `js/games/sim/` (entry `index.js`), page script `js/glorp.js`, page `glorp/index.html`
   (uses `<base href="../">` so it shares the site's assets).
 - `?debug` exposes `window.__clawSim`; `?hq` forces High graphics.
