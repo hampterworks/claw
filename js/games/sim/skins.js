@@ -38,10 +38,13 @@ export const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
 export function createWallet(hud) {
   const saved = read('simwallet', null);
   const st = saved || { coins: 200, owned: ['classic'], equipped: 'classic', welcomed: false };
+  st.pets ||= [];
+  st.pet ||= null;
   let frac = 0;
   const save = () => write('simwallet', st);
   hud.setCoins(st.coins);
   const listeners = new Set();
+  const petListeners = new Set();
   return {
     get coins() {
       return st.coins;
@@ -52,6 +55,12 @@ export function createWallet(hud) {
     get equipped() {
       return st.equipped;
     },
+    get pets() {
+      return st.pets;
+    },
+    get pet() {
+      return st.pet;
+    },
     get welcomed() {
       return st.welcomed;
     },
@@ -59,8 +68,8 @@ export function createWallet(hud) {
       st.welcomed = true;
       save();
     },
-    earnFromPoints(pts) {
-      frac += pts / 10;
+    earnFromPoints(pts, bonus = 0) {
+      frac += (pts / 10) * (1 + bonus);
       const whole = Math.floor(frac);
       if (whole > 0) {
         frac -= whole;
@@ -91,20 +100,31 @@ export function createWallet(hud) {
       listeners.forEach((f) => f(skinById(id)));
     },
     onEquip: (f) => listeners.add(f),
+    ownPet(id) {
+      if (st.pets.includes(id)) return false;
+      st.pets.push(id);
+      save();
+      return true;
+    },
+    equipPet(id) {
+      st.pet = id;
+      save();
+      petListeners.forEach((f) => f(id));
+    },
+    onPet: (f) => petListeners.add(f),
   };
+}
+
+export function rollRarity() {
+  const total = Object.values(RARITY).reduce((a, r) => a + r.weight, 0);
+  let x = Math.random() * total;
+  for (const [k, r] of Object.entries(RARITY)) if ((x -= r.weight) < 0) return k;
+  return 'common';
 }
 
 // Weighted rarity roll, then a random skin of that rarity.
 export function rollSkin() {
-  const total = Object.values(RARITY).reduce((a, r) => a + r.weight, 0);
-  let x = Math.random() * total;
-  let rarity = 'common';
-  for (const [k, r] of Object.entries(RARITY)) {
-    if ((x -= r.weight) < 0) {
-      rarity = k;
-      break;
-    }
-  }
+  const rarity = rollRarity();
   const pool = SKINS.filter((s) => s.rarity === rarity);
   return pool[Math.floor(Math.random() * pool.length)];
 }

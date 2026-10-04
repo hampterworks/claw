@@ -27,12 +27,22 @@ export const FISH = [
   { id: 'lobster', name: 'Lobster Maxwell', emoji: '🦞', rarity: 'epic', w: 2.5, speed: 1.7, jump: 0.07, coins: 150, pts: 450, zone: 60 },
   { id: 'golden', name: 'Golden Glorpfish', emoji: '🐟', rarity: 'legendary', w: 1, speed: 2.2, jump: 0.08, coins: 400, pts: 1000, zone: 52, gold: true },
 ];
-const totalW = FISH.reduce((a, f) => a + f.w, 0);
-function rollFish() {
-  let x = Math.random() * totalW;
-  for (const f of FISH) if ((x -= f.w) < 0) return f;
+const LUCKY = new Set(['rare', 'epic', 'legendary']);
+// luck: Golden Bait level, boosts the weight of rare+ catches
+function rollFish(luck = 0) {
+  const wOf = (f) => f.w * (LUCKY.has(f.rarity) ? 1 + luck * 0.6 : 1);
+  let x = Math.random() * FISH.reduce((a, f) => a + wOf(f), 0);
+  for (const f of FISH) if ((x -= wOf(f)) < 0) return f;
   return FISH[0];
 }
+
+// Tackle Shop upgrades: 3 levels each, bought with Glorp Coins.
+export const TACKLE = [
+  { id: 'rod', name: 'Chonky Rod', emoji: '🎣', desc: 'bigger catch zone', cost: [100, 300, 700] },
+  { id: 'reel', name: 'Turbo Reel', emoji: '⚙️', desc: 'reels in faster', cost: [150, 400, 900] },
+  { id: 'lure', name: 'Catnip Lure', emoji: '🌿', desc: 'calmer fish', cost: [200, 500, 1000] },
+  { id: 'bait', name: 'Golden Bait', emoji: '✨', desc: 'rarer fish', cost: [250, 600, 1200] },
+];
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -48,6 +58,8 @@ export function createFishing({ wallet, ch, sfx, hud }) {
   const bucket = read('simbucket', []).filter((id) => FISH.some((f) => f.id === id));
   const saveBucket = () => write('simbucket', bucket);
   const fishById = (id) => FISH.find((f) => f.id === id);
+  const tackle = { rod: 0, reel: 0, lure: 0, bait: 0, ...read('simtackle', {}) };
+  const saveTackle = () => write('simtackle', tackle);
   const bucketValue = () => bucket.reduce((a, id) => a + fishById(id).coins, 0);
 
   function panel() {
@@ -79,6 +91,38 @@ export function createFishing({ wallet, ch, sfx, hud }) {
     sell.type = 'button';
     bucketRow.append(bucketText, sell);
     root.appendChild(bucketRow);
+    const shop = el('div', 'tackle-shop');
+    root.appendChild(el('div', 'tackle-head', '🛠 TACKLE SHOP'));
+    root.appendChild(shop);
+    function renderShop() {
+      shop.innerHTML = '';
+      for (const u of TACKLE) {
+        const lv = tackle[u.id];
+        const max = lv >= u.cost.length;
+        const b = el('button', 'btn small tackle' + (max ? ' maxed' : ''));
+        b.type = 'button';
+        b.append(el('b', null, `${u.emoji} ${u.name}`), el('span', 'pips', '●'.repeat(lv) + '○'.repeat(u.cost.length - lv)), el('small', null, max ? `MAXED · ${u.desc}` : `${u.desc} · ${u.cost[lv]} 🪙`));
+        b.disabled = max;
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (max) return;
+          if (!wallet.spend(u.cost[lv])) {
+            msg.textContent = `Need ${u.cost[lv]} 🪙. Sell some fish first.`;
+            msg.style.color = '#ff4f6d';
+            sfx.fail();
+            return;
+          }
+          tackle[u.id]++;
+          saveTackle();
+          msg.textContent = `${u.name} upgraded to level ${tackle[u.id]}!`;
+          msg.style.color = '#7CFF4F';
+          sfx.win();
+          renderShop();
+          renderBucket();
+        });
+        shop.appendChild(b);
+      }
+    }
     const grid = el('div', 'fishdex');
     root.appendChild(grid);
     root.appendChild(el('p', 'fine', 'Hold the button (or Space / E / tap the water) to raise the green zone. Keep the catch on it until the bar fills. Sell your bucket to the Fisher Cat for Glorp Coins.'));
@@ -90,6 +134,7 @@ export function createFishing({ wallet, ch, sfx, hud }) {
       sell.disabled = !bucket.length;
       coinsB.textContent = String(wallet.coins);
     }
+    renderShop();
     sell.addEventListener('click', () => {
       if (!bucket.length) return;
       const n = bucket.length;
@@ -147,20 +192,20 @@ export function createFishing({ wallet, ch, sfx, hud }) {
     }
     function bite() {
       mode = 'bite';
-      timer = 0.9;
-      fish = rollFish();
+      timer = 1.3;
+      fish = rollFish(tackle.bait);
       msg.textContent = '! HOOK IT !';
       btn.textContent = 'HOOK!';
       sfx.pop();
     }
     function hook() {
       mode = 'reel';
-      zoneH = fish.zone || 74;
+      zoneH = (fish.zone || 84) + tackle.rod * 18;
       zoneY = 40;
       zoneV = 0;
       fishY = TRACK_H * 0.4;
       fishTarget = fishY;
-      progress = 0.3;
+      progress = 0.35;
       msg.textContent = `Something's on the line...`;
       btn.textContent = 'REEL (hold)';
       sfx.click();
@@ -250,8 +295,8 @@ export function createFishing({ wallet, ch, sfx, hud }) {
         }
       } else if (mode === 'reel') {
         // catch zone: hold to rise, gravity pulls it down, bouncy floor
-        zoneV += (holding ? 620 : -520) * dt;
-        zoneV = Math.max(-420, Math.min(420, zoneV));
+        zoneV += (holding ? 500 : -420) * dt;
+        zoneV = Math.max(-340, Math.min(340, zoneV));
         zoneY += zoneV * dt;
         if (zoneY < 0) {
           zoneY = 0;
@@ -262,11 +307,12 @@ export function createFishing({ wallet, ch, sfx, hud }) {
           zoneV = 0;
         }
         // fish darts between random targets
-        if (Math.random() < fish.jump || Math.abs(fishTarget - fishY) < 4) fishTarget = 10 + Math.random() * (TRACK_H - 20);
-        fishY += (fishTarget - fishY) * Math.min(1, dt * fish.speed * 2.4) + Math.sin(t * 9) * fish.speed * 0.6;
+        const calm = 1 - tackle.lure * 0.17;
+        if (Math.random() < fish.jump * calm || Math.abs(fishTarget - fishY) < 4) fishTarget = 10 + Math.random() * (TRACK_H - 20);
+        fishY += (fishTarget - fishY) * Math.min(1, dt * fish.speed * calm * 2.2) + Math.sin(t * 9) * fish.speed * calm * 0.5;
         fishY = Math.max(8, Math.min(TRACK_H - 8, fishY));
         const inZone = fishY > zoneY && fishY < zoneY + zoneH;
-        progress += (inZone ? 0.3 : -0.2) * dt;
+        progress += (inZone ? 0.32 * (1 + tackle.reel * 0.3) : -0.16 * (1 - tackle.reel * 0.15)) * dt;
         if (progress >= 1) finish(true);
         else if (progress <= 0) finish(false);
       } else if (mode === 'done') {
@@ -381,5 +427,5 @@ export function createFishing({ wallet, ch, sfx, hud }) {
     return root;
   }
 
-  return { panel, dex, bucket, bucketValue };
+  return { panel, dex, bucket, bucketValue, tackle };
 }

@@ -17,6 +17,7 @@ import { createWallet, skinById } from './skins.js';
 import { createCasino } from './casino.js';
 import { createWinty } from './winty.js';
 import { createFishing } from './fishing.js';
+import { createPetCompanion, petById, PET_BONUS } from './pets.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -63,10 +64,11 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   onStatus('Summoning Claw...');
   const loader = new GLTFLoader();
-  const [catGltf, maxGltf, worldGltf, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
+  const [catGltf, maxGltf, worldGltf, petsGltf, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/world.glb'),
+    loader.loadAsync('assets/models/pets.glb'),
     loadTexture('assets/sim-matt.png'),
     loadTexture('assets/sim-huh.png'),
     loadTexture('assets/sim-baby.png'),
@@ -185,7 +187,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   // Glorp Coins, skins and the casino
   const wallet = createWallet(hud);
-  ch.onPoints((pts) => wallet.earnFromPoints(pts));
+  ch.onPoints((pts) => {
+    const pet = petById(wallet.pet);
+    wallet.earnFromPoints(pts, pet ? PET_BONUS[pet.rarity] : 0);
+  });
   function refreshFace() {
     const skin = skinById(wallet.equipped);
     claw.setFaceTexture((mut.matt || skin.mattFace) && matt ? matt : face);
@@ -202,10 +207,23 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     pmrem.dispose();
   }
   claw.setSkin(skinById(wallet.equipped));
-  const casino = createCasino({ wallet, sfx, hud, onEquip: equipSkin });
+  // the pet that follows Claw around
+  const pets = createPetCompanion({ gltf: petsGltf, scene, world, RAPIER, claw });
+  pets.set(wallet.pet);
+  function equipPet(id) {
+    wallet.equipPet(id);
+    pets.set(id);
+    const pet = petById(id);
+    if (pet) {
+      hud.popup(`${pet.name.toUpperCase()} JOINED THE SQUAD`, '#7CFF4F');
+      pets.celebrate(3);
+    }
+  }
+  const casino = createCasino({ wallet, sfx, hud, ch, onEquip: equipSkin, onPet: equipPet, onBigWin: () => pets.celebrate(5) });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
   const fishing = createFishing({ wallet, ch, sfx, hud });
   ch.onComplete(() => {
+    pets.celebrate(3);
     wallet.add(50);
     hud.popup('+50 🪙', '#ffe14d');
   });
@@ -217,22 +235,36 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     showOverlay(wrap, { title, extra: content, buttons: [{ label: 'Close', primary: true, onClick: closeMenu }] });
   }
   // the machine Claw is standing at (if any)
+  const MACHINES = {
+    slots: { prompt: '🎰 GLORP SLOTS', title: 'GLORP SLOTS', open: () => casino.slots() },
+    crate: { prompt: '📦 OPEN A CAT CRATE', title: 'CAT CRATES', open: () => casino.crate() },
+    petcrate: { prompt: '🐾 OPEN A PET CRATE', title: 'PET CRATES', open: () => casino.petCrate() },
+    wheel: { prompt: '🎡 WHEEL OF GLORP', title: 'WHEEL OF GLORP', open: () => casino.wheel() },
+    plinko: { prompt: '🧶 PLINKO PAWS', title: 'PLINKO PAWS', open: () => casino.plinko() },
+    derby: { prompt: '🏁 PET DERBY', title: 'PET DERBY', open: () => casino.derby() },
+    fish: {
+      prompt: () => `🎣 GO FISHING${fishing.bucket.length ? ` · 🪣 ${fishing.bucket.length} TO SELL` : ''}`,
+      title: "GONE FISHIN'",
+      open: () => fishing.panel(),
+    },
+  };
+  const playMachine = (m) => openPanel(MACHINES[m].title, MACHINES[m].open());
   let machine = null;
   function updateMachines() {
     const p = claw.position();
-    const c = S.districts.casino;
     let m = null;
+    for (const [id, pos] of Object.entries(S.districts.casino)) {
+      if (Math.hypot(p.x - pos.x, p.z - pos.z) < 2.3) m = id;
+    }
     const fs = S.districts.fishSpot;
-    if (Math.hypot(p.x - c.slots.x, p.z - c.slots.z) < 2.3) m = 'slots';
-    else if (Math.hypot(p.x - c.crate.x, p.z - c.crate.z) < 2.3) m = 'crate';
-    else if (Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
+    if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
     machine = m;
     const verb = touch ? 'TAP' : 'E';
-    if (m === 'slots') hud.prompt(`🎰 GLORP SLOTS (${verb})`, () => openPanel('GLORP SLOTS', casino.slots()));
-    else if (m === 'crate') hud.prompt(`📦 OPEN A CAT CRATE (${verb})`, () => openPanel('CAT CRATES', casino.crate()));
-    else if (m === 'fish') hud.prompt(`🎣 GO FISHING${fishing.bucket.length ? ` · 🪣 ${fishing.bucket.length} TO SELL` : ''} (${verb})`, () => openPanel("GONE FISHIN'", fishing.panel()));
-    else hud.prompt(null);
+    if (m) {
+      const label = typeof MACHINES[m].prompt === 'function' ? MACHINES[m].prompt() : MACHINES[m].prompt;
+      hud.prompt(`${label} (${verb})`, () => playMachine(m));
+    } else hud.prompt(null);
   }
   music.setEnabled(read('simmusic', true));
   hud.setMusic(music.enabled);
@@ -604,6 +636,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     S.town.check(dt, t, { claw, ch, hud, sfx });
     updateMachines();
     winty?.update(dt, t, claw);
+    pets.update(dt);
 
     // OIIA mode soundtrack
     if (mut.oiia) {
@@ -706,9 +739,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       if (input.bonk) bonk();
       if (input.lick) {
         // at a casino machine, E / LICK plays it instead of licking
-        if (machine === 'slots') openPanel('GLORP SLOTS', casino.slots());
-        else if (machine === 'crate') openPanel('CAT CRATES', casino.crate());
-        else if (machine === 'fish') openPanel("GONE FISHIN'", fishing.panel());
+        if (machine) playMachine(machine);
         else lick();
       }
       holdSpring(dt);
@@ -872,7 +903,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
             closeMenu();
           },
         },
-        { label: 'Skins', onClick: () => openPanel('CLAW SKINS', casino.wardrobe()) },
+        { label: 'Skins & Pets', onClick: () => openPanel('SKINS & PETS', casino.wardrobe()) },
         { label: 'Credits', onClick: openCredits },
         { label: 'Arcade', onClick: exitToArcade },
       ],
@@ -918,7 +949,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     add('h3', 'Starring');
     add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
-    add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
+    add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
     showOverlay(wrap, {
       title: 'CREDITS',
@@ -954,7 +985,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, fishing, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, fishing, casino, pets, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
@@ -986,6 +1017,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       document.removeEventListener('visibilitychange', onVisibility);
       claw.dispose();
       winty?.dispose();
+      pets.dispose();
       W.dispose();
       gfx.dispose();
       music.dispose();

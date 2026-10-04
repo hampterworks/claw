@@ -30,6 +30,9 @@ export const CHALLENGES = [
   { id: 'winty', name: 'Just say no: outrun Winty in the park' },
   { id: 'fishing', name: "Gone fishin': catch 5 things off the dock", goal: 5 },
   { id: 'golden', name: 'Reel in the legendary Golden Glorpfish' },
+  { id: 'pet', name: 'Adopt a pet at the Glorp Casino' },
+  { id: 'derby', name: 'Win a bet at the Pet Derby' },
+  { id: 'plinko', name: 'Hit a 9x edge on Plinko Paws' },
 ];
 
 export const MUTATORS = [

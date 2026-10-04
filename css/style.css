@@ -1060,6 +1060,113 @@ footer {
   outline-offset: 2px;
 }
 
+/* pets */
+.pet-icon {
+  width: 56px;
+  height: 56px;
+  background: url(../assets/sim-pets.png) 0 0 / 2400% 100% no-repeat;
+  image-rendering: auto;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  color: #888;
+  font-size: 28px;
+}
+.pet-icon.glorp {
+  filter: sepia(1) saturate(5) hue-rotate(55deg) brightness(1.05);
+}
+.pet-icon.locked {
+  background: #333;
+  border-radius: 50%;
+  border: 3px solid #111;
+  width: 50px;
+  height: 50px;
+}
+.pet-icon.none {
+  background: none;
+  font-size: 30px;
+}
+.wardrobe-head {
+  font-family: var(--display);
+  letter-spacing: 1px;
+  color: var(--yellow);
+  margin: 14px 0 0;
+}
+.wheel-canvas,
+.plinko-canvas {
+  display: block;
+  margin: 8px auto;
+  max-width: 100%;
+}
+.plinko-canvas {
+  border: 3px solid #111;
+  border-radius: 12px;
+}
+.derby-track {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+.derby-lane {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 58px;
+  padding: 0;
+  border: 2px solid #2b1650;
+  border-radius: 10px;
+  background: repeating-linear-gradient(90deg, #3f8f3a 0 28px, #4ca345 28px 56px);
+  cursor: pointer;
+  overflow: hidden;
+  color: #fff;
+  font: inherit;
+}
+.derby-lane.picked {
+  border-color: var(--yellow);
+  box-shadow: 0 0 10px var(--yellow);
+}
+.derby-lane.won {
+  border-color: var(--green);
+  box-shadow: 0 0 14px var(--green);
+}
+.derby-name {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+  z-index: 1;
+}
+.derby-odds {
+  position: absolute;
+  right: 28px;
+  top: 2px;
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--yellow);
+  text-shadow: 0 1px 2px #000;
+  z-index: 1;
+}
+.derby-runner {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  transition: transform 0.06s;
+}
+.derby-runner.hop {
+  transform: translateY(-4px);
+}
+.derby-finish {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px;
+}
+
 /* ---------- fishing ---------- */
 .fish-canvas {
   display: block;
@@ -1084,6 +1191,38 @@ footer {
 }
 .fish-bucket .btn:disabled {
   opacity: 0.5;
+}
+.tackle-head {
+  font-family: var(--display);
+  letter-spacing: 1px;
+  color: var(--yellow);
+  margin-top: 10px;
+}
+.tackle-shop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tackle-shop .tackle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  line-height: 1.15;
+}
+.tackle-shop .tackle small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.tackle-shop .pips {
+  color: #2f9e44;
+  letter-spacing: 2px;
+  font-size: 12px;
+}
+.tackle-shop .tackle.maxed {
+  opacity: 0.6;
 }
 .fishdex {
   display: grid;

@@ -312,7 +312,90 @@ export function buildDistricts(ctx) {
     scene.add(vend);
     staticBox(vend.position.x, 1.15, vend.position.z, 0.8, 1.15, 0.5);
     deco('k_cardboardBoxClosed', vend.position.x, 2.3, vend.position.z, 0.3, 0.8);
-    out.casino = { slots: slot.position.clone(), crate: vend.position.clone() };
+    // more machines on both flanks of the building
+    function cabinet(lines, body, border, colors, x, z, rotY, w = 1.4, h = 2.2) {
+      const g = new THREE.Group();
+      const cb = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.9), new THREE.MeshStandardMaterial({ color: body, metalness: 0.35, roughness: 0.45 }));
+      cb.position.y = h / 2;
+      const tex = signTexture(lines, { w: 256, h: 256, size: 64, bg: '#12041f', border, colors });
+      disposables.push(tex);
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.3, w - 0.3), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.4, 1.4, 1.4) }));
+      sc.position.set(0, h * 0.62, 0.46);
+      g.add(cb, sc);
+      g.traverse((o) => (o.castShadow = true));
+      g.position.set(x, 0, z);
+      g.rotation.y = rotY;
+      scene.add(g);
+      const c = Math.abs(Math.cos(rotY));
+      staticBox(x, h / 2, z, c > 0.5 ? w / 2 : 0.45, h / 2, c > 0.5 ? 0.45 : w / 2);
+      return g;
+    }
+    // Pet Crate vending machine (east of the door)
+    const petVend = cabinet(['🐾', 'PET', 'CRATES'], '#1f7a6a', '#ff7bf2', ['#fff', '#7CFF4F', '#ff7bf2'], K.x + 7.4, front - 1.0, Math.PI, 1.6, 2.3);
+    deco('k_cardboardBoxOpen', petVend.position.x, 2.3, petVend.position.z, 0.6, 0.8);
+    // Plinko cabinet (west side) and the Pet Derby screen (east side)
+    const plinko = cabinet(['🧶', 'PLINKO', 'PAWS'], '#c25cff', '#ffd23f', ['#fff', '#ffd23f', '#7CFF4F'], K.x - 7.1, K.z + 1.2, -Math.PI / 2);
+    const derby = cabinet(['🏁', 'PET', 'DERBY'], '#2a6fdb', '#7CFF4F', ['#fff', '#7CFF4F', '#ffd23f'], K.x + 7.1, K.z + 1.2, Math.PI / 2, 1.8, 2.4);
+    // Wheel of Glorp: a big spinning prize wheel on a stand (west of the door)
+    const wheelPos = new THREE.Vector3(K.x - 7.6, 0, front - 1.0);
+    {
+      const cvs = document.createElement('canvas');
+      cvs.width = cvs.height = 256;
+      const g2 = cvs.getContext('2d');
+      const cols = ['#c0182f', '#2a6fdb', '#ff7bf2', '#2f9e44', '#6b4226', '#8a3cff', '#4fd8ff', '#ff9a3c', '#c0182f', '#2f9e44', '#2a6fdb', '#ffb000'];
+      const seg = (Math.PI * 2) / cols.length;
+      cols.forEach((c, i) => {
+        g2.beginPath();
+        g2.moveTo(128, 128);
+        g2.arc(128, 128, 126, i * seg, (i + 1) * seg);
+        g2.closePath();
+        g2.fillStyle = c;
+        g2.fill();
+        g2.strokeStyle = '#111';
+        g2.lineWidth = 3;
+        g2.stroke();
+      });
+      g2.beginPath();
+      g2.arc(128, 128, 26, 0, Math.PI * 2);
+      g2.fillStyle = '#ffd23f';
+      g2.fill();
+      const wtex = new THREE.CanvasTexture(cvs);
+      wtex.colorSpace = THREE.SRGBColorSpace;
+      disposables.push(wtex);
+      const wheel = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshBasicMaterial({ map: wtex, color: new THREE.Color(1.25, 1.25, 1.25) }));
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(1.32, 0.08, 8, 40), new THREE.MeshStandardMaterial({ color: '#ffd23f', metalness: 0.7, roughness: 0.3 }));
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 0.3), new THREE.MeshStandardMaterial({ color: '#2a0b4a' }));
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.9), new THREE.MeshStandardMaterial({ color: '#2a0b4a' }));
+      const tick = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 4), new THREE.MeshStandardMaterial({ color: '#7CFF4F', emissive: '#2a8a1a' }));
+      const g = new THREE.Group();
+      stand.position.y = 0.8;
+      base.position.y = 0.125;
+      wheel.position.set(0, 2.9, -0.2);
+      rim.position.copy(wheel.position);
+      tick.position.set(0, 4.35, -0.2);
+      tick.rotation.z = Math.PI;
+      wheel.rotation.y = rim.rotation.y = Math.PI;
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.6, 10), stand.material);
+      hub.rotation.x = Math.PI / 2;
+      hub.position.set(0, 2.9, 0);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.4, 0.2), stand.material);
+      arm.position.set(0, 2.2, 0);
+      g.add(stand, base, wheel, rim, tick, hub, arm);
+      g.traverse((o) => (o.castShadow = true));
+      g.position.copy(wheelPos);
+      scene.add(g);
+      staticBox(wheelPos.x, 1.4, wheelPos.z, 0.8, 1.4, 0.45);
+      animated.push((dt, t) => (wheel.rotation.z = t * 0.6));
+    }
+    out.casino = {
+      slots: slot.position.clone(),
+      crate: vend.position.clone(),
+      petcrate: petVend.position.clone(),
+      wheel: wheelPos.clone(),
+      plinko: plinko.position.clone(),
+      derby: derby.position.clone(),
+    };
+    clear.push([K.x - 8, K.z, 3], [K.x + 8, K.z, 3]);
     if (textures.matt) {
       npc(textures.matt, K.x, 0, front - 1.6, { name: 'MATT (OWNER)', line: 'Welcome to my casino. The house always wins. The house is me.', quests: [], size: 1.8 });
     }
