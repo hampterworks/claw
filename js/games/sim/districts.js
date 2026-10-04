@@ -73,7 +73,8 @@ export function buildDistricts(ctx) {
 
   // ---------- Glorpville: road + lamps ----------
   solidBox(0, 0.015, -52, 170, 0.03, 8, '#3b3f4a', { shadow: false, collide: false });
-  solidBox(0, 0.02, -52, 170, 0.02, 0.25, '#ffe14d', { shadow: false, collide: false });
+  // centre line sits 2 cm above the asphalt (same height = z-fighting flicker)
+  solidBox(0, 0.04, -52, 170, 0.02, 0.25, '#ffe14d', { shadow: false, collide: false });
   solidBox(12, 0.015, -42, 6, 0.03, 12, '#3b3f4a', { shadow: false, collide: false });
   {
     const N = 24;
