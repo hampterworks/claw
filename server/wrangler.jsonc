@@ -1,0 +1,15 @@
+// Claw Simulator multiplayer relay: one shared Ohio in one Durable Object.
+// Deployed by .github/workflows/deploy-worker.yml. Local: `npx wrangler dev` (ws://localhost:8787/ws).
+{
+  "name": "claw-ohio",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "durable_objects": {
+    "bindings": [{ "name": "OHIO", "class_name": "Ohio" }]
+  },
+  // SQLite-backed Durable Objects work on the Workers Free plan
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Ohio"] }],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://hampterworks.github.io,http://localhost,http://127.0.0.1"
+  }
+}

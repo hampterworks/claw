@@ -19,6 +19,10 @@ import { createWinty } from './winty.js';
 import { createFishing } from './fishing.js';
 import { createPetCompanion, petById, PET_BONUS } from './pets.js';
 import { createVash, buildVash } from './vash.js';
+import { mpUrl } from './net-config.js';
+import { createNet } from './net.js';
+import { createPlayers, createMpUi, FLAG } from './players.js';
+import { createPropSync } from './props-sync.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -159,6 +163,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   for (const p of W.props) {
     const t = p.body.translation();
     p.spawn.set(t.x, t.y, t.z);
+    const r = p.body.rotation();
+    p.spawnQ = { x: r.x, y: r.y, z: r.z, w: r.w };
     p.elevated = t.y - p.baseOff > 0.3 && p.kind !== 'golf';
     p.body.sleep();
   }
@@ -204,6 +210,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     wallet.equip(id);
     claw.setSkin(skinById(id));
     refreshFace();
+    net?.send({ t: 'look', skin: id, pet: wallet.pet });
   }
   // small studio environment so Gold / Chrome skins have something to reflect
   {
@@ -218,13 +225,25 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   function equipPet(id) {
     wallet.equipPet(id);
     pets.set(id);
+    net?.send({ t: 'look', skin: wallet.equipped, pet: id });
     const pet = petById(id);
     if (pet) {
       hud.popup(`${pet.name.toUpperCase()} JOINED THE SQUAD`, '#7CFF4F');
       pets.celebrate(3);
     }
   }
-  const casino = createCasino({ wallet, sfx, hud, ch, onEquip: equipSkin, onPet: equipPet, onBigWin: () => pets.celebrate(5) });
+  const casino = createCasino({
+    wallet,
+    sfx,
+    hud,
+    ch,
+    onEquip: equipSkin,
+    onPet: equipPet,
+    onBigWin: () => {
+      pets.celebrate(5);
+      net?.send({ t: 'fx', text: 'hit it big at the Glorp Casino 🎰' });
+    },
+  });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
   // Lyonia (Vash), next to Matt, and his gold statue in the secret shrine
   const vash = createVash({ scene, world, RAPIER, gltf: vashGltf, hud, sfx, ch, claw, home: S.districts.vashHome });
@@ -239,6 +258,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   function retireVashSword() {
     const pr = S.districts.vashSword;
     if (!pr || pr.gone) return;
+    if (net?.connected) {
+      // shared world: Vash keeps a copy, the real one goes back up for the next player
+      if (st.held === pr) st.held = null;
+      setTimeout(() => propSync.reset(pr), 4000);
+      return;
+    }
     pr.gone = true;
     pr.mesh.visible = false;
     pr.body.setEnabled(false);
@@ -311,7 +336,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   music.setEnabled(read('simmusic', true));
   hud.setMusic(music.enabled);
-  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
+  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled), onChat: () => mpUi?.openChat() });
 
   ch.state.babies.forEach((i) => S.babies[i] && (S.babies[i].visible = false));
   S.districts.reset(ch);
@@ -397,9 +422,23 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const hits = [];
     world.intersectionsWithShape(center, ident, ballShape, (col) => {
       const b = col.parent();
-      if (b && b.handle !== claw.body.handle && b.isDynamic()) hits.push(b);
+      if (!b || b.handle === claw.body.handle) return true;
+      const pr = propByHandle.get(b.handle);
+      if (b.isDynamic()) hits.push(b);
+      else if (pr && propSync?.isFollowed(pr)) {
+        // someone else is moving it: take it over and bonk it anyway
+        propSync.claimProp(pr);
+        hits.push(b);
+      }
       return true;
     });
+    // bonk other players' Claws (they get knocked back on their own screen)
+    if (players) {
+      for (const r of players.near(center, 0.9 * k)) {
+        net.send({ t: 'hit', to: r.id, d: [fwd.x * 9 * k, 6 * k, fwd.z * 9 * k] });
+        ch.chaos(25, `BONKED ${r.name.toUpperCase()}`, '#ff7bf2');
+      }
+    }
     if (mut.popcat) sfx.pop();
     else sfx.stoke();
     for (const b of hits) {
@@ -445,6 +484,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       const m = b.mass();
       claw.forward(fwd);
       b.applyImpulse({ x: fwd.x * 6 * m, y: 3 * m, z: fwd.z * 6 * m }, true);
+      propSync?.hold(st.held, false);
       st.held = null;
       tongue.visible = false;
       sfx.flap();
@@ -471,6 +511,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       return;
     }
     st.held = best;
+    propSync?.hold(best, true);
     best.body.wakeUp();
     sfx.glorp();
     ch.chaos(5, 'LICKED', '#ff8fb1');
@@ -479,6 +520,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   function holdSpring(dt) {
     const pr = st.held;
     if (!pr) return;
+    if (propSync?.isFollowed(pr)) {
+      // someone else grabbed it first
+      st.held = null;
+      tongue.visible = false;
+      return;
+    }
     const k = claw.st.scaleK;
     const p = claw.position();
     claw.forward(fwd);
@@ -491,6 +538,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const m = b.mass();
     const d = Math.hypot(tx - t.x, ty - t.y, tz - t.z);
     if (d > 4 * k) {
+      propSync?.hold(pr, false);
       st.held = null;
       tongue.visible = false;
       hud.popup('IT SLIPPED', '#ff8fb1');
@@ -530,7 +578,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
     // knocked props
     for (const pr of W.props) {
-      if (pr.body.isSleeping()) continue;
+      if (pr.body.isSleeping() || !mine(pr)) continue;
       const tr = pr.body.translation();
       if (!pr.moved && Math.hypot(tr.x - pr.spawn.x, tr.z - pr.spawn.z) > 0.7) {
         pr.moved = true;
@@ -554,6 +602,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       sfx.boom();
       sfx.meow(700);
       bump('boiled');
+      net?.send({ t: 'fx', text: 'got boiled 🍲' });
       ch.chaos(200, 'SELF-BOILED', '#ff9a3c');
       ch.complete('boil');
       hud.hint('Claw has been boiled. He seems fine.', 2500);
@@ -676,8 +725,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     if (p.y < -6) claw.teleport(spawn.x, 2, spawn.z);
 
-    S.districts.check(dt, t, { claw, ch, hud, sfx });
-    S.town.check(dt, t, { claw, ch, hud, sfx });
+    const reset = (pr, delay = 3000) => setTimeout(() => (propSync ? propSync.reset(pr) : null), delay);
+    S.districts.check(dt, t, { claw, ch, hud, sfx, mine, reset, online: !!net?.connected });
+    S.town.check(dt, t, { claw, ch, hud, sfx, mine, reset, online: !!net?.connected });
     updateMachines();
     winty?.update(dt, t, claw);
     pets.update(dt);
@@ -692,6 +742,72 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         sfx.oiia();
       }
     }
+  }
+
+  // ---------- multiplayer (shared Ohio via the claw-ohio Worker) ----------
+  const url = mpUrl();
+  var net = url ? createNet(url) : null; // var: equipSkin/equipPet above may run first
+  let players = null;
+  let propSync = null;
+  let mpUi = null;
+  let myName = read('simname', '') || `Glorp${Math.floor(100 + Math.random() * 900)}`;
+  if (net) {
+    propSync = createPropSync({ RAPIER, world, W, net });
+    mpUi = createMpUi(wrap, {
+      touch,
+      onSend: (text) => net.send({ t: 'chat', text }),
+      onOpenChange: () => {},
+    });
+    players = createPlayers({
+      RAPIER,
+      world,
+      scene,
+      net,
+      petsGltf,
+      envMap: claw.envMap,
+      faceTex: face,
+      mattTex: matt,
+      onFeed: (text, color) => mpUi.feed(text, color),
+      onHit: (d, name) => {
+        const v = claw.body.linvel();
+        claw.body.setLinvel({ x: v.x + d[0], y: Math.max(v.y, 0) + d[1], z: v.z + d[2] }, true);
+        claw.lungeNow();
+        sfx.boing();
+        hud.popup(`BONKED BY ${name.toUpperCase()}`, '#ff7bf2');
+      },
+    });
+    net.on('status', (up) => {
+      mpUi.setStatus(up, players.count);
+      mpUi.feed(up ? 'Connected to the shared Ohio 🌐' : 'Lost connection, retrying…', up ? '#7CFF4F' : '#ff4f6d');
+    });
+    net.on('full', () => mpUi.feed('Ohio is full right now (12 Claws). Playing solo.', '#ff4f6d'));
+    ch.onComplete((id) => {
+      const c = ch.CHALLENGES.find((x) => x.id === id);
+      if (c) net.send({ t: 'fx', text: `finished "${c.name}" 🏆` });
+    });
+    mpUi.setStatus(false, 0);
+  }
+  const mine = (pr) => !propSync || propSync.mine(pr);
+  let netT = 0;
+  function sendState(dt) {
+    netT -= dt;
+    if (!net?.connected || netT > 0) return;
+    netT = 0.1;
+    const p = claw.position();
+    const v = claw.body.linvel();
+    const r = claw.body.rotation();
+    const c = claw.st;
+    const flags =
+      (c.grounded ? FLAG.grounded : 0) |
+      (c.flopping ? FLAG.flopping : 0) |
+      (c.zooming ? FLAG.zooming : 0) |
+      (mut.oiia ? FLAG.oiia : 0) |
+      (mut.cursed ? FLAG.cursed : 0) |
+      (mut.matt ? FLAG.matt : 0);
+    const R2 = (x) => Math.round(x * 100) / 100;
+    const R3 = (x) => Math.round(x * 1000) / 1000;
+    net.send({ t: 'p', d: [R2(p.x), R2(p.y), R2(p.z), R3(c.yaw), R2(v.x), R2(v.y), R2(v.z), R3(r.x), R3(r.y), R3(r.z), R3(r.w), R2(c.scaleK), flags] });
+    mpUi.setStatus(true, players.count);
   }
 
   if (ch.isDone('vashshelf')) retireVashSword();
@@ -792,6 +908,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       }
       holdSpring(dt);
       st.bonkCd -= dt;
+      propSync?.update(dt);
+      players?.update();
       acc += dt;
       let steps = 0;
       while (acc >= 1 / 60 && steps < 4) {
@@ -800,7 +918,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         steps++;
       }
       W.syncProps();
+      propSync?.syncFollowed();
       claw.sync(dt, t, mut);
+      players?.sync(dt, t);
+      sendState(dt);
       drawTongue();
       checks(dt, t);
       ch.update(dt);
@@ -846,6 +967,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   function menuContent() {
     const box = document.createElement('div');
     box.className = 'sim-menu';
+    if (net) {
+      const oh = document.createElement('h3');
+      const others = players ? [...players.remotes.values()].map((r) => r.name) : [];
+      oh.textContent = net.connected ? `In Ohio right now (${others.length + 1})` : 'Shared Ohio: offline (retrying)';
+      box.appendChild(oh);
+      if (net.connected) {
+        const p = document.createElement('p');
+        p.className = 'mp-names';
+        p.textContent = [`${myName} (you)`, ...others].join(' · ');
+        box.appendChild(p);
+      }
+    }
     const h = document.createElement('h3');
     h.textContent = `Claw-lenges ${ch.count()}/${ch.CHALLENGES.length}`;
     box.appendChild(h);
@@ -1033,12 +1166,20 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, fishing, casino, pets, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
 
-  const start = () => {
+  const start = (name) => {
+    if (typeof name === 'string' && name.trim()) {
+      myName = name.trim().slice(0, 20);
+      write('simname', myName);
+    }
+    if (net && !st.netStarted) {
+      st.netStarted = true;
+      net.start(() => ({ name: myName, skin: wallet.equipped, pet: wallet.pet }));
+    }
     hideOverlay(wrap);
     playing = true;
     music.start();
@@ -1054,8 +1195,15 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   return {
     start,
     touch,
+    mp: !!net,
+    get name() {
+      return myName;
+    },
     dispose() {
       alive = false;
+      net?.close();
+      players?.dispose();
+      mpUi?.dispose();
       cancelAnimationFrame(raf);
       ch.saveBest();
       controls.destroy();

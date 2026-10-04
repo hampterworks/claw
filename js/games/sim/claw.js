@@ -105,7 +105,14 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   return { wrapper, root, mixer, actions, head, height, scale, mesh: merged, material, recolor };
 }
 
-export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
+// Collision groups ((membership << 16) | filter). Remote Claws are in group 4 and props don't
+// collide with them (each prop is simulated by the player who knocked it), but the local
+// Claw and the world still do.
+export const GROUP_REMOTE = 0x0004ffff;
+export const GROUP_PROP = 0x0001fffb;
+
+// remote: a puppet for another player, driven by setRemote() instead of control().
+export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote = false }) {
   const R = 0.34;
   const cat = makeCat(gltf, {
     length: 1.0,
@@ -148,13 +155,15 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
   face.visible = false;
   scene.add(face);
 
-  const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-    .setTranslation(spawn.x, spawn.y, spawn.z)
-    .lockRotations()
-    .setCcdEnabled(true)
-    .setLinearDamping(0.05);
+  const bodyDesc = remote
+    ? RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(spawn.x, spawn.y, spawn.z)
+    : RAPIER.RigidBodyDesc.dynamic().setTranslation(spawn.x, spawn.y, spawn.z).lockRotations().setCcdEnabled(true).setLinearDamping(0.05);
   const body = world.createRigidBody(bodyDesc);
-  let collider = world.createCollider(RAPIER.ColliderDesc.ball(R).setFriction(0).setRestitution(0).setDensity(3), body);
+  const ballDesc = (r) => {
+    const d = RAPIER.ColliderDesc.ball(r).setFriction(0).setRestitution(0).setDensity(3);
+    return remote ? d.setCollisionGroups(GROUP_REMOTE) : d;
+  };
+  let collider = world.createCollider(ballDesc(R), body);
 
   const st = {
     yaw: 0,
@@ -170,6 +179,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
     oiia: 0,
     speed: 0,
     zooming: false,
+    rv: { x: 0, y: 0, z: 0 }, // remote puppets: velocity from the network
   };
   const ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
 
@@ -228,10 +238,9 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
       face.scale.setScalar(k);
       world.removeCollider(collider, false);
       collider = world.createCollider(
-        RAPIER.ColliderDesc.ball(R * k)
+        ballDesc(R * k)
           .setFriction(st.flopping ? 0.9 : 0)
-          .setRestitution(st.flopping ? 0.35 : 0)
-          .setDensity(3),
+          .setRestitution(st.flopping ? 0.35 : 0),
         body
       );
       const p = body.translation();
@@ -343,10 +352,25 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
       st.speed = Math.hypot(v.x, v.z);
     },
 
+    // Remote puppets: place the body where the network says (interpolated by the caller).
+    setRemote(r) {
+      body.setNextKinematicTranslation({ x: r.x, y: r.y, z: r.z });
+      if (r.flopping) body.setNextKinematicRotation(r.q);
+      else body.setNextKinematicRotation({ x: 0, y: 0, z: 0, w: 1 });
+      st.yaw = r.yaw;
+      st.rv.x = r.vx;
+      st.rv.y = r.vy;
+      st.rv.z = r.vz;
+      st.grounded = r.grounded;
+      st.flopping = r.flopping;
+      st.zooming = r.zooming;
+      if (Math.abs(r.scale - st.scaleK) > 0.01) claw.setScale(r.scale);
+    },
+
     // After the physics step: move the model to match.
     sync(dt, t, mut) {
       const p = body.translation();
-      const v = body.linvel();
+      const v = remote ? st.rv : body.linvel();
       pivot.position.set(p.x, p.y, p.z);
       if (st.flopping) {
         const r = body.rotation();
@@ -419,6 +443,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
     },
     dispose() {
       scene.remove(pivot, antenna, face);
+      if (remote) world.removeRigidBody(body);
     },
   };
   return claw;

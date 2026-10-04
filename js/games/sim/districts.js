@@ -767,7 +767,9 @@ export function buildDistricts(ctx) {
   const inRect = (p, r) => p.x > r.x0 && p.x < r.x1 && p.z > r.z0 && p.z < r.z1;
   const inLake = (p) => ((p.x - LAKE.x) / LAKE_RX) ** 2 + ((p.z - LAKE.z) / LAKE_RZ) ** 2 < 1;
 
-  out.check = (dt, t, { claw, ch, hud, sfx }) => {
+  // mine(prop): may this player score it (in multiplayer, only the player moving it).
+  // reset(prop): put a delivered quest item back for the next player (multiplayer only).
+  out.check = (dt, t, { claw, ch, hud, sfx, mine = () => true, reset = () => {}, online = false }) => {
     const p = claw.position();
     const v = claw.body.linvel();
 
@@ -796,25 +798,27 @@ export function buildDistricts(ctx) {
 
     // deliveries: fish to the café, headphones to Matt
     for (const pr of ctx.props) {
-      if (pr.kind === 'fish' && !pr.delivered && inRect(pr.body.translation(), out.cafeRect)) {
+      if (pr.kind === 'fish' && !pr.delivered && mine(pr) && inRect(pr.body.translation(), out.cafeRect)) {
         pr.delivered = true;
+        if (online) reset(pr);
         sfx.meow(820);
         ch.chaos(250, 'FISH DELIVERED', '#5ff2ff');
         ch.complete('fish');
       }
     }
-    if (out.matt && !ch.isDone('headphones')) {
+    if (out.matt && !ch.isDone('headphones') && mine(out.headphones)) {
       const h = out.headphones.body.translation();
       if (Math.hypot(h.x - out.matt.pos.x, h.z - out.matt.pos.z) < 3) {
         sfx.meow(950);
         hud.banner('MATT', 'MY HEADPHONES! Thank you Claw. You are now an honorary Hampter.');
         ch.chaos(300, 'MATT IS HAPPY', '#ffe14d');
         ch.complete('headphones');
+        if (online) reset(out.headphones);
       }
     }
 
     // Vash's sword back to Vash
-    if (out.vashSword && !out.vashSword.gone && !ch.isDone('vashshelf')) {
+    if (out.vashSword && !out.vashSword.gone && !ch.isDone('vashshelf') && mine(out.vashSword)) {
       const s = out.vashSword.body.translation();
       if (Math.hypot(s.x - out.vashHome.x, s.z - out.vashHome.z) < 2.6) {
         sfx.meow(1100);

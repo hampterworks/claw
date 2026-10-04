@@ -40,9 +40,9 @@ export function createWinty({ scene, texture, hud, sfx, ch }) {
   };
   const pos = sprite.position;
   const dir = new THREE.Vector3();
-
-  function say(text) {
-    hud.popup(`WINTY: ${text}`, '#ff6a8a');
+  // her lines go in the subtitle bar at the bottom, so HUD banners never cover them
+  function say(text, seconds = 6) {
+    hud.say('WINTY', text, { color: '#ff6a8a', ms: seconds * 1000 });
   }
 
   function nextLine() {
@@ -68,7 +68,7 @@ export function createWinty({ scene, texture, hud, sfx, ch }) {
           st.mode = 'chase';
           st.t = 0;
           st.lineT = 2.2;
-          hud.banner('MS WINTER (WINTY)', PITCH[0]);
+          say(PITCH[0]);
           sfx.mrrp();
         }
       } else if (st.mode === 'chase') {
@@ -96,14 +96,14 @@ export function createWinty({ scene, texture, hud, sfx, ch }) {
           // outran her
           st.mode = 'home';
           st.cd = 25;
-          say('WAIT. come back!!');
+          say('WAIT. come back!!', 3);
           sfx.ding();
           if (!ch.isDone('winty')) ch.chaos(250, 'JUST SAID NO', '#7CFF4F');
           ch.complete('winty');
         } else if (st.t > CHASE_TIME) {
           st.mode = 'home';
           st.cd = 25;
-          say(GIVE_UP[Math.floor(Math.random() * GIVE_UP.length)]);
+          say(GIVE_UP[Math.floor(Math.random() * GIVE_UP.length)], 3.5);
         }
       } else if (st.mode === 'home') {
         const dh = Math.hypot(WINTY_HOME.x - pos.x, WINTY_HOME.z - pos.z);

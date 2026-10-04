@@ -641,7 +641,7 @@ footer {
 }
 .sim-popups {
   position: absolute;
-  top: 22%;
+  top: 34%; /* below the banner so banners never cover popups */
   left: 0;
   right: 0;
   display: flex;
@@ -730,6 +730,38 @@ footer {
   transition: opacity 0.3s;
   max-width: 90%;
   text-align: center;
+}
+.sim-say {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translate(-50%, 10px);
+  max-width: min(560px, 90%);
+  padding: 8px 16px;
+  border-radius: 14px;
+  border: 3px solid #111;
+  background: rgba(18, 4, 31, 0.88);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 7;
+}
+.sim-say.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.sim-say b {
+  font-family: var(--display);
+  letter-spacing: 1px;
+  margin-right: 8px;
+  font-weight: 400;
+}
+.sim-wrap.touch .sim-say {
+  bottom: 250px;
 }
 .sim-hint.show {
   opacity: 1;
@@ -1406,4 +1438,68 @@ footer {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- multiplayer ---------- */
+.sim-chip.mp-online.off {
+  opacity: 0.6;
+}
+.mp-feed {
+  position: absolute;
+  left: 12px;
+  bottom: 70px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: min(420px, 70%);
+  pointer-events: none;
+}
+.mp-feed-row {
+  background: rgba(18, 4, 31, 0.72);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+  transition: opacity 1s;
+  overflow-wrap: anywhere;
+}
+.mp-feed-row.fade {
+  opacity: 0;
+}
+.sim-wrap.touch .mp-feed {
+  bottom: auto;
+  top: 150px;
+}
+.mp-chat {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%);
+  z-index: 8;
+  width: min(460px, 90%);
+}
+.mp-chat input,
+.mp-name {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 3px solid var(--green);
+  background: #12041f;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+}
+.mp-name {
+  max-width: 260px;
+  margin: 4px auto 10px;
+  display: block;
+  text-align: center;
+}
+.mp-names {
+  font-size: 14px;
+  color: var(--green);
+  margin-top: -4px;
 }

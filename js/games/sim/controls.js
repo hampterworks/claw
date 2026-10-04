@@ -5,7 +5,7 @@ export function isTouchDevice() {
   return window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 }
 
-export function createControls(wrap, canvas, { touch, onMenu, onMusic }) {
+export function createControls(wrap, canvas, { touch, onMenu, onMusic, onChat }) {
   const keys = new Set();
   const s = {
     lookX: 0,
@@ -28,6 +28,13 @@ export function createControls(wrap, canvas, { touch, onMenu, onMusic }) {
 
   function onKeyDown(e) {
     if (!enabled) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if ((e.code === 'KeyT' || e.code === 'Enter') && onChat && !e.repeat) {
+      e.preventDefault();
+      keys.clear();
+      onChat();
+      return;
+    }
     if (e.code === 'KeyP' || e.code === 'Tab') {
       e.preventDefault();
       onMenu();

@@ -38,6 +38,33 @@ python3 -m http.server 8000
 
 All paths are relative, so it works under the `/claw/` sub-path. `.nojekyll` stops GitHub from running Jekyll on it.
 
+## Multiplayer (shared Ohio)
+
+Claw Simulator can put everyone in the same world: you see each other's Claws (names, skins,
+pets, chat), knocked-over props are shared, and you can bonk each other. The site stays on
+GitHub Pages; a tiny relay runs on Cloudflare Workers' free plan (`server/`, one Durable Object).
+Quests, coins, the casino and fishing stay per player.
+
+**One-time setup**
+
+1. Make a free [Cloudflare](https://dash.cloudflare.com/sign-up) account. Copy your **Account ID**
+   (Workers & Pages → Overview, right side).
+2. My Profile → API Tokens → Create Token → template **Edit Cloudflare Workers** → create, copy it.
+3. GitHub repo → Settings → Secrets and variables → Actions → add
+   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+4. Actions → **Deploy multiplayer server** → Run workflow (it also runs on any push to `server/`).
+   The log ends with the URL, like `https://claw-ohio.<you>.workers.dev`.
+5. Put it in `js/games/sim/net-config.js`: `export const MP_URL = 'wss://claw-ohio.<you>.workers.dev/ws';`
+   then run `node tools/stamp.mjs` and push.
+
+If you ever move the site off `hampterworks.github.io`, add the new origin to `ALLOWED_ORIGINS`
+in `server/wrangler.jsonc`.
+
+**Local testing:** `cd server && npx wrangler dev` (runs the Worker + Durable Object locally), serve the
+site, and open `glorp/?mp=ws://localhost:8787/ws` in two browser windows. `?mp=off` forces single-player.
+
+**In game:** T or Enter to chat (💬 on phones), F near another Claw to bonk them.
+
 ## Project layout
 
 ```

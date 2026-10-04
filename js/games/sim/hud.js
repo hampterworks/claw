@@ -16,6 +16,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
     <div class="sim-timer"></div>
     <div class="sim-energy"><span></span><i>3AM ENERGY</i></div>
     <div class="sim-hint"></div>
+    <div class="sim-say"><b></b><span></span></div>
   `;
   wrap.appendChild(el);
   const $ = (s) => el.querySelector(s);
@@ -49,6 +50,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
   const toMap = (v) => ((v + mapBounds) / (2 * mapBounds)) * 260;
 
   let bannerTimer = 0;
+  let sayTimer = 0;
   let hintTimer = 0;
   let shownScore = 0;
 
@@ -182,6 +184,16 @@ export function createHud(wrap, { onMenu, onMusic }) {
       clearTimeout(bannerTimer);
       bannerTimer = setTimeout(() => banner.classList.remove('show'), 3200);
     },
+    // NPC dialogue as a subtitle bar near the bottom, so banners never cover it
+    say(name, text, { color = '#ff6a8a', ms = 2600 } = {}) {
+      const box = $('.sim-say');
+      box.querySelector('b').textContent = name;
+      box.querySelector('b').style.color = color;
+      box.querySelector('span').textContent = text;
+      box.classList.add('show');
+      clearTimeout(sayTimer);
+      sayTimer = setTimeout(() => box.classList.remove('show'), ms);
+    },
     hint(text, ms = 4000) {
       hint.textContent = text;
       hint.classList.add('show');
@@ -189,6 +201,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
       hintTimer = setTimeout(() => hint.classList.remove('show'), ms);
     },
     destroy() {
+      clearTimeout(sayTimer);
       clearTimeout(bannerTimer);
       clearTimeout(hintTimer);
       el.remove();

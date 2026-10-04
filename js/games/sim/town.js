@@ -267,7 +267,7 @@ export function buildTown(ctx) {
 
   // ---------- quest logic ----------
   const st = { wishCd: 0 };
-  out.check = (dt, t, { claw, ch, hud, sfx }) => {
+  out.check = (dt, t, { claw, ch, hud, sfx, mine = () => true }) => {
     const p = claw.position();
     for (const n of out.npcs) {
       n.talkCd -= dt;
@@ -291,7 +291,7 @@ export function buildTown(ctx) {
     const g = out.golf;
     g.cd -= dt;
     const b = out.ball.body.translation();
-    if (g.cd <= 0 && Math.hypot(b.x - g.hole.x, b.z - g.hole.z) < 0.42 && b.y < 0.6) {
+    if (g.cd <= 0 && mine(out.ball) && Math.hypot(b.x - g.hole.x, b.z - g.hole.z) < 0.42 && b.y < 0.6) {
       g.cd = 2;
       sfx.ding();
       const strokes = Math.max(1, g.strokes);
@@ -301,7 +301,7 @@ export function buildTown(ctx) {
       g.strokes = 0;
       out.resetBall();
     }
-    if (b.y < -3 || Math.hypot(b.x - GOLF.x - 3, b.z - GOLF.z - 7) > 30) out.resetBall();
+    if (mine(out.ball) && (b.y < -3 || Math.hypot(b.x - GOLF.x - 3, b.z - GOLF.z - 7) > 30)) out.resetBall();
   };
   out.resetBall = () => {
     const s = out.golf.ballStart;

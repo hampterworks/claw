@@ -36,6 +36,16 @@ export function mount(el, { fullscreen = false } = {}) {
         return;
       }
       game = g;
+      // multiplayer: pick a name for the shared Ohio
+      let nameInput = null;
+      if (g.mp) {
+        nameInput = document.createElement('input');
+        nameInput.className = 'mp-name';
+        nameInput.maxLength = 20;
+        nameInput.value = g.name;
+        nameInput.setAttribute('aria-label', 'Your name in the shared Ohio');
+        nameInput.addEventListener('keydown', (e) => e.key === 'Enter' && g.start(nameInput.value));
+      }
       showOverlay(wrap, {
         title: 'CLAW SIMULATOR',
         img: 'assets/sim-dance.png',
@@ -45,8 +55,10 @@ export function mount(el, { fullscreen = false } = {}) {
             ? 'Left stick moves, drag to look. Buttons: JUMP (x2), BONK, LICK, FLOP, ZOOM.'
             : 'WASD move, mouse look. Space jump (x2), F bonk, E lick, R flop, Shift zoomies, P menu.',
           'Finish Claw-lenges to unlock mutators.',
+          ...(g.mp ? ['🌐 Shared Ohio: your friends play in the same world. T to chat. Your name:'] : []),
         ],
-        buttons: [{ label: 'START GLORPING', primary: true, onClick: g.start }],
+        extra: nameInput,
+        buttons: [{ label: 'START GLORPING', primary: true, onClick: () => g.start(nameInput?.value) }],
       });
     })
     .catch((err) => {
