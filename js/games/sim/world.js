@@ -6,6 +6,7 @@ import { memeStandeeTexture, signTexture, yarnTexture, newsTexture } from './tex
 import { soupMaterial } from './graphics.js';
 import { createBuilder } from './builder.js';
 import { buildDistricts } from './districts.js';
+import { buildTown } from './town.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
 export const PARK_POT = new THREE.Vector3(16, 0, 12);
@@ -564,10 +565,13 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   // ---------- the rest of Ohio (downtown, raceway, UFO, lake, cat tree) ----------
   const districts = buildDistricts({ B, RAPIER, world, scene, rand, animated, disposables, textures, props });
   special.districts = districts;
+  const town = buildTown({ B, RAPIER, world, scene, rand, animated, disposables });
+  special.town = town;
 
   // ---------- nature ----------
   const clear = [
     ...districts.clear,
+    ...town.clear,
     [HOUSE.x, HOUSE.z, 9.5], [PARK_POT.x, PARK_POT.z, 6], [TRAMP.x, TRAMP.z, 4], [STATUE.x, STATUE.z, 3.5],
     [TOWER.x, TOWER.z, 4.5], [STUDIO.x, STUDIO.z + 2, 8], [CORN.x, CORN.z, 8], [-28, -12, 3.5], [4, 4, 3], [18, 21, 3], [-6, 14, 3], [0, 0, 6],
   ];

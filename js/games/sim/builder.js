@@ -47,7 +47,14 @@ export function createBuilder({ RAPIER, world, scene, models }) {
       col.copy(mat.color);
       if (RECOLOR[mat.name]) col.set(RECOLOR[mat.name]);
       const colors = new Float32Array(pos.count * 3);
-      for (let i = 0; i < pos.count; i++) col.toArray(colors, i * 3);
+      const baked = src.getAttribute('color'); // Kenney atlas colours baked per vertex
+      for (let i = 0; i < pos.count; i++) {
+        if (baked) {
+          colors[i * 3] = baked.getX(i) * col.r;
+          colors[i * 3 + 1] = baked.getY(i) * col.g;
+          colors[i * 3 + 2] = baked.getZ(i) * col.b;
+        } else col.toArray(colors, i * 3);
+      }
       g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       parts.push(g);
     });
@@ -56,7 +63,7 @@ export function createBuilder({ RAPIER, world, scene, models }) {
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
     const size = geo.boundingBox.getSize(new THREE.Vector3());
-    t = { geo, size, mat: name.startsWith('n_') ? natureMat : furnitureMat };
+    t = { geo, size, box: geo.boundingBox, mat: name.startsWith('n_') ? natureMat : furnitureMat };
     templates.set(name, t);
     return t;
   }

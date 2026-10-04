@@ -23,6 +23,10 @@ export const CHALLENGES = [
   { id: 'swim', name: 'Cats hate water: fall in Lake Meowchigan' },
   { id: 'king', name: 'King of the Cat Tree (reach the crown)' },
   { id: 'gold', name: 'Collect all 8 golden yarn balls', goal: 8 },
+  { id: 'market', name: 'Meowtown market mayhem: knock 8 goods off the stalls', goal: 8 },
+  { id: 'windmill', name: 'Bonk the Meowtown windmill' },
+  { id: 'wish', name: 'Make a wish in the Meowtown fountain' },
+  { id: 'golf', name: 'Glorp Mini Golf: bonk the ball into the hole' },
 ];
 
 export const MUTATORS = [
@@ -31,8 +35,8 @@ export const MUTATORS = [
   { id: 'big', name: 'Big Claw', desc: '3x size', need: 6 },
   { id: 'oiia', name: 'OIIA Mode', desc: 'spin forever', need: 9 },
   { id: 'popcat', name: 'Popcat Mode', desc: 'every bonk pops', need: 12 },
-  { id: 'tiny', name: 'Tiny Claw', desc: 'smol', need: 15 },
-  { id: 'matt', name: 'Matt Mode', desc: 'Claw becomes Matt', need: 18 },
+  { id: 'tiny', name: 'Tiny Claw', desc: 'smol', need: 16 },
+  { id: 'matt', name: 'Matt Mode', desc: 'Claw becomes Matt', need: 20 },
 ];
 
 export function createChallenges(hud) {

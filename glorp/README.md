@@ -4,7 +4,11 @@ A 3D Goat-Simulator-style sandbox where you play Claw. It lives at **`/claw/glor
 deliberately not linked from the arcade menu, so it can be a surprise.
 
 You play Claw: knock things off tables, lick and fling stuff, flop like liquid, and boil yourself in the giant soup pot.
-10 Claw-lenges unlock mutators (Glorp Gravity, Cursed Face, Big Claw, OIIA Mode, Popcat Mode).
+The world is ~180 m across, with a minimap: the original living room/park/tower/studio/corn field, plus
+Glorpville downtown (Glorp Café, Glorp Towers + pool, Matt's House), the Zoomies Raceway, a UFO,
+Lake Meowchigan, the giant Cat Tree, medieval Meowtown with its windmill, and Glorp Mini Golf.
+24 Claw-lenges (NPCs with a "!" hand them out) unlock 7 mutators (Glorp Gravity, Cursed Face, Big Claw,
+OIIA Mode, Popcat Mode, Tiny Claw, Matt Mode).
 
 ## Controls
 

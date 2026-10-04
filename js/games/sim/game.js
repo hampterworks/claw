@@ -5,6 +5,7 @@ import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
 import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
 import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE } from './districts.js';
+import { MEOWTOWN, WINDMILL, GOLF } from './town.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
 import { createChallenges } from './challenges.js';
@@ -128,7 +129,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   for (const p of W.props) {
     const t = p.body.translation();
     p.spawn.set(t.x, t.y, t.z);
-    p.elevated = t.y - p.baseOff > 0.3;
+    p.elevated = t.y - p.baseOff > 0.3 && p.kind !== 'golf';
     p.body.sleep();
   }
   W.syncAll();
@@ -180,9 +181,13 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     { x: MATT_HOUSE.x, z: MATT_HOUSE.z, w: 7, d: 7, color: '#ffe14d', label: 'MATT' },
     { x: UFO.x, z: UFO.z, w: 9, d: 9, color: '#9dff6a', round: true, label: 'UFO' },
     { x: CAT_TREE.x, z: CAT_TREE.z, w: 7, d: 7, color: '#c98bdb', round: true, label: 'CAT TREE' },
+    { x: MEOWTOWN.x, z: MEOWTOWN.z, w: 30, d: 30, color: '#b9b2a6', label: 'MEOWTOWN' },
+    { x: WINDMILL.x, z: WINDMILL.z, w: 5, d: 5, color: '#cfc6b4', round: true },
+    { x: GOLF.x + 3, z: GOLF.z + 7, w: 9, d: 18, color: '#4fc46a', label: 'GOLF' },
   ]);
   const QUEST_SPOTS = {
     boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
+    market: MEOWTOWN, windmill: WINDMILL, wish: MEOWTOWN, golf: GOLF,
     mugs: CAFE, fish: LAKE, headphones: CAT_TREE, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
   };
   let mapT = 0;
@@ -214,6 +219,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     oiiaT: 0,
     lowFps: 0,
     saveT: 0,
+    trampT: 0,
   };
 
   const v3 = new THREE.Vector3();
@@ -247,6 +253,13 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     for (const b of hits) {
       const m = b.mass();
       b.wakeUp();
+      if (propByHandle.get(b.handle)?.kind === 'golf') {
+        // golf: a flat putt, and it counts as a stroke
+        b.applyImpulse({ x: fwd.x * 5 * m, y: 0, z: fwd.z * 5 * m }, true);
+        S.town.golf.strokes++;
+        hud.popup(`BONK ${S.town.golf.strokes}`, '#7CFF4F');
+        continue;
+      }
       b.applyImpulse({ x: fwd.x * 7 * m * k, y: 3.5 * m * k, z: fwd.z * 7 * m * k }, true);
       b.applyTorqueImpulse({ x: (Math.random() - 0.5) * m, y: (Math.random() - 0.5) * m, z: (Math.random() - 0.5) * m }, true);
       const pr = propByHandle.get(b.handle);
@@ -259,6 +272,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         else if (mut.popcat) ch.chaos(15, 'POP', '#ffe14d');
         else ch.chaos(10, 'BONK', '#5ff2ff');
       }
+    }
+    if (dist2(p, WINDMILL.x, WINDMILL.z) < 5 && p.y < 5) {
+      S.town.windmill.spin = 14;
+      sfx.boom();
+      if (!ch.isDone('windmill')) ch.chaos(150, 'WINDMILL GO BRRR', '#fff');
+      ch.complete('windmill');
     }
     if (dist2(p, STATUE.x, STATUE.z) < 2.9 && p.y < 4) {
       S.maxwell.spin = 30;
@@ -369,6 +388,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         ch.chaos(50, pick(KNOCK), '#ffe14d');
         ch.progress('knock');
         if (pr.kind === 'mug') ch.progress('mugs');
+        if (pr.kind === 'market') ch.progress('market');
       }
     }
 
@@ -403,8 +423,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     st.towerHere = onTower;
 
-    // higher than the tower
-    if (p.y > S.towerTop + 2) {
+    // higher than the tower (only counts when the trampoline launched you)
+    st.trampT -= dt;
+    if (p.y > S.towerTop + 2 && st.trampT > 0) {
       if (!ch.isDone('sky')) ch.chaos(300, 'SKY CLAW', '#5ff2ff');
       ch.complete('sky');
     }
@@ -501,6 +522,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (p.y < -6) claw.teleport(spawn.x, 2, spawn.z);
 
     S.districts.check(dt, t, { claw, ch, hud, sfx });
+    S.town.check(dt, t, { claw, ch, hud, sfx });
 
     // OIIA mode soundtrack
     if (mut.oiia) {
@@ -596,6 +618,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         const v = claw.body.linvel();
         claw.body.setLinvel({ x: v.x, y: 29 * Math.sqrt(claw.st.scaleK), z: v.z }, true);
         sfx.boing();
+        st.trampT = 4;
         S.trampMat.scale.y = 0.2;
         ch.chaos(20, 'BOING', '#5ff2ff');
       }
