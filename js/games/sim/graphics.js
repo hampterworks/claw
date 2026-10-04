@@ -94,6 +94,7 @@ export function applyRim(material, color = '#9dff6a', power = 2.5, intensity = 0
     );
   };
   material.customProgramCacheKey = () => 'rim' + color + power + intensity;
+  material.userData.rimColor = rimColor; // live-editable (skins tint the rim)
   material.needsUpdate = true;
 }
 

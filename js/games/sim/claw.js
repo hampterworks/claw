@@ -8,6 +8,9 @@ const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 const fwdV = new THREE.Vector3();
+const rainbowCol = new THREE.Color();
+const rainbowCol2 = new THREE.Color();
+const rimWhite = new THREE.Color('#ffffff');
 
 // Take a freshly loaded cat GLB (each cat gets its own load, skinned clones are
 // fiddly), recolour it, scale it to `length` metres, face +z, feet at y=0.
@@ -21,6 +24,9 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   const pieces = [];
   root.traverse((o) => o.isSkinnedMesh && pieces.push(o));
   const col = new THREE.Color();
+  // remember which part (by original material name) every vertex belongs to, for skins
+  const PARTS = ['Grey', 'White', 'Pink'];
+  const partList = [];
   const geos = pieces.map((m) => {
     const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
     const mat = Array.isArray(m.material) ? m.material[0] : m.material;
@@ -31,8 +37,11 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
     for (let i = 0; i < n; i++) col.toArray(c, i * 3);
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.deleteAttribute('normal');
+    const part = Math.max(0, PARTS.indexOf(mat.name));
+    for (let i = 0; i < n; i++) partList.push(part);
     return g;
   });
+  const parts = Uint8Array.from(partList);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 });
   if (emissive) {
     material.emissive = new THREE.Color(emissive);
@@ -82,7 +91,18 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
     a.setEffectiveWeight(0);
     actions[clip.name] = a;
   }
-  return { wrapper, root, mixer, actions, head, height, scale };
+  // Repaint the cat: colours = [body, belly/paws, ears/nose].
+  const colorAttr = merged.geometry.getAttribute('color');
+  const pc = [new THREE.Color(), new THREE.Color(), new THREE.Color()];
+  function recolor(cols) {
+    cols.forEach((c, i) => pc[i].set(c));
+    for (let i = 0; i < parts.length; i++) {
+      const c = pc[parts[i]];
+      colorAttr.setXYZ(i, c.r, c.g, c.b);
+    }
+    colorAttr.needsUpdate = true;
+  }
+  return { wrapper, root, mixer, actions, head, height, scale, mesh: merged, material, recolor };
 }
 
 export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
@@ -226,6 +246,26 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
         face.material.needsUpdate = true;
       }
     },
+    setSkin(skin) {
+      st.skin = skin;
+      const m = cat.material;
+      cat.recolor([skin.body, skin.belly, skin.ears]);
+      stalkMat.color.set(skin.body);
+      m.metalness = skin.metal || 0;
+      m.roughness = skin.rough ?? 0.8;
+      m.envMap = skin.metal ? claw.envMap || null : null;
+      m.envMapIntensity = 1.2;
+      // classic keeps its faint green glow; other skins only glow if they say so
+      m.emissive.set(skin.emissive || (skin.id === 'classic' ? '#3cff3c' : '#000000'));
+      m.emissiveIntensity = skin.glow ?? (skin.id === 'classic' ? 0.15 : 0);
+      // rim light follows the skin: its body colour, lifted toward white
+      if (m.userData.rimColor) m.userData.rimColor.set(skin.body).lerp(rimWhite, 0.45).multiplyScalar(skin.id === 'classic' ? 1 : 0.7);
+      m.transparent = skin.opacity != null;
+      m.opacity = skin.opacity ?? 1;
+      m.depthWrite = skin.opacity == null;
+      m.needsUpdate = true;
+      st.skinT = 0;
+    },
     setGlow(on) {
       ballMat.emissiveIntensity = on ? 3 : 0;
       ballMat.color.set(on ? '#b6ff5c' : '#7cd650');
@@ -343,6 +383,22 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
       }
       cat.mixer.update(dt);
 
+      // animated skins
+      const sk = st.skin;
+      if (sk && sk.anim) {
+        st.skinT = (st.skinT || 0) + dt;
+        if (sk.anim === 'rainbow' && st.skinT > 0.08) {
+          st.skinT = 0;
+          const h = (t * 0.25) % 1;
+          rainbowCol.setHSL(h, 0.9, 0.55);
+          rainbowCol2.setHSL((h + 0.5) % 1, 0.9, 0.7);
+          cat.recolor([rainbowCol.getHex(), '#ffffff', rainbowCol2.getHex()]);
+          cat.material.userData.rimColor?.copy(rainbowCol2);
+        } else if (sk.anim === 'pulse') {
+          cat.material.emissiveIntensity = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3));
+        }
+      }
+
       // antennae ride on the head, wobble with speed
       pivot.updateMatrixWorld(true);
       claw.headPos(tmpV);
@@ -354,7 +410,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
         s.rotation.x = -0.25 - Math.min(0.5, hs * 0.04);
       }
 
-      face.visible = !!(mut.cursed || mut.matt);
+      face.visible = !!(mut.cursed || mut.matt || (st.skin && st.skin.mattFace));
       if (face.visible) {
         fwdV.set(0, 0, 1).applyQuaternion(pivot.quaternion);
         face.position.copy(antenna.position).addScaledVector(UP, -0.1 * st.scaleK).addScaledVector(fwdV, 0.1 * st.scaleK);

@@ -24,6 +24,14 @@ OIIA Mode, Popcat Mode, Tiny Claw, Matt Mode).
 | Music on/off | M | ♪ |
 | Menu (challenges, mutators, graphics, settings) | P / Tab | ☰ |
 
+## Glorp Casino, Cat Crates and skins
+
+Play money only. Points earn Glorp Coins (10 points = 1 coin, +50 per Claw-lenge, 200 welcome coins from Matt).
+The Glorp Casino downtown (Matt owns it) has **Glorp Slots** (pairs 1.5x, triples 10x, three Mattpogs 50x;
+~12% house edge) and the **Cat Crate** machine (300 coins, CS:GO-style spin; Common 55%, Rare 28%,
+Epic 13%, Legendary 4%; duplicates refund 100). Walk up to a machine and press E (or tap the prompt).
+20 Claw skins live in `js/games/sim/skins.js`; equip them from the pause menu's **Skins** wardrobe.
+
 ## Music
 
 "Glorp Groove" is an original chiptune sequenced live in `js/games/sim/music.js`

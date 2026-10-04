@@ -3,7 +3,8 @@ export function createHud(wrap, { onMenu, onMusic }) {
   const el = document.createElement('div');
   el.className = 'sim-hud';
   el.innerHTML = `
-    <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="combo"></span></div>
+    <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="coins">🪙 0</span><span class="combo"></span></div>
+    <button type="button" class="sim-prompt"></button>
     <div class="sim-top-right">
       <button type="button" class="sim-chip trophies">🏆 0</button>
       <button type="button" class="sim-chip music" aria-label="Toggle music">♪ ON</button>
@@ -33,6 +34,13 @@ export function createHud(wrap, { onMenu, onMusic }) {
     onMusic();
   });
 
+  const coinsEl = $('.coins');
+  const prompt = $('.sim-prompt');
+  let promptAction = null;
+  prompt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    promptAction?.();
+  });
   const timer = $('.sim-timer');
   const mapCanvas = $('.sim-map');
   const mctx = mapCanvas.getContext('2d');
@@ -60,6 +68,15 @@ export function createHud(wrap, { onMenu, onMusic }) {
       musicBtn.textContent = on ? '♪ ON' : '♪ OFF';
       musicBtn.classList.toggle('off', !on);
       musicBtn.setAttribute('aria-pressed', String(on));
+    },
+    setCoins(n) {
+      coinsEl.textContent = `🪙 ${n.toLocaleString()}`;
+    },
+    // Contextual action button (also triggered by the E key in game.js).
+    prompt(text, action) {
+      promptAction = action || null;
+      if (prompt.textContent !== (text || '')) prompt.textContent = text || '';
+      prompt.classList.toggle('show', !!text);
     },
     setTimer(text) {
       timer.textContent = text || '';

@@ -1,10 +1,11 @@
 // CLAW SIMULATOR: the 3D sandbox. three.js renders, Rapier simulates.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
 import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
-import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE } from './districts.js';
+import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO } from './districts.js';
 import { MEOWTOWN, WINDMILL, GOLF } from './town.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
@@ -12,6 +13,8 @@ import { createChallenges } from './challenges.js';
 import { loadTexture } from './textures.js';
 import { createGraphics, createSky, applyWind } from './graphics.js';
 import { createMusic } from './music.js';
+import { createWallet, skinById } from './skins.js';
+import { createCasino } from './casino.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -176,6 +179,53 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   const hud = createHud(wrap, { onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
   const ch = createChallenges(hud);
+
+  // Glorp Coins, skins and the casino
+  const wallet = createWallet(hud);
+  ch.onPoints((pts) => wallet.earnFromPoints(pts));
+  function refreshFace() {
+    const skin = skinById(wallet.equipped);
+    claw.setFaceTexture((mut.matt || skin.mattFace) && matt ? matt : face);
+  }
+  function equipSkin(id) {
+    wallet.equip(id);
+    claw.setSkin(skinById(id));
+    refreshFace();
+  }
+  // small studio environment so Gold / Chrome skins have something to reflect
+  {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    claw.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+  }
+  claw.setSkin(skinById(wallet.equipped));
+  const casino = createCasino({ wallet, sfx, hud, onEquip: equipSkin });
+  ch.onComplete(() => {
+    wallet.add(50);
+    hud.popup('+50 🪙', '#ffe14d');
+  });
+  function openPanel(title, content) {
+    if (!playing) return;
+    menuOpen = true;
+    music.duck(true);
+    controls.setEnabled(false);
+    showOverlay(wrap, { title, extra: content, buttons: [{ label: 'Close', primary: true, onClick: closeMenu }] });
+  }
+  // the machine Claw is standing at (if any)
+  let machine = null;
+  function updateMachines() {
+    const p = claw.position();
+    const c = S.districts.casino;
+    let m = null;
+    if (Math.hypot(p.x - c.slots.x, p.z - c.slots.z) < 2.3) m = 'slots';
+    else if (Math.hypot(p.x - c.crate.x, p.z - c.crate.z) < 2.3) m = 'crate';
+    if (m === machine) return;
+    machine = m;
+    const verb = touch ? 'TAP' : 'E';
+    if (m === 'slots') hud.prompt(`🎰 GLORP SLOTS (${verb})`, () => openPanel('GLORP SLOTS', casino.slots()));
+    else if (m === 'crate') hud.prompt(`📦 OPEN A CAT CRATE (${verb})`, () => openPanel('CAT CRATES', casino.crate()));
+    else hud.prompt(null);
+  }
   music.setEnabled(read('simmusic', true));
   hud.setMusic(music.enabled);
   const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
@@ -199,6 +249,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     { x: UFO.x, z: UFO.z, w: 9, d: 9, color: '#9dff6a', round: true, label: 'UFO' },
     { x: CAT_TREE.x, z: CAT_TREE.z, w: 7, d: 7, color: '#c98bdb', round: true, label: 'CAT TREE' },
     { x: MEOWTOWN.x, z: MEOWTOWN.z, w: 30, d: 30, color: '#b9b2a6', label: 'MEOWTOWN' },
+    { x: CASINO.x, z: CASINO.z, w: 11, d: 8, color: '#a03cff', label: '🎰' },
     { x: WINDMILL.x, z: WINDMILL.z, w: 5, d: 5, color: '#cfc6b4', round: true },
     { x: GOLF.x + 3, z: GOLF.z + 7, w: 9, d: 18, color: '#4fc46a', label: 'GOLF' },
   ]);
@@ -542,6 +593,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
     S.districts.check(dt, t, { claw, ch, hud, sfx });
     S.town.check(dt, t, { claw, ch, hud, sfx });
+    updateMachines();
 
     // OIIA mode soundtrack
     if (mut.oiia) {
@@ -569,7 +621,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     world.gravity = { x: 0, y: mut.gravity ? -6.5 : -20, z: 0 };
     claw.setScale(mut.big ? 2.6 : mut.tiny ? 0.45 : 1);
     cam.dist = mut.big ? 8.5 : mut.tiny ? 2.6 : 4.4;
-    claw.setFaceTexture(mut.matt && matt ? matt : face);
+    refreshFace();
   }
 
   // ---------- camera ----------
@@ -642,7 +694,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         ch.chaos(20, 'BOING', '#5ff2ff');
       }
       if (input.bonk) bonk();
-      if (input.lick) lick();
+      if (input.lick) {
+        // at a casino machine, E / LICK plays it instead of licking
+        if (machine === 'slots') openPanel('GLORP SLOTS', casino.slots());
+        else if (machine === 'crate') openPanel('CAT CRATES', casino.crate());
+        else lick();
+      }
       holdSpring(dt);
       st.bonkCd -= dt;
       acc += dt;
@@ -804,6 +861,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
             closeMenu();
           },
         },
+        { label: 'Skins', onClick: () => openPanel('CLAW SKINS', casino.wardrobe()) },
         { label: 'Credits', onClick: openCredits },
         { label: 'Arcade', onClick: exitToArcade },
       ],
@@ -885,7 +943,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
@@ -897,6 +955,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     controls.setEnabled(true);
     controls.requestLock();
     hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off tables.' : 'Click to lock the mouse. Go knock stuff off tables.', 5000);
+    if (!wallet.welcomed) {
+      wallet.markWelcomed();
+      setTimeout(() => hud.banner('MATT GAVE YOU 200 GLORP COINS', 'Spend them at the Glorp Casino downtown. Points earn more coins.', { pog: true }), 5500);
+    }
   };
 
   return {

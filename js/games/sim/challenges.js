@@ -52,6 +52,7 @@ export function createChallenges(hud) {
   let comboN = 0;
   let comboT = 0;
   const listeners = new Set();
+  const pointListeners = new Set();
 
   const save = () => write('sim', { done: st.done, progress: st.progress, babies: st.babies, gold: st.gold });
   const count = () => CHALLENGES.filter((c) => st.done[c.id]).length;
@@ -90,6 +91,7 @@ export function createChallenges(hud) {
     const mult = Math.min(5, 1 + Math.floor(comboN / 3));
     const pts = Math.round(n * mult);
     score += pts;
+    pointListeners.forEach((f) => f(pts));
     if (label) hud.popup(`+${pts} ${label}`, color);
     hud.setScore(score);
     return pts;
@@ -133,6 +135,7 @@ export function createChallenges(hud) {
       return true;
     },
     onComplete: (f) => listeners.add(f),
+    onPoints: (f) => pointListeners.add(f),
     update(dt) {
       if (comboT > 0) {
         comboT -= dt;

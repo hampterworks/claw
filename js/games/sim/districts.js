@@ -13,6 +13,7 @@ export const RACE = new THREE.Vector3(66, 0, 6);
 export const UFO = new THREE.Vector3(70, 0, -34);
 export const LAKE = new THREE.Vector3(0, 0, 66);
 export const CAT_TREE = new THREE.Vector3(-66, 0, 4);
+export const CASINO = new THREE.Vector3(36, 0, -40);
 
 const RACE_A = 17;
 const RACE_B = 24;
@@ -234,6 +235,89 @@ export function buildDistricts(ctx) {
   solidBox(68, 3, -65, 10, 6, 8, '#2b2b3a');
   sign(['HAMPTER WORKS'], 68, 4.8, -60.95, 0, 7, 1.2, { color: '#7CFF4F' });
   clear.push([-46, -65, 8], [-66, -64, 6], [68, -65, 8]);
+
+  // ---------- Glorp Casino (Matt owns it) ----------
+  {
+    const K = CASINO;
+    solidBox(K.x, 3, K.z, 11, 6, 8, '#2a0b4a');
+    solidBox(K.x, 6.15, K.z, 11.6, 0.3, 8.6, '#ffd23f');
+    const front = K.z - 4.02;
+    // neon sign, over-bright so it blooms
+    const neonTex = signTexture(['GLORP CASINO'], { w: 512, h: 128, size: 92, bg: '#12041f', border: '#ff7bf2', color: '#7CFF4F' });
+    disposables.push(neonTex);
+    const neon = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: neonTex, color: new THREE.Color(1.7, 1.7, 1.7) }));
+    neon.position.set(K.x, 4.4, front - 0.02);
+    neon.rotation.y = Math.PI;
+    scene.add(neon);
+    const doorTex = signTexture(['THE HOUSE', 'ALWAYS WINS'], { w: 512, h: 256, size: 64, bg: '#1d0b33', border: '#ffd23f', colors: ['#ffd23f', '#ff7bf2'] });
+    disposables.push(doorTex);
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshBasicMaterial({ map: doorTex }));
+    door.position.set(K.x, 1.7, front - 0.02);
+    door.rotation.y = Math.PI;
+    scene.add(door);
+    // blinking marquee bulbs around the sign
+    const nb = 26;
+    const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' }), nb);
+    const bm = new THREE.Matrix4();
+    for (let i = 0; i < nb; i++) {
+      const tt = i / nb;
+      const per = 2 * (8.4 + 2.4);
+      let d = tt * per;
+      let bx;
+      let by;
+      if (d < 8.4) [bx, by] = [-4.2 + d, 5.6];
+      else if ((d -= 8.4) < 2.4) [bx, by] = [4.2, 5.6 - d];
+      else if ((d -= 2.4) < 8.4) [bx, by] = [4.2 - d, 3.2];
+      else [bx, by] = [-4.2, 3.2 + (d - 8.4)];
+      bulbs.setMatrixAt(i, bm.makeTranslation(K.x - bx, by, front - 0.12));
+    }
+    bulbs.computeBoundingSphere();
+    scene.add(bulbs);
+    const bc = new THREE.Color();
+    animated.push((dt, t) => {
+      const step = Math.floor(t * 6);
+      for (let i = 0; i < nb; i++) bulbs.setColorAt(i, (i + step) % 3 === 0 ? bc.set('#ffe14d').multiplyScalar(3) : bc.set('#552200'));
+      bulbs.instanceColor.needsUpdate = true;
+    });
+    // slot machine
+    const slot = new THREE.Group();
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.1, 0.9), new THREE.MeshStandardMaterial({ color: '#c0182f', metalness: 0.4, roughness: 0.4 }));
+    cab.position.y = 1.05;
+    const screenTex = signTexture(['🎰', 'SLOTS'], { w: 256, h: 256, size: 80, bg: '#12041f', border: '#ffd23f', colors: ['#fff', '#ffd23f'] });
+    disposables.push(screenTex);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: screenTex, color: new THREE.Color(1.4, 1.4, 1.4) }));
+    scr.position.set(0, 1.45, -0.46);
+    scr.rotation.y = Math.PI;
+    const lever = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8), new THREE.MeshStandardMaterial({ color: '#cccccc', metalness: 0.9 }));
+    lever.position.set(0.75, 1.6, 0);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), new THREE.MeshStandardMaterial({ color: '#ff2a2a' }));
+    knob.position.set(0.75, 2.05, 0);
+    slot.add(cab, scr, lever, knob);
+    slot.traverse((o) => (o.castShadow = true));
+    slot.position.set(K.x - 3.6, 0, front - 1.2);
+    scene.add(slot);
+    staticBox(slot.position.x, 1.05, slot.position.z, 0.65, 1.05, 0.45);
+    // Cat Crate vending machine
+    const vend = new THREE.Group();
+    const vcab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.3, 1.0), new THREE.MeshStandardMaterial({ color: '#4f2a9a', metalness: 0.3, roughness: 0.5 }));
+    vcab.position.y = 1.15;
+    const vTex = signTexture(['CAT', 'CRATES'], { w: 256, h: 256, size: 86, bg: '#12041f', border: '#7CFF4F', colors: ['#7CFF4F', '#ff7bf2'] });
+    disposables.push(vTex);
+    const vscr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), new THREE.MeshBasicMaterial({ map: vTex, color: new THREE.Color(1.4, 1.4, 1.4) }));
+    vscr.position.set(0, 1.4, -0.51);
+    vscr.rotation.y = Math.PI;
+    vend.add(vcab, vscr);
+    vend.traverse((o) => (o.castShadow = true));
+    vend.position.set(K.x + 3.6, 0, front - 1.2);
+    scene.add(vend);
+    staticBox(vend.position.x, 1.15, vend.position.z, 0.8, 1.15, 0.5);
+    deco('k_cardboardBoxClosed', vend.position.x, 2.3, vend.position.z, 0.3, 0.8);
+    out.casino = { slots: slot.position.clone(), crate: vend.position.clone() };
+    if (textures.matt) {
+      npc(textures.matt, K.x, 0, front - 1.6, { name: 'MATT (OWNER)', line: 'Welcome to my casino. The house always wins. The house is me.', quests: [], size: 1.8 });
+    }
+    clear.push([K.x, K.z, 9]);
+  }
 
   // ---------- Zoomies Raceway ----------
   {
