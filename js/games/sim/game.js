@@ -16,6 +16,7 @@ import { createMusic } from './music.js';
 import { createWallet, skinById } from './skins.js';
 import { createCasino } from './casino.js';
 import { createWinty } from './winty.js';
+import { createFishing } from './fishing.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -203,6 +204,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   claw.setSkin(skinById(wallet.equipped));
   const casino = createCasino({ wallet, sfx, hud, onEquip: equipSkin });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
+  const fishing = createFishing({ wallet, ch, sfx, hud });
   ch.onComplete(() => {
     wallet.add(50);
     hud.popup('+50 🪙', '#ffe14d');
@@ -220,13 +222,16 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const p = claw.position();
     const c = S.districts.casino;
     let m = null;
+    const fs = S.districts.fishSpot;
     if (Math.hypot(p.x - c.slots.x, p.z - c.slots.z) < 2.3) m = 'slots';
     else if (Math.hypot(p.x - c.crate.x, p.z - c.crate.z) < 2.3) m = 'crate';
+    else if (Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
     machine = m;
     const verb = touch ? 'TAP' : 'E';
     if (m === 'slots') hud.prompt(`🎰 GLORP SLOTS (${verb})`, () => openPanel('GLORP SLOTS', casino.slots()));
     else if (m === 'crate') hud.prompt(`📦 OPEN A CAT CRATE (${verb})`, () => openPanel('CAT CRATES', casino.crate()));
+    else if (m === 'fish') hud.prompt(`🎣 GO FISHING (${verb})`, () => openPanel("GONE FISHIN'", fishing.panel()));
     else hud.prompt(null);
   }
   music.setEnabled(read('simmusic', true));
@@ -259,6 +264,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   const QUEST_SPOTS = {
     boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
     market: MEOWTOWN, windmill: WINDMILL, wish: MEOWTOWN, golf: GOLF,
+    fishing: LAKE, golden: LAKE,
     mugs: CAFE, fish: LAKE, headphones: CAT_TREE, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
   };
   let mapT = 0;
@@ -702,6 +708,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         // at a casino machine, E / LICK plays it instead of licking
         if (machine === 'slots') openPanel('GLORP SLOTS', casino.slots());
         else if (machine === 'crate') openPanel('CAT CRATES', casino.crate());
+        else if (machine === 'fish') openPanel("GONE FISHIN'", fishing.panel());
         else lick();
       }
       holdSpring(dt);
@@ -947,7 +954,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, fishing, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);

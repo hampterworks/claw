@@ -28,6 +28,8 @@ export const CHALLENGES = [
   { id: 'wish', name: 'Make a wish in the Meowtown fountain' },
   { id: 'golf', name: 'Glorp Mini Golf: bonk the ball into the hole' },
   { id: 'winty', name: 'Just say no: outrun Winty in the park' },
+  { id: 'fishing', name: "Gone fishin': catch 5 things off the dock", goal: 5 },
+  { id: 'golden', name: 'Reel in the legendary Golden Glorpfish' },
 ];
 
 export const MUTATORS = [

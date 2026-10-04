@@ -7,7 +7,7 @@ You play Claw: knock things off tables, lick and fling stuff, flop like liquid, 
 The world is ~180 m across, with a minimap: the original living room/park/tower/studio/corn field, plus
 Glorpville downtown (Glorp Café, Glorp Towers + pool, Matt's House), the Zoomies Raceway, a UFO,
 Lake Meowchigan, the giant Cat Tree, medieval Meowtown with its windmill, and Glorp Mini Golf.
-25 Claw-lenges (NPCs with a "!" hand them out) unlock 7 mutators (Glorp Gravity, Cursed Face, Big Claw,
+27 Claw-lenges (NPCs with a "!" hand them out) unlock 7 mutators (Glorp Gravity, Cursed Face, Big Claw,
 OIIA Mode, Popcat Mode, Tiny Claw, Matt Mode).
 
 ## Controls
@@ -29,6 +29,13 @@ OIIA Mode, Popcat Mode, Tiny Claw, Matt Mode).
 Hangs around the park (`js/games/sim/winty.js`). Walk up to her and she starts pitching her
 "business opportunity", then chases Claw for ~10 s yelling sales lines. Get 16 m away to complete
 **Just say no: outrun Winty** (zoomies help); otherwise she gives up and wanders back.
+
+## Fishing
+
+Stand at the end of the Lake Meowchigan dock and press E (`js/games/sim/fishing.js`). Cast, wait for the
+bobber, hook it on the "!", then hold (Space / E / tap) to keep the green zone on the fish until the bar
+fills. 12 catches from junk (Old Boot, Rubber Duck) to the legendary Golden Glorpfish, a Fishdex
+collection log, coins + points per catch, and two Claw-lenges (catch 5, catch the Golden Glorpfish).
 
 ## Glorp Casino, Cat Crates and skins
 

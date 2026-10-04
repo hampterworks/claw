@@ -450,6 +450,7 @@ export function buildDistricts(ctx) {
       solidBox(dx + 1.2, 0.35, L.z - 14 + k * 3.6, 0.25, 0.7, 0.25, '#5d3a1a', { collide: false });
     }
     out.dockRect = { x0: dx - 1.3, x1: dx + 1.3, z0: L.z - 15.5, z1: L.z - 2.5 };
+    out.fishSpot = new THREE.Vector3(dx + 0.6, 0.8, L.z - 4.2);
     out.islandRect = { x0: L.x + 7, x1: L.x + 13, z0: L.z + 1.5, z1: L.z + 6.5 };
     // fish
     const fishMat = new THREE.MeshStandardMaterial({ color: '#8fb6d9', metalness: 0.3, roughness: 0.4 });
@@ -466,8 +467,8 @@ export function buildDistricts(ctx) {
     }
     out.fisher = npc(memeSpriteTexture('banana'), dx, 0.8, L.z - 2.8, {
       name: 'FISHER CAT',
-      line: "Don't steal my fish. (Lick one and take it to the Glorp Café.)",
-      quests: ['fish'],
+      line: "Don't steal my fish (lick one to the Glorp Café). Or catch your own: stand at the end of the dock and press E.",
+      quests: ['fish', 'fishing', 'golden'],
     });
     // beach stuff
     for (let k = 0; k < 6; k++) {
