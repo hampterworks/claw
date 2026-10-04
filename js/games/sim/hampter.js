@@ -14,7 +14,7 @@ const LINES = [
 ];
 const SCREAM = '*AAAAAAAAAAA* (hamster scream)';
 
-function makeHamster() {
+export function makeHamster() {
   const g = new THREE.Group();
   const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true, ...o });
   const fur = mat('#e39b55');

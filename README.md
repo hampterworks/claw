@@ -64,8 +64,8 @@ in `server/wrangler.jsonc`.
 **Local testing:** `cd server && npx wrangler dev` (runs the Worker + Durable Object locally), serve the
 site, and open `glorp/?mp=ws://localhost:8787/ws` in two browser windows. `?mp=off` forces single-player.
 
-**Loans:** borrow at the Bank of Romni (20% interest). Pay back within 5 minutes of play; at 10 minutes Winty
-comes to collect, takes what you owe and locks you in the dungeon of Winter's Castle. Respawn (menu) to escape, or
+**Loans:** borrow at the Bank of Romni (20% interest). Pay back within 5 minutes of play; 30 seconds after
+that Winty comes to collect, takes what you owe and locks you in the dungeon of Winter's Castle. Respawn (menu) to escape, or
 in multiplayer a friend pulls the lever outside your cell. The castle also hides a secret room behind a bookcase.
 
 **In game:** the start screen has **🌐 Play online** and **🎮 Play offline** (remembered for next time). Switch

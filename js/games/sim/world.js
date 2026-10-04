@@ -7,6 +7,7 @@ import { soupMaterial } from './graphics.js';
 import { createBuilder } from './builder.js';
 import { buildDistricts } from './districts.js';
 import { buildTown } from './town.js';
+import { buildPark } from './park.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
 export const PARK_POT = new THREE.Vector3(16, 0, 12);
@@ -15,7 +16,7 @@ export const STATUE = new THREE.Vector3(23, 0, 0);
 export const TOWER = new THREE.Vector3(-26, 0, 22);
 export const STUDIO = new THREE.Vector3(0, 0, -27);
 export const CORN = new THREE.Vector3(25, 0, -24);
-export const BOUNDS = 92;
+export const BOUNDS = 132; // Ohio got bigger (Glorp Park + the Outskirts woods)
 
 const POT_R = 2.3;
 const POT_H = 1.45;
@@ -56,7 +57,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   special.sun = sun;
 
   {
-    const geo = new THREE.PlaneGeometry(300, 300, 72, 72);
+    const geo = new THREE.PlaneGeometry(460, 460, 72, 72); // reaches past the fog from anywhere in Ohio
     geo.rotateX(-Math.PI / 2);
     const colors = [];
     const c = new THREE.Color();
@@ -68,7 +69,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
     ground.receiveShadow = true;
     scene.add(ground);
-    staticBox(0, -0.5, 0, 150, 0.5, 150);
+    staticBox(0, -0.5, 0, 230, 0.5, 230);
     // invisible borders of Ohio
     for (const [x, z, hx, hz] of [[BOUNDS, 0, 0.5, BOUNDS], [-BOUNDS, 0, 0.5, BOUNDS], [0, BOUNDS, BOUNDS, 0.5], [0, -BOUNDS, BOUNDS, 0.5]]) staticBox(x, 10, z, hx, 10, hz);
   }
@@ -642,6 +643,11 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
 
   // the cactus patch of eastern Ohio
   for (let i = 0; i < 9; i++) staticModel('n_Cactus_1', 84 - rand() * 6, 0, 30 + rand() * 30, rand() * 6, 1 + rand() * 0.6);
+
+  // ---------- Glorp Park (arena + hedge maze) and the Outskirts ----------
+  const park = buildPark({ B, RAPIER, world, scene, disposables, bounds: BOUNDS });
+  special.park = park;
+  special.trees.push(...park.trees);
 
   B.finalize();
 

@@ -8,6 +8,7 @@ import { createClaw } from './claw.js';
 import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
 import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO, HAMPTER_HOUSE, BANK, CASTLE } from './districts.js';
 import { MEOWTOWN, WINDMILL, GOLF } from './town.js';
+import { ARENA, MAZE, HS_ZONE } from './park.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
 import { createChallenges } from './challenges.js';
@@ -29,6 +30,8 @@ import { createHampter } from './hampter.js';
 import { createRomni } from './romni.js';
 import { createCastle } from './castle.js';
 import { createLoans } from './loan.js';
+import { createBattles } from './battle.js';
+import { createHideSeek } from './hideseek.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -337,8 +340,17 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     wallet.add(50);
     hud.popup('+50 🪙', '#ffe14d');
   });
-  function openPanel(title, content) {
+  // a panel can ask to hear when it goes away (closed, or replaced by another panel or the menu)
+  let panelClose = null;
+  function runPanelClose() {
+    const f = panelClose;
+    panelClose = null;
+    f?.();
+  }
+  function openPanel(title, content, onClose) {
     if (!playing) return;
+    runPanelClose();
+    panelClose = onClose || null;
     menuOpen = true;
     music.duck(true);
     controls.setEnabled(false);
@@ -362,6 +374,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   MACHINES.hampter = { prompt: '🐹 PET HAMPTER', run: () => hampter.squeak() };
   MACHINES.bank = { prompt: '💰 TALK TO ROMNI', title: 'BANK OF ROMNI', open: () => (romni.wave(), loans.panel()) };
   MACHINES.lever = { prompt: '🔓 OPEN THE CELL', run: pullLever };
+  MACHINES.arena = { prompt: '⚔️ PET BATTLES', title: 'PET BATTLE ARENA', open: () => battles.arenaPanel() };
+  MACHINES.hideseek = {
+    prompt: () => (hs.hunting ? '🐹 HAMPTER HUNT (GIVE UP?)' : '🙈 HIDE AND SEEK'),
+    title: 'HIDE AND SEEK',
+    open: () => hs.panel(),
+  };
   MACHINES.bookcase = { prompt: '📚 PULL THE SUSPICIOUS BOOK', run: () => (castle.pullBook(), sfx.boom(), hud.popup('...a secret room?!', '#ff7bf2')) };
   const playMachine = (m) => (MACHINES[m].run ? MACHINES[m].run() : openPanel(MACHINES[m].title, MACHINES[m].open()));
   let machine = null;
@@ -378,6 +396,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (!m && Math.hypot(p.x - bc.x, p.z - bc.z) < 2.2) m = 'bank';
     if (!m && Math.hypot(p.x - castle.leverAt.x, p.z - castle.leverAt.z) < 1.6) m = 'lever';
     if (!m && !castle.shelfOpen && Math.hypot(p.x - castle.shelfAt.x, p.z - castle.shelfAt.z) < 1.5) m = 'bookcase';
+    const pk = S.park;
+    if (!m && Math.hypot(p.x - pk.arenaDesk.x, p.z - pk.arenaDesk.z) < 2.2 && p.y < 2) m = 'arena';
+    if (!m && Math.hypot(p.x - pk.hsBoard.x, p.z - pk.hsBoard.z) < 2.2 && p.y < 2) m = 'hideseek';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
@@ -397,7 +418,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   // minimap
   hud.setupMap(BOUNDS, [
-    { x: 0, z: -52, w: 170, d: 6, color: '#3b3f4a' },
+    { x: 0, z: -52, w: 2 * BOUNDS, d: 6, color: '#3b3f4a' },
+    { x: ARENA.x, z: -38.5, w: 4, d: 19, color: '#3b3f4a' },
+    { x: ARENA.x, z: ARENA.z, w: 34, d: 34, color: '#c9b48a', round: true, label: '⚔️ ARENA' },
+    { x: MAZE.x, z: MAZE.z, w: 35, d: 35, color: '#2f6b2c', label: 'MAZE' },
     { x: LAKE.x, z: LAKE.z, w: 48, d: 32, color: '#2a9fd6', round: true, label: 'LAKE' },
     { x: RACE.x, z: RACE.z, w: 39, d: 53, color: '#b8875a', round: true, label: 'RACE' },
     { x: HOUSE.x, z: HOUSE.z, w: 13, d: 11, color: '#c99a6b', label: 'HOME' },
@@ -422,6 +446,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
     market: MEOWTOWN, windmill: WINDMILL, wish: MEOWTOWN, golf: GOLF,
     fishing: LAKE, golden: LAKE,
+    arena: ARENA, hunt: MAZE,
     mugs: CAFE, fish: LAKE, headphones: CAT_TREE, vashshelf: MATT_HOUSE, shrine: null, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
   };
   let mapT = 0;
@@ -494,6 +519,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (players) {
       for (const r of players.near(center, 0.9 * k)) {
         net.send({ t: 'hit', to: r.id, d: [fwd.x * 9 * k, 6 * k, fwd.z * 9 * k] });
+        hs.onBonk(r); // Hide and Seek: a seeker found a hider
         ch.chaos(25, `BONKED ${r.name.toUpperCase()}`, '#ff7bf2');
       }
     }
@@ -794,6 +820,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     romni.update(dt, t);
     castle.update(dt);
     loans.update(dt);
+    hs.update(dt, t);
     if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(); // paid while she was on the way
     respectCd -= dt;
 
@@ -858,6 +885,14 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       if (c) net.send({ t: 'fx', text: `finished "${c.name}" 🏆` });
     });
     mpUi.setStatus(false, 0, true);
+  }
+  // Pet Battles (arena) and Hide and Seek (maze), both work offline and online
+  const fx = (text) => net?.connected && net.send({ t: 'fx', text });
+  const battles = createBattles({ wallet, hud, sfx, ch, net, players, openPanel, onFx: fx });
+  const hs = createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, players, park: S.park, feed: (t, c) => mpUi?.feed(t, c), onFx: fx, closePanel: () => closeMenu() });
+  if (net) {
+    net.on('duel', (m) => battles.onDuel(m));
+    net.on('leave', (m) => battles.onLeave(m.id));
   }
   // Online (shared Ohio) or offline (solo). Progress, coins and skins are the same either way.
   let online = false;
@@ -976,6 +1011,11 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const t = timer.getElapsed();
     if (playing && !menuOpen) {
       const input = controls.consume();
+      if (hs.frozen) {
+        // the blindfolded Hide and Seek seeker waits (looking around is fine, it's all black anyway)
+        input.moveX = input.moveY = 0;
+        input.jump = input.bonk = input.lick = input.flop = input.zoom = false;
+      }
       updateCameraYawOnly(input);
       claw.control(dt, input, cam.yaw, events);
       // trampoline bounce
@@ -1170,6 +1210,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   function openMenu() {
     if (!playing) return;
+    runPanelClose();
     menuOpen = true;
     music.duck(true);
     controls.setEnabled(false);
@@ -1242,6 +1283,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
 
   function closeMenu() {
+    runPanelClose();
     hideOverlay(wrap);
     menuOpen = false;
     music.duck(false);
@@ -1268,7 +1310,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1333,6 +1375,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hampter.dispose();
       romni.dispose();
       castle.dispose();
+      hs.dispose();
+      battles.leaveFight();
       W.dispose();
       gfx.dispose();
       music.dispose();

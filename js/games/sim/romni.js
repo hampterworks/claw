@@ -25,7 +25,7 @@ function faceTexture() {
 
 const LINES = [
   'Welcome to the Bank of Romni. Need some Glorp Coins?',
-  'Loans are 20%. You have 5 minutes. After that... I call Winty.',
+  'Loans are 20%. You have 5 minutes. Then 30 seconds. Then Winty.',
   'I am not a scam. I am a bank. Banks are never scams.',
   "Bloxy cola? No. Only loans.",
   'Oof.',

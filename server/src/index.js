@@ -10,6 +10,14 @@ const CLAIM_TIMEOUT = 2000; // ms of owner silence before a prop can be taken ov
 const RESET_AFTER = 15 * 60 * 1000; // Ohio resets this long after the last player leaves
 const BOUND = 200;
 const MAX_PROP = 5000;
+// Hide and Seek round timings (ms)
+const HS_LOBBY = 20000;
+const HS_HIDE = 25000;
+const HS_SEEK = 150000;
+const HS_TAG_RANGE = 6; // metres; a little slack for latency
+const DUEL_ACTS = ['ask', 'yes', 'no', 'mv', 'quit'];
+const DUEL_MOVES = ['bonk', 'guard', 'special'];
+const int = (v, hi) => (Number.isInteger(v) && v >= 0 && v <= hi ? v : 0);
 
 const num = (v, lo = -BOUND, hi = BOUND) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0);
 const nums = (a, n, lo, hi) => (Array.isArray(a) && a.length === n ? a.map((v) => num(v, lo, hi)) : null);
@@ -39,6 +47,7 @@ export class Ohio extends DurableObject {
     this.owners = new Map(); // propId -> { by, t }
     this.lastS = new Map(); // propId -> latest streamed transform (for releases on leave)
     this.rate = new Map(); // ws -> { n, t }
+    this.hs = null; // the Hide and Seek round, if any (memory only: a hibernation just ends it)
     // after hibernation, rebuild who is connected from the socket attachments
     for (const ws of this.ctx.getWebSockets()) {
       const a = ws.deserializeAttachment();
@@ -125,12 +134,13 @@ export class Ohio extends DurableObject {
       for (const [pid, o] of this.owners) owners[pid] = o.by;
       const players = [];
       for (const [pid, pl] of this.players) if (pid !== id) players.push({ id: pid, name: pl.name, skin: pl.skin, pet: pl.pet, d: pl.d });
-      this.send(ws, { t: 'welcome', you: id, players, owners, props });
+      this.send(ws, { t: 'welcome', you: id, players, owners, props, hs: this.hsSnap(), now: Date.now() });
       this.broadcast({ t: 'join', id, name: p.name, skin: p.skin, pet: p.pet }, ws);
       return;
     }
     if (!me) return; // everything else needs a hello first
     const id = me.id;
+    this.hsTick();
 
     switch (m.t) {
       case 'p': {
@@ -207,6 +217,26 @@ export class Ohio extends DurableObject {
         this.broadcast({ t: 'unlock', id }, ws);
         break;
       }
+      case 'duel': {
+        // pet battles are peer to peer: just pass the (cleaned up) message to the opponent
+        const target = this.socketOf(ident(m.to));
+        if (!target || target === ws || !DUEL_ACTS.includes(m.a)) return;
+        this.send(target, {
+          t: 'duel',
+          from: id,
+          a: m.a,
+          pet: ident(m.pet) || null,
+          bet: int(m.bet, 1000),
+          r: int(m.r, 99),
+          mv: DUEL_MOVES.includes(m.mv) ? m.mv : 'bonk',
+          seed: int(m.seed, 2147483647),
+          why: ident(m.why),
+        });
+        break;
+      }
+      case 'hs':
+        this.hsMessage(ws, id, m);
+        break;
       case 'chat': {
         const s = text(m.text, 80);
         if (s) this.broadcast({ t: 'chat', id, text: s });
@@ -220,12 +250,111 @@ export class Ohio extends DurableObject {
     }
   }
 
+  // ---------- Hide and Seek: the server is the referee ----------
+  hsSnap() {
+    const h = this.hs;
+    return h ? { phase: h.phase, host: h.host, ids: h.ids, seekers: h.seekers, first: h.first || null, lobbyEnd: h.lobbyEnd, hideEnd: h.hideEnd || 0, end: h.end || 0 } : null;
+  }
+
+  hsSend(ev, extra = {}) {
+    this.broadcast({ t: 'hs', ev, s: this.hsSnap(), now: Date.now(), ...extra });
+  }
+
+  hsEnd(win, why = '') {
+    const h = this.hs;
+    if (!h) return;
+    this.hs = null;
+    this.broadcast({ t: 'hs', ev: 'end', win, why, ids: h.ids, seekers: h.seekers, first: h.first || null, s: null, now: Date.now() });
+  }
+
+  // timers run lazily: every message (and the clients' 'tick' at each deadline) moves the round on
+  hsTick() {
+    const h = this.hs;
+    if (!h) return;
+    const now = Date.now();
+    if (h.phase === 'lobby' && now >= h.lobbyEnd) {
+      if (h.ids.length < 2) return this.hsEnd(null, 'Not enough players joined.');
+      const seeker = h.ids[Math.floor(Math.random() * h.ids.length)];
+      Object.assign(h, { phase: 'play', seekers: [seeker], first: seeker, hideEnd: now + HS_HIDE, end: now + HS_HIDE + HS_SEEK });
+      this.hsSend('begin', { seeker });
+    } else if (h.phase === 'play' && now >= h.end) this.hsEnd('hiders');
+  }
+
+  hsCheck() {
+    const h = this.hs;
+    if (!h || h.phase !== 'play') return;
+    if (h.ids.length < 2) this.hsEnd(null, 'Not enough players left.');
+    else if (!h.seekers.length) this.hsEnd('hiders', 'The seeker left.');
+    else if (h.seekers.length >= h.ids.length) this.hsEnd('seekers');
+  }
+
+  hsDrop(id) {
+    const h = this.hs;
+    if (!h || !h.ids.includes(id)) return;
+    h.ids = h.ids.filter((x) => x !== id);
+    h.seekers = h.seekers.filter((x) => x !== id);
+    if (h.phase === 'lobby') {
+      if (!h.ids.length) this.hsEnd(null, 'Everyone left.');
+      else {
+        if (h.host === id) h.host = h.ids[0];
+        this.hsSend('state');
+      }
+      return;
+    }
+    this.hsSend('state');
+    this.hsCheck();
+  }
+
+  hsMessage(ws, id, m) {
+    const h = this.hs;
+    const now = Date.now();
+    switch (m.a) {
+      case 'start':
+        if (h) return this.send(ws, { t: 'hs', ev: 'state', s: this.hsSnap(), now });
+        this.hs = { phase: 'lobby', host: id, ids: [id], seekers: [], lobbyEnd: now + HS_LOBBY };
+        this.hsSend('open', { by: id });
+        break;
+      case 'join':
+        if (!h || h.phase !== 'lobby' || h.ids.includes(id)) return;
+        h.ids.push(id);
+        this.hsSend('join', { by: id });
+        break;
+      case 'leave':
+        this.hsDrop(id);
+        break;
+      case 'tag': {
+        // a seeker bonked a hider
+        const who = ident(m.who);
+        if (!h || h.phase !== 'play' || now < h.hideEnd || !h.seekers.includes(id) || !h.ids.includes(who) || h.seekers.includes(who)) return;
+        const a = this.players.get(id)?.d;
+        const b = this.players.get(who)?.d;
+        if (a && b && Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > HS_TAG_RANGE) return;
+        h.seekers.push(who);
+        this.hsSend('tag', { by: id, who });
+        this.hsCheck();
+        break;
+      }
+      case 'out':
+        // a hider ran out of the play area: that counts as found
+        if (!h || h.phase !== 'play' || !h.ids.includes(id) || h.seekers.includes(id)) return;
+        h.seekers.push(id);
+        this.hsSend('tag', { by: null, who: id });
+        this.hsCheck();
+        break;
+      case 'state':
+        this.send(ws, { t: 'hs', ev: 'state', s: this.hsSnap(), now });
+        break;
+      // 'tick' needs nothing: hsTick already ran
+    }
+  }
+
   async leave(ws) {
     const me = ws.deserializeAttachment();
     this.rate.delete(ws);
     if (!me) return;
     ws.serializeAttachment(null);
     this.players.delete(me.id);
+    this.hsDrop(me.id);
     // hand back everything they were holding, where it last was
     for (const [pid, o] of this.owners) {
       if (o.by !== me.id) continue;

@@ -1,12 +1,12 @@
 // Bank of Romni loans. Borrow Glorp Coins, pay back 20% more within 5 minutes of play.
-// At 5 minutes the loan is overdue; at 10 minutes Winty comes to collect.
+// At 5 minutes the loan is overdue; 30 seconds after that Winty comes to collect.
 // The clock only runs while you're actually playing (not in menus, not with the tab closed).
 import { read, write } from '../../scores.js';
 
 export const LOAN_AMOUNTS = [100, 250, 500, 1000];
 export const INTEREST = 0.2;
 export const DUE = 300; // seconds
-export const COLLECT = 600;
+export const COLLECT = DUE + 30;
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -75,12 +75,12 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
       const before = st.t;
       st.t += dt;
       if (before < DUE && st.t >= DUE) {
-        hud.banner('YOUR LOAN IS OVERDUE', `Pay Romni ${st.owed} 🪙 or Winty comes in 5 minutes.`);
+        hud.banner('YOUR LOAN IS OVERDUE', `Pay Romni ${st.owed} 🪙 NOW. Winty comes in 30 seconds.`);
         sfx.fail();
       }
-      if (!warned && st.t >= COLLECT - 30) {
+      if (!warned && st.t >= COLLECT - 10) {
         warned = true;
-        hud.say('ROMNI', 'Last chance. I am calling Winty in 30 seconds.', { color: '#f5cd30', ms: 4000 });
+        hud.say('ROMNI', 'Last chance. Winty is putting her boots on.', { color: '#f5cd30', ms: 4000 });
       }
       if (st.t >= COLLECT && !collecting) {
         collecting = true;
@@ -101,7 +101,7 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
       root.appendChild(status);
       const row = el('div', 'bets');
       root.appendChild(row);
-      root.appendChild(el('p', 'fine', `Loans cost ${INTEREST * 100}% interest. Pay back within 5 minutes of play. After 10 minutes Winty comes to collect, takes what you have, and locks you in her dungeon.`));
+      root.appendChild(el('p', 'fine', `Loans cost ${INTEREST * 100}% interest. Pay back within 5 minutes of play. Miss it by 30 seconds and Winty comes to collect, takes what you have, and locks you in her dungeon.`));
       function render() {
         coins.textContent = `🪙 ${wallet.coins} Glorp Coins`;
         row.innerHTML = '';

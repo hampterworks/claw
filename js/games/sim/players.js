@@ -29,8 +29,19 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
     r.puppet.envMap = envMap;
     r.puppet.setGlow(true);
     applyLook(r);
-    r.tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture([r.name]), depthTest: false, transparent: true }));
-    r.tag.scale.set(1.3, 0.33, 1);
+    makeTag(r);
+  }
+
+  // name tag, with an optional second line (e.g. "👁️ SEEKER" in Hide and Seek)
+  function makeTag(r) {
+    if (r.tag) {
+      scene.remove(r.tag);
+      r.tag.material.map.dispose();
+      r.tag.material.dispose();
+    }
+    const tex = r.badge ? labelTexture([r.name, r.badge], { h: 104, color: '#ff4f6d' }) : labelTexture([r.name]);
+    r.tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    r.tag.scale.set(1.3, r.badge ? 0.53 : 0.33, 1);
     r.tag.renderOrder = 10;
     scene.add(r.tag);
   }
@@ -104,12 +115,26 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
   });
   net.on('hit', (m) => onHit(m.d, remotes.get(m.from)?.name || 'someone'));
 
+  let tagHidden = () => false;
   const q = { x: 0, y: 0, z: 0, w: 1 };
   const st = { x: 0, y: 0, z: 0, yaw: 0, vx: 0, vy: 0, vz: 0, q, scale: 1, grounded: true, flopping: false, zooming: false };
   return {
     remotes,
     get count() {
       return remotes.size;
+    },
+    nameOf(id) {
+      return remotes.get(id)?.name || null;
+    },
+    // Hide and Seek: hide some name tags, badge others
+    setTagFilter(fn) {
+      tagHidden = fn || (() => false);
+    },
+    setBadge(id, badge) {
+      const r = remotes.get(id);
+      if (!r || (r.badge || null) === (badge || null)) return;
+      r.badge = badge || null;
+      if (r.tag) makeTag(r);
     },
     // which remote Claws are inside a bonk sphere
     near(center, radius) {
@@ -165,7 +190,9 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
         r.petCo?.update(dt);
         const p = r.puppet.position();
         const k = r.puppet.st.scaleK;
-        r.tag.position.set(p.x, p.y + 0.95 * k + 0.25, p.z);
+        r.tag.position.set(p.x, p.y + 0.95 * k + (r.badge ? 0.35 : 0.25), p.z);
+        r.tag.visible = !tagHidden(r.id);
+        if (r.petCo?.object) r.petCo.object.visible = r.tag.visible; // a pet would give a hider away
         r.bubble.update(dt, { x: p.x, y: p.y + 0.95 * k + 0.5, z: p.z });
       }
     },

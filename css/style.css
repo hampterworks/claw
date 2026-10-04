@@ -635,6 +635,7 @@ footer {
   top: 58px;
   left: 50%;
   transform: translateX(-50%);
+  white-space: nowrap;
   font-size: clamp(22px, 4vw, 32px);
   color: var(--yellow);
   opacity: 0;
@@ -1536,4 +1537,323 @@ footer {
   font-size: 14px;
   color: var(--green);
   margin-top: -4px;
+}
+
+/* ---------- invites (Hide and Seek, pet battle challenges) ---------- */
+.sim-invite {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translate(-50%, -12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  background: rgba(29, 11, 51, 0.94);
+  border: 3px solid var(--green);
+  border-radius: 16px;
+  padding: 10px 16px;
+  text-align: center;
+  max-width: min(440px, 92%);
+  z-index: 9;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.sim-invite.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.sim-invite p {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--yellow);
+}
+.sim-invite div {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.sim-invite .btn {
+  text-shadow: none;
+}
+
+/* ---------- Hide and Seek ---------- */
+.hs-blind {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: radial-gradient(circle at 50% 45%, #1d0b33 0%, #05010a 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #fff;
+  font-family: var(--display);
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 16px;
+  pointer-events: none;
+}
+.hs-blind[hidden] {
+  display: none;
+}
+.hs-blind b {
+  font-size: clamp(28px, 6vw, 48px);
+  color: var(--pink);
+}
+.hs-blind span {
+  font-size: 22px;
+  color: var(--muted);
+}
+.hs-blind big {
+  font-size: clamp(90px, 22vw, 180px);
+  line-height: 1;
+  color: var(--yellow);
+  text-shadow: 0 0 30px rgba(255, 225, 77, 0.5);
+}
+.hs-blind small {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--muted);
+}
+.casino.hideseek h3 {
+  margin: 10px 0 6px;
+}
+
+/* ---------- Pet Battles ---------- */
+.casino.arena h3 {
+  margin: 10px 0 6px;
+}
+.pb-pets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.pb-pet {
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid transparent;
+  border-radius: 12px;
+  padding: 2px;
+  cursor: pointer;
+}
+.pb-pet.on {
+  border-color: var(--green);
+  background: rgba(124, 255, 79, 0.18);
+}
+.pb-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.pb-trainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pb-trainer.beaten {
+  opacity: 0.8;
+}
+.pb {
+  text-align: center;
+  max-width: 520px;
+  min-width: min(480px, 80vw);
+}
+.pb-title {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--pink);
+  letter-spacing: 1px;
+}
+.pb-field {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.pb-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.pb-icon {
+  transition: transform 0.18s ease-out;
+}
+.pb-side.foe .pb-icon {
+  transform: scaleX(-1);
+}
+.pb-side.me .pb-icon.lunge {
+  transform: translateX(26px) scale(1.12);
+}
+.pb-side.foe .pb-icon.lunge {
+  transform: scaleX(-1) translateX(26px) scale(1.12);
+}
+.pb-icon.hit {
+  animation: pb-shake 0.35s;
+  filter: brightness(1.8) saturate(0.4);
+}
+@keyframes pb-shake {
+  0%, 100% { translate: 0 0; }
+  25% { translate: -6px 2px; }
+  50% { translate: 6px -2px; }
+  75% { translate: -3px 0; }
+}
+.pb-name {
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.pb-owner {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pb-hp {
+  position: relative;
+  width: 100%;
+  max-width: 170px;
+  height: 18px;
+  border: 2px solid #111;
+  border-radius: 9px;
+  background: #3a1d3a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pb-hp i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(#9dff6a, #3fbf2a);
+  transition: width 0.4s;
+}
+.pb-hp i[data-low='1'] {
+  background: linear-gradient(#ff8f8f, #e0303f);
+}
+.pb-hp span {
+  position: relative;
+  line-height: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 1px 0 #111;
+}
+.pb-charge {
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--yellow);
+  min-height: 20px;
+}
+.pb-vs {
+  font-family: var(--display);
+  font-size: 32px;
+  color: var(--yellow);
+  transform: rotate(-8deg);
+}
+.pb-dmg {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  font-family: var(--display);
+  font-size: 30px;
+  color: var(--red);
+  text-shadow: 2px 2px 0 #111;
+  pointer-events: none;
+  animation: pb-float 0.9s ease-out forwards;
+}
+@keyframes pb-float {
+  from { transform: translate(-50%, 0); opacity: 1; }
+  to { transform: translate(-50%, -46px); opacity: 0; }
+}
+.pb-log {
+  min-height: 64px;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  padding: 6px 10px;
+  text-align: left;
+}
+.pb-log p {
+  margin: 2px 0 !important;
+}
+.pb-round p:first-child {
+  color: var(--cyan);
+}
+.pb-round + .pb-round {
+  opacity: 0.5;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 3px;
+}
+.pb-status {
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: var(--yellow);
+  margin: 6px 0;
+  min-height: 24px;
+}
+.pb-moves {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pb-move {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 6px;
+}
+.pb-move b {
+  font-size: 19px;
+}
+.pb-move small {
+  font-family: var(--body);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 0;
+}
+.pb-move:disabled {
+  opacity: 0.45;
+}
+@media (max-width: 520px) {
+  .pb-move {
+    padding: 6px 4px;
+  }
+  .pb-move small {
+    display: none;
+  }
+  .pb-hp {
+    max-width: 120px;
+  }
+}
+.pb-trainer .pet-icon.none {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font-size: 18px;
+}
+/* menus and panels always sit above the HUD layers (Hide and Seek blindfold, invites) */
+.sim-wrap .overlay {
+  z-index: 10;
+}
+.sim-wrap.touch .sim-timer {
+  top: 110px;
+  left: auto;
+  right: 12px;
+  transform: none;
+  font-size: 18px;
+}
+.sim-wrap.touch .sim-invite {
+  top: 38%;
 }

@@ -17,6 +17,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
     <div class="sim-energy"><span></span><i>3AM ENERGY</i></div>
     <div class="sim-hint"></div>
     <div class="sim-say"><b></b><span></span></div>
+    <div class="sim-invite"><p></p><div><button type="button" class="btn small primary yes"></button><button type="button" class="btn small no"></button></div></div>
   `;
   wrap.appendChild(el);
   const $ = (s) => el.querySelector(s);
@@ -48,6 +49,33 @@ export function createHud(wrap, { onMenu, onMusic }) {
   let mapBg = null;
   let mapBounds = 92;
   const toMap = (v) => ((v + mapBounds) / (2 * mapBounds)) * 260;
+
+  // invites (Hide and Seek, pet battle challenges): Y / N or tap
+  const inviteEl = $('.sim-invite');
+  let invite = null;
+  function closeInvite(answer) {
+    const inv = invite;
+    if (!inv) return;
+    invite = null;
+    clearTimeout(inv.timer);
+    inviteEl.classList.remove('show');
+    if (answer) inv.onYes?.();
+    else inv.onNo?.();
+  }
+  inviteEl.querySelector('.yes').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeInvite(true);
+  });
+  inviteEl.querySelector('.no').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeInvite(false);
+  });
+  function onInviteKey(e) {
+    if (!invite || e.repeat || e.target?.tagName === 'INPUT') return;
+    if (e.code === 'KeyY') closeInvite(true);
+    else if (e.code === 'KeyN') closeInvite(false);
+  }
+  document.addEventListener('keydown', onInviteKey);
 
   let bannerTimer = 0;
   let sayTimer = 0;
@@ -203,6 +231,14 @@ export function createHud(wrap, { onMenu, onMusic }) {
       l.textContent = text;
       l.dataset.state = state;
     },
+    invite(text, { yes = 'YES', no = 'NO', ms = 15000, onYes, onNo } = {}) {
+      closeInvite(false); // a new invite replaces (declines) the old one
+      invite = { onYes, onNo, timer: setTimeout(() => closeInvite(false), ms) };
+      inviteEl.querySelector('p').textContent = text;
+      inviteEl.querySelector('.yes').textContent = `${yes} (Y)`;
+      inviteEl.querySelector('.no').textContent = `${no} (N)`;
+      inviteEl.classList.add('show');
+    },
     hint(text, ms = 4000) {
       hint.textContent = text;
       hint.classList.add('show');
@@ -210,6 +246,8 @@ export function createHud(wrap, { onMenu, onMusic }) {
       hintTimer = setTimeout(() => hint.classList.remove('show'), ms);
     },
     destroy() {
+      if (invite) clearTimeout(invite.timer);
+      document.removeEventListener('keydown', onInviteKey);
       clearTimeout(sayTimer);
       clearTimeout(bannerTimer);
       clearTimeout(hintTimer);

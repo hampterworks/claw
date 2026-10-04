@@ -35,6 +35,8 @@ export const CHALLENGES = [
   { id: 'plinko', name: 'Hit a 9x edge on Plinko Paws' },
   { id: 'vashshelf', name: "Get Vash's sword off Matt's top shelf (he can't reach)" },
   { id: 'shrine', name: 'Find the secret Vash Shrine and pay respects' },
+  { id: 'arena', name: 'Pet Arena champion: beat all 5 trainers (Winty is last)' },
+  { id: 'hunt', name: 'Hampter Hunt: find all 6 hampters hiding in Glorp Park' },
 ];
 
 export const MUTATORS = [
