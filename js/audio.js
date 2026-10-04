@@ -135,4 +135,22 @@ export const sfx = {
     noise({ dur: 0.6, f: 900, f2: 60, vol: 0.5 });
     tone({ f: 120, f2: 30, dur: 0.5, vol: 0.25 });
   },
+  // hamster: a burst of tiny high chirps that sweep up then down
+  squeak: () => {
+    const n = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const f = 2600 + Math.random() * 900;
+      tone({ type: 'triangle', f, f2: f * 1.35, dur: 0.035, vol: 0.09, delay: i * 0.09 });
+      tone({ type: 'sine', f: f * 1.35, f2: f * 0.9, dur: 0.04, vol: 0.07, delay: i * 0.09 + 0.035 });
+    }
+  },
+  // the screaming hamster: a long wobbly shriek with a breathy edge
+  hamsterScream: () => {
+    for (let i = 0; i < 16; i++) {
+      const base = 1900 + Math.sin(i * 0.9) * 160 + i * 18;
+      tone({ type: 'sawtooth', f: base, f2: base * (i % 2 ? 0.94 : 1.06), dur: 0.08, vol: 0.05, delay: i * 0.07 });
+      tone({ type: 'sine', f: base * 2, f2: base * 2.05, dur: 0.08, vol: 0.04, delay: i * 0.07 });
+    }
+    noise({ dur: 1.1, type: 'bandpass', f: 3200, f2: 2400, q: 2, vol: 0.12 });
+  },
 };

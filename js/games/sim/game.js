@@ -6,7 +6,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
 import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
-import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO } from './districts.js';
+import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO, HAMPTER_HOUSE } from './districts.js';
 import { MEOWTOWN, WINDMILL, GOLF } from './town.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
@@ -20,11 +20,12 @@ import { createWinty } from './winty.js';
 import { createFishing } from './fishing.js';
 import { createPetCompanion, petById, PET_BONUS } from './pets.js';
 import { createVash, buildVash } from './vash.js';
-import { mpUrl } from './net-config.js';
+import { mpUrl, WORLD_VERSION } from './net-config.js';
 import { createNet } from './net.js';
 import { createPlayers, createMpUi, FLAG } from './players.js';
 import { createPropSync } from './props-sync.js';
 import { mergeStaticMeshes } from './merge.js';
+import { createHampter } from './hampter.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -92,6 +93,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     loadImage('assets/sim-matt.webp'),
   ]);
   if (isCancelled()) return null;
+  // the Hampter Works gallery (small, loaded alongside)
+  const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
   onStatus('Building Ohio...');
 
   // ---------- renderer ----------
@@ -134,7 +137,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     models: worldGltf.scene,
     catGltf: maxGltf,
     images: { news: newsImg, claw: clawImg, matt: mattImg },
-    textures: { matt, huh, baby, dance, forp, vash: vashTex },
+    textures: { matt, huh, baby, dance, forp, vash: vashTex, hampterArt },
   });
   const S = W.special;
   const sky = createSky(scene, new THREE.Vector3(14, 26, 9));
@@ -255,6 +258,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
   // Lyonia (Vash), next to Matt, and his gold statue in the secret shrine
+  const hampter = createHampter({ scene, world, RAPIER, hud, sfx, claw, home: S.districts.hampterHome, wheelAt: S.districts.hampterWheel });
   const vash = createVash({ scene, world, RAPIER, gltf: vashGltf, hud, sfx, ch, claw, home: S.districts.vashHome });
   {
     const statue = buildVash(vashStatueGltf, { gold: true }).model;
@@ -323,6 +327,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     },
   };
   MACHINES.shrine = { prompt: '🙏 PAY RESPECTS', run: payRespects };
+  MACHINES.hampter = { prompt: '🐹 PET HAMPTER', run: () => hampter.squeak() };
   const playMachine = (m) => (MACHINES[m].run ? MACHINES[m].run() : openPanel(MACHINES[m].title, MACHINES[m].open()));
   let machine = null;
   function updateMachines() {
@@ -333,6 +338,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     const sh = S.districts.shrine.altar;
     if (!m && Math.hypot(p.x - sh.x, p.z - sh.z) < 1.6) m = 'shrine';
+    if (!m && Math.hypot(p.x - hampter.pos.x, p.z - hampter.pos.z) < 1.7) m = 'hampter';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
@@ -363,6 +369,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     { x: CAFE.x, z: CAFE.z, w: 9, d: 7, color: '#ff7bf2', label: 'CAFÉ' },
     { x: TOWERS.x, z: TOWERS.z, w: 9, d: 7, color: '#9aa3b5' },
     { x: MATT_HOUSE.x, z: MATT_HOUSE.z, w: 7, d: 7, color: '#ffe14d', label: 'MATT' },
+    { x: HAMPTER_HOUSE.x, z: HAMPTER_HOUSE.z, w: 9, d: 7, color: '#ffb347', label: 'HAMPTER' },
     { x: UFO.x, z: UFO.z, w: 9, d: 9, color: '#9dff6a', round: true, label: 'UFO' },
     { x: CAT_TREE.x, z: CAT_TREE.z, w: 7, d: 7, color: '#c98bdb', round: true, label: 'CAT TREE' },
     { x: MEOWTOWN.x, z: MEOWTOWN.z, w: 30, d: 30, color: '#b9b2a6', label: 'MEOWTOWN' },
@@ -742,6 +749,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     winty?.update(dt, t, claw);
     pets.update(dt);
     vash.update(dt, t);
+    hampter.update(dt, t);
     respectCd -= dt;
 
     // OIIA mode soundtrack
@@ -806,7 +814,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     online = on;
     write('simonline', on);
     if (on) {
-      net.start(() => ({ name: myName, skin: wallet.equipped, pet: wallet.pet }));
+      net.start(() => ({ name: myName, skin: wallet.equipped, pet: wallet.pet, v: WORLD_VERSION }));
       mpUi.setStatus(false, 0);
       mpUi.feed('Going online…', '#7CFF4F');
     } else {
@@ -1208,7 +1216,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1270,6 +1278,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       winty?.dispose();
       pets.dispose();
       vash.dispose();
+      hampter.dispose();
       W.dispose();
       gfx.dispose();
       music.dispose();

@@ -109,6 +109,15 @@ export class Ohio extends DurableObject {
       const p = { id, name: text(m.name, 20) || 'Glorp', skin: ident(m.skin) || 'classic', pet: ident(m.pet) || null };
       ws.serializeAttachment(p);
       this.players.set(id, { name: p.name, skin: p.skin, pet: p.pet, d: null });
+      // a newer world layout (props renumbered): forget the old saved mess
+      const v = Number.isInteger(m.v) ? m.v : 0;
+      const stored = (await this.ctx.storage.get('meta:v')) || 0;
+      if (v > stored) {
+        for (const k of (await this.ctx.storage.list({ prefix: 'p:' })).keys()) await this.ctx.storage.delete(k);
+        this.owners.clear();
+        this.lastS.clear();
+        await this.ctx.storage.put('meta:v', v);
+      }
       const props = {};
       for (const [k, v] of await this.ctx.storage.list({ prefix: 'p:' })) props[k.slice(2)] = v;
       for (const [pid, d] of this.lastS) props[pid] = d.slice(0, 7);
