@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { signTexture, memeSpriteTexture, markerTexture, ropeTexture, checkerTexture } from './textures.js';
 import { waterMaterial } from './graphics.js';
+import { vashSword } from './vash.js';
 
 export const CAFE = new THREE.Vector3(-20, 0, -64);
 export const TOWERS = new THREE.Vector3(24, 0, -66);
@@ -14,6 +15,7 @@ export const UFO = new THREE.Vector3(70, 0, -34);
 export const LAKE = new THREE.Vector3(0, 0, 66);
 export const CAT_TREE = new THREE.Vector3(-66, 0, 4);
 export const CASINO = new THREE.Vector3(36, 0, -40);
+export const SHRINE = new THREE.Vector3(-76, 0, 74);
 
 const RACE_A = 17;
 const RACE_B = 24;
@@ -223,6 +225,15 @@ export function buildDistricts(ctx) {
         size: 1.8,
       });
     }
+    // Matt's very tall shelf, with Vash's sword on top (he can't reach it)
+    solidBox(M.x - 2.85, 1.3, M.z + 2.3, 0.5, 2.6, 1.3, '#6b4226');
+    for (const y of [0.5, 1.15, 1.8]) deco('k_books', M.x - 2.55, y, M.z + 2.3, Math.PI / 2, 1, false);
+    const swordG = new THREE.Group();
+    const swordM = vashSword();
+    swordM.position.x = -0.145; // centre the blade over its collider
+    swordG.add(swordM);
+    out.vashSword = addBody(swordG, RAPIER.ColliderDesc.cuboid(0.26, 0.03, 0.08), M.x - 2.8, 2.62, M.z + 2.3, 0.3, 0.03, { density: 0.3, kind: 'vashsword' });
+    out.vashHome = new THREE.Vector3(M.x - 2.6, 0, M.z + 5.0);
     sign(["MATT'S HOUSE"], M.x, 3.2, M.z + 3.42, 0, 4.4, 0.9, { color: '#ffe14d' });
     clear.push([M.x, M.z, 7]);
   }
@@ -400,6 +411,93 @@ export function buildDistricts(ctx) {
       npc(textures.matt, K.x, 0, front - 1.6, { name: 'MATT (OWNER)', line: 'Welcome to my casino. The house always wins. The house is me.', quests: [], size: 1.8 });
     }
     clear.push([K.x, K.z, 9]);
+  }
+
+  // ---------- the secret Vash Shrine (no sign, no map marker) ----------
+  {
+    const S = SHRINE; // faces +x
+    const stone = '#8a8f99';
+    solidBox(S.x, 0.06, S.z, 6, 0.12, 6, stone, { shadow: false });
+    for (let i = 0; i < 4; i++) solidBox(S.x + 3.8 + i * 1.3, 0.03, S.z + Math.sin(i) * 0.3, 0.9, 0.06, 0.9, '#9aa0a8', { shadow: false, collide: false });
+    // torii gate
+    const pillar = '#2a1a3d';
+    for (const dz of [-1.3, 1.3]) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 2.7, 10), new THREE.MeshStandardMaterial({ color: pillar }));
+      m.position.set(S.x + 2.4, 1.35, S.z + dz);
+      m.castShadow = true;
+      scene.add(m);
+      world.createCollider(RAPIER.ColliderDesc.cylinder(1.35, 0.15), fixed(S.x + 2.4, 1.35, S.z + dz));
+    }
+    solidBox(S.x + 2.4, 2.75, S.z, 0.32, 0.2, 3.6, '#6b3cc9');
+    solidBox(S.x + 2.4, 2.3, S.z, 0.2, 0.12, 2.9, pillar);
+    for (const dz of [-1.85, 1.85]) solidBox(S.x + 2.4, 2.75, S.z + dz, 0.36, 0.24, 0.12, '#ffcc33', { collide: false });
+    const plaque = sign(['VASH'], S.x + 2.56, 2.52, S.z, Math.PI / 2, 0.9, 0.36, { size: 60, color: '#ffcc33', bg: '#2a1a3d', border: '#ffcc33' });
+    plaque.material.color.setScalar(1.2);
+    // shrine house: back wall + roof
+    solidBox(S.x - 2.4, 1.5, S.z, 0.3, 3, 4.4, '#3a2c34');
+    solidBox(S.x - 1.9, 3.1, S.z, 1.6, 0.18, 5.0, '#6b3cc9', { collide: false });
+    // hidden: a hedge ring and pines all round, open only toward the lake (+x)
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2;
+      if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.6) continue;
+      deco(i % 3 ? 'n_Bush_1' : 'n_BushBerries_1', S.x + Math.cos(a) * 4.9, 0, S.z + Math.sin(a) * 4.9, a, 1.5);
+    }
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2 + 0.2;
+      if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.7) continue;
+      const tx = S.x + Math.cos(a) * 7.6;
+      const tz = S.z + Math.sin(a) * 7.6;
+      deco(`n_PineTree_${(i % 3) + 1}`, tx, 0, tz, a, 1.2);
+      world.createCollider(RAPIER.ColliderDesc.cylinder(1.6, 0.3), fixed(tx, 1.6, tz));
+    }
+    // portrait
+    if (textures.vash) {
+      const img = textures.vash.image;
+      const h = 2.0;
+      const w = (h * img.width) / img.height;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.06, h + 0.16, w + 0.16), new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 0.6, roughness: 0.35 }));
+      const pz = S.z - 1.0;
+      frame.position.set(S.x - 2.2, 1.55, pz);
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: textures.vash, transparent: true, alphaTest: 0.2 }));
+      pic.position.set(S.x - 2.16, 1.55, pz);
+      pic.rotation.y = Math.PI / 2;
+      const back = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: '#1d0b33' }));
+      back.position.set(S.x - 2.165, 1.55, pz);
+      back.rotation.y = Math.PI / 2;
+      scene.add(frame, back, pic);
+    }
+    // pedestal for the gold statue (game.js puts the statue on it)
+    solidBox(S.x - 0.9, 0.5, S.z + 0.9, 0.9, 0.9, 0.9, '#4a4f5a');
+    solidBox(S.x - 0.9, 0.97, S.z + 0.9, 1.0, 0.06, 1.0, '#ffcc33', { collide: false });
+    out.shrine = { statue: new THREE.Vector3(S.x - 0.9, 1.0, S.z + 0.9), altar: new THREE.Vector3(S.x + 0.6, 0, S.z) };
+    // offering: a fish on a plate
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.04, 14), new THREE.MeshStandardMaterial({ color: '#f4f4f4' }));
+    plate.position.set(S.x + 0.05, 0.14, S.z);
+    const fish = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), new THREE.MeshStandardMaterial({ color: '#ff9a3c' }));
+    fish.scale.set(1.2, 0.45, 0.6);
+    fish.position.set(S.x + 0.05, 0.2, S.z);
+    scene.add(plate, fish);
+    // purple lanterns + flickering candles
+    const lanternMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#b48cff').multiplyScalar(2.2) });
+    for (const dz of [-1.9, 1.9]) {
+      solidBox(S.x + 0.9, 0.55, S.z + dz, 0.12, 1.1, 0.12, pillar);
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.42, 0.34), lanternMat);
+      l.position.set(S.x + 0.9, 1.3, S.z + dz);
+      scene.add(l);
+      solidBox(S.x + 0.9, 1.56, S.z + dz, 0.46, 0.08, 0.46, '#2a1a3d', { collide: false });
+    }
+    const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb347').multiplyScalar(2.4) });
+    const flames = [];
+    for (const [dx, dz] of [[0.2, -0.85], [0.2, 0.85], [-0.1, -1.2], [-0.1, 1.2]]) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.22, 8), new THREE.MeshStandardMaterial({ color: '#fff6e0' }));
+      c.position.set(S.x + dx, 0.23, S.z + dz);
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), flameMat);
+      f.position.set(S.x + dx, 0.37, S.z + dz);
+      scene.add(c, f);
+      flames.push(f);
+    }
+    animated.push((dt, t) => flames.forEach((f, i) => f.scale.set(1, 1.2 + Math.sin(t * 13 + i * 2) * 0.35, 1)));
+    clear.push([S.x, S.z, 8]);
   }
 
   // ---------- Zoomies Raceway ----------
@@ -712,6 +810,17 @@ export function buildDistricts(ctx) {
         hud.banner('MATT', 'MY HEADPHONES! Thank you Claw. You are now an honorary Hampter.');
         ch.chaos(300, 'MATT IS HAPPY', '#ffe14d');
         ch.complete('headphones');
+      }
+    }
+
+    // Vash's sword back to Vash
+    if (out.vashSword && !out.vashSword.gone && !ch.isDone('vashshelf')) {
+      const s = out.vashSword.body.translation();
+      if (Math.hypot(s.x - out.vashHome.x, s.z - out.vashHome.z) < 2.6) {
+        sfx.meow(1100);
+        hud.banner('LYONIA (VASH)', "MY SWORD! It's a normal sized sword. I'm just small.");
+        ch.chaos(300, 'VASH IS ARMED', '#b48cff');
+        ch.complete('vashshelf');
       }
     }
 

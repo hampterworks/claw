@@ -838,9 +838,10 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
   function wardrobe() {
     const root = el('div', 'casino wardrobe');
     const owned = wallet.owned;
-    root.appendChild(el('p', 'fine', `${owned.length}/${SKINS.length} skins owned · win more from Cat Crates at the Glorp Casino downtown.`));
+    const listed = SKINS.filter((s) => !s.secret || owned.includes(s.id));
+    root.appendChild(el('p', 'fine', `${owned.length}/${listed.length} skins owned · win more from Cat Crates at the Glorp Casino downtown.`));
     const grid = el('div', 'skin-grid');
-    for (const skin of SKINS) {
+    for (const skin of listed) {
       const has = owned.includes(skin.id);
       const card = skinCard(skin, has);
       if (skin.id === wallet.equipped) card.classList.add('equipped');

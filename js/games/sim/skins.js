@@ -30,6 +30,8 @@ export const SKINS = [
   { id: 'rainbow', name: 'Nyan Mode', rarity: 'legendary', body: '#ff0000', belly: '#ffffff', ears: '#ffffff', anim: 'rainbow' },
   { id: 'galaxy', name: 'Galaxy Brain', rarity: 'legendary', body: '#2a0b5a', belly: '#7a3cff', ears: '#ff7bf2', emissive: '#7a3cff', glow: 0.4, anim: 'pulse' },
   { id: 'mattclaw', name: 'Mattpog Claw', rarity: 'legendary', body: '#f1c7a8', belly: '#ffe6d6', ears: '#d98c7a', mattFace: true },
+  // secret: only from paying respects at the Vash Shrine
+  { id: 'vash', name: 'Vash Mode', rarity: 'legendary', body: '#3a2c34', belly: '#8a5cff', ears: '#b48cff', emissive: '#7a3cff', glow: 0.25, secret: true },
 ];
 
 export const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
@@ -125,6 +127,6 @@ export function rollRarity() {
 // Weighted rarity roll, then a random skin of that rarity.
 export function rollSkin() {
   const rarity = rollRarity();
-  const pool = SKINS.filter((s) => s.rarity === rarity);
+  const pool = SKINS.filter((s) => s.rarity === rarity && !s.secret);
   return pool[Math.floor(Math.random() * pool.length)];
 }

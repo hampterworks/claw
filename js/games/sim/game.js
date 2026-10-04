@@ -18,6 +18,7 @@ import { createCasino } from './casino.js';
 import { createWinty } from './winty.js';
 import { createFishing } from './fishing.js';
 import { createPetCompanion, petById, PET_BONUS } from './pets.js';
+import { createVash, buildVash } from './vash.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -28,6 +29,7 @@ const CLAW_ROASTS = [
   'ArcticGemstone beat this game before Claw did. In a game about Claw.',
   'Claw lost a staring contest to a Baby Glorp.',
   "Claw's aura: lukewarm. Like his bath water.",
+  'Vash is fun-sized and still has more aura than Claw.',
   'Claw once tried to be the main character. He was cast as an ingredient.',
   'Doctors say Claw is legally a vegetable. A soup vegetable.',
   'Claw thinks "glorp" is a personality. It is.',
@@ -64,11 +66,14 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   onStatus('Summoning Claw...');
   const loader = new GLTFLoader();
-  const [catGltf, maxGltf, worldGltf, petsGltf, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
+  const [catGltf, maxGltf, worldGltf, petsGltf, vashGltf, vashStatueGltf, vashTex, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/world.glb'),
     loader.loadAsync('assets/models/pets.glb'),
+    loader.loadAsync('assets/models/vash.glb'),
+    loader.loadAsync('assets/models/vash.glb'), // second copy for the shrine statue
+    loadTexture('assets/sim-vash.png'),
     loadTexture('assets/sim-matt.png'),
     loadTexture('assets/sim-huh.png'),
     loadTexture('assets/sim-baby.png'),
@@ -119,7 +124,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     models: worldGltf.scene,
     catGltf: maxGltf,
     images: { news: newsImg, claw: clawImg, matt: mattImg },
-    textures: { matt, huh, baby, dance, forp },
+    textures: { matt, huh, baby, dance, forp, vash: vashTex },
   });
   const S = W.special;
   const sky = createSky(scene, new THREE.Vector3(14, 26, 9));
@@ -221,6 +226,41 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   const casino = createCasino({ wallet, sfx, hud, ch, onEquip: equipSkin, onPet: equipPet, onBigWin: () => pets.celebrate(5) });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
+  // Lyonia (Vash), next to Matt, and his gold statue in the secret shrine
+  const vash = createVash({ scene, world, RAPIER, gltf: vashGltf, hud, sfx, ch, claw, home: S.districts.vashHome });
+  {
+    const statue = buildVash(vashStatueGltf, { gold: true }).model;
+    statue.scale.setScalar(1.3);
+    statue.position.copy(S.districts.shrine.statue);
+    statue.rotation.y = Math.PI / 2;
+    scene.add(statue);
+  }
+  // the sword prop disappears once Vash has it (he holds his own copy)
+  function retireVashSword() {
+    const pr = S.districts.vashSword;
+    if (!pr || pr.gone) return;
+    pr.gone = true;
+    pr.mesh.visible = false;
+    pr.body.setEnabled(false);
+    if (st.held === pr) st.held = null;
+  }
+  ch.onComplete((id) => id === 'vashshelf' && retireVashSword());
+  let respectCd = 0;
+  function payRespects() {
+    if (respectCd > 0) return;
+    respectCd = 2.5;
+    sfx.ding();
+    sfx.purr?.();
+    if (!ch.isDone('shrine')) {
+      hud.banner('THE SHRINE ACCEPTS YOUR OFFERING', 'Secret skin unlocked: VASH MODE');
+      ch.chaos(400, '🙏 RESPECTS PAID', '#b48cff');
+      ch.complete('shrine');
+      wallet.own('vash');
+      equipSkin('vash');
+    } else {
+      hud.popup(pick(['🙏 respects paid', '🙏 Vash is pleased', '🙏 +1 fun-size blessing', '🙏 the shrine purrs']), '#b48cff');
+    }
+  }
   const fishing = createFishing({ wallet, ch, sfx, hud });
   ch.onComplete(() => {
     pets.celebrate(3);
@@ -248,7 +288,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       open: () => fishing.panel(),
     },
   };
-  const playMachine = (m) => openPanel(MACHINES[m].title, MACHINES[m].open());
+  MACHINES.shrine = { prompt: '🙏 PAY RESPECTS', run: payRespects };
+  const playMachine = (m) => (MACHINES[m].run ? MACHINES[m].run() : openPanel(MACHINES[m].title, MACHINES[m].open()));
   let machine = null;
   function updateMachines() {
     const p = claw.position();
@@ -256,6 +297,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     for (const [id, pos] of Object.entries(S.districts.casino)) {
       if (Math.hypot(p.x - pos.x, p.z - pos.z) < 2.3) m = id;
     }
+    const sh = S.districts.shrine.altar;
+    if (!m && Math.hypot(p.x - sh.x, p.z - sh.z) < 1.6) m = 'shrine';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
@@ -297,7 +340,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
     market: MEOWTOWN, windmill: WINDMILL, wish: MEOWTOWN, golf: GOLF,
     fishing: LAKE, golden: LAKE,
-    mugs: CAFE, fish: LAKE, headphones: CAT_TREE, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
+    mugs: CAFE, fish: LAKE, headphones: CAT_TREE, vashshelf: MATT_HOUSE, shrine: null, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
   };
   let mapT = 0;
   function updateMap(dt) {
@@ -413,6 +456,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     let best = null;
     let bestD = 2.6 * k;
     for (const pr of W.props) {
+      if (pr.gone) continue;
       const t = pr.body.translation();
       v3b.set(t.x - v3.x, t.y - v3.y, t.z - v3.z);
       const d = v3b.length();
@@ -637,6 +681,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     updateMachines();
     winty?.update(dt, t, claw);
     pets.update(dt);
+    vash.update(dt, t);
+    respectCd -= dt;
 
     // OIIA mode soundtrack
     if (mut.oiia) {
@@ -647,6 +693,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       }
     }
   }
+
+  if (ch.isDone('vashshelf')) retireVashSword();
 
   const events = {
     land(air) {
@@ -947,9 +995,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
-    add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
+    add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets, Mini Characters), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
     showOverlay(wrap, {
       title: 'CREDITS',
@@ -985,7 +1033,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, fishing, casino, pets, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, fishing, casino, pets, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
@@ -1018,6 +1066,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       claw.dispose();
       winty?.dispose();
       pets.dispose();
+      vash.dispose();
       W.dispose();
       gfx.dispose();
       music.dispose();

@@ -33,6 +33,8 @@ export const CHALLENGES = [
   { id: 'pet', name: 'Adopt a pet at the Glorp Casino' },
   { id: 'derby', name: 'Win a bet at the Pet Derby' },
   { id: 'plinko', name: 'Hit a 9x edge on Plinko Paws' },
+  { id: 'vashshelf', name: "Get Vash's sword off Matt's top shelf (he can't reach)" },
+  { id: 'shrine', name: 'Find the secret Vash Shrine and pay respects' },
 ];
 
 export const MUTATORS = [
