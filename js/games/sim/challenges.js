@@ -27,6 +27,7 @@ export const CHALLENGES = [
   { id: 'windmill', name: 'Bonk the Meowtown windmill' },
   { id: 'wish', name: 'Make a wish in the Meowtown fountain' },
   { id: 'golf', name: 'Glorp Mini Golf: bonk the ball into the hole' },
+  { id: 'winty', name: 'Just say no: outrun Winty in the park' },
 ];
 
 export const MUTATORS = [

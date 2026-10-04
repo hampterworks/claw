@@ -579,6 +579,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
 
   // ---------- nature ----------
   const clear = [
+    [-1, 13, 3], // Winty's corner of the park
     ...districts.clear,
     ...town.clear,
     [HOUSE.x, HOUSE.z, 9.5], [PARK_POT.x, PARK_POT.z, 6], [TRAMP.x, TRAMP.z, 4], [STATUE.x, STATUE.z, 3.5],

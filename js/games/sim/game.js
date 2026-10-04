@@ -15,6 +15,7 @@ import { createGraphics, createSky, applyWind } from './graphics.js';
 import { createMusic } from './music.js';
 import { createWallet, skinById } from './skins.js';
 import { createCasino } from './casino.js';
+import { createWinty } from './winty.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -61,7 +62,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   onStatus('Summoning Claw...');
   const loader = new GLTFLoader();
-  const [catGltf, maxGltf, worldGltf, matt, huh, baby, dance, forp, face, newsImg, clawImg, mattImg] = await Promise.all([
+  const [catGltf, maxGltf, worldGltf, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/world.glb'),
@@ -71,6 +72,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     loadTexture('assets/sim-dance.png'),
     loadTexture('assets/sim-forp.webp'),
     loadTexture('assets/claw-alien.png'),
+    loadTexture('assets/sim-winty.png'),
     loadImage('assets/sim-news.webp'),
     loadImage('assets/claw-alien.png'),
     loadImage('assets/sim-matt.png'),
@@ -200,6 +202,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   claw.setSkin(skinById(wallet.equipped));
   const casino = createCasino({ wallet, sfx, hud, onEquip: equipSkin });
+  const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
   ch.onComplete(() => {
     wallet.add(50);
     hud.popup('+50 🪙', '#ffe14d');
@@ -594,6 +597,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     S.districts.check(dt, t, { claw, ch, hud, sfx });
     S.town.check(dt, t, { claw, ch, hud, sfx });
     updateMachines();
+    winty?.update(dt, t, claw);
 
     // OIIA mode soundtrack
     if (mut.oiia) {
@@ -905,7 +909,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
@@ -943,7 +947,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, casino, equipSkin, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);
@@ -974,6 +978,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       document.removeEventListener('pointerlockchange', onLockChange);
       document.removeEventListener('visibilitychange', onVisibility);
       claw.dispose();
+      winty?.dispose();
       W.dispose();
       gfx.dispose();
       music.dispose();
