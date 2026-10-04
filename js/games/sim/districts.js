@@ -116,7 +116,8 @@ export function buildDistricts(ctx) {
       return addBody(g, RAPIER.ColliderDesc.cylinder(0.11, 0.12), x, y, z, rand() * 6, 0.11, { density: 0.3, kind: 'mug' });
     };
     let i = 0;
-    for (const dx of [-3.0, -2.3, -1.6, -0.6, 0.1, 0.8]) mug(C.x + dx, 0.98, C.z - 2.45, i++);
+    // all on solid counter (0.8 sat over the gap at the bar end and fell off at load: only 9 mugs counted)
+    for (const dx of [-3.0, -2.3, -1.6, -1.1, -0.6, 0.1]) mug(C.x + dx, 0.98, C.z - 2.45, i++);
     for (const [tx, tz] of [[-1.8, 0.6], [2.2, 0.4]]) {
       staticModel('k_tableRound', C.x + tx, 0.06, C.z + tz, 0);
       mug(C.x + tx - 0.3, 0.88, C.z + tz, i++);
