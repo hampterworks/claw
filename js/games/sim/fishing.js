@@ -11,20 +11,21 @@ const RARITY_COLORS = {
   legendary: '#ffb000',
 };
 
-// speed: how fast the fish darts, jump: chance per frame of a sudden new target, zone: catch zone height
+// speed: how fast the fish darts, jump: chance per frame of a sudden new target, zone: catch zone height,
+// coins: what the Fisher Cat pays when you sell it
 export const FISH = [
-  { id: 'glorpfish', name: 'Glorpfish', emoji: '🐟', rarity: 'common', w: 30, speed: 0.55, jump: 0.01, coins: 8, pts: 60 },
-  { id: 'tropical', name: 'Ohio Tropical Fish', emoji: '🐠', rarity: 'common', w: 22, speed: 0.7, jump: 0.012, coins: 10, pts: 70 },
-  { id: 'boot', name: 'Old Boot', emoji: '🥾', rarity: 'junk', w: 12, speed: 0.2, jump: 0, coins: 1, pts: 10 },
-  { id: 'duck', name: 'Rubber Duck', emoji: '🦆', rarity: 'junk', w: 8, speed: 0.35, jump: 0.005, coins: 3, pts: 20 },
-  { id: 'puffer', name: 'Popcat Pufferfish', emoji: '🐡', rarity: 'uncommon', w: 12, speed: 1.0, jump: 0.02, coins: 20, pts: 120 },
-  { id: 'catfish', name: 'Literal Catfish', emoji: '🐱', rarity: 'uncommon', w: 10, speed: 1.1, jump: 0.025, coins: 25, pts: 140 },
-  { id: 'headphones', name: "Matt's Spare Headphones", emoji: '🎧', rarity: 'rare', w: 5, speed: 0.9, jump: 0.03, coins: 40, pts: 200 },
-  { id: 'shark', name: 'Baby Shark (doo doo)', emoji: '🦈', rarity: 'rare', w: 5, speed: 1.5, jump: 0.03, coins: 50, pts: 250 },
-  { id: 'card', name: "Winty's Business Card", emoji: '💳', rarity: 'rare', w: 4, speed: 1.3, jump: 0.05, coins: 30, pts: 180 },
-  { id: 'squid', name: 'OIIA Squid', emoji: '🦑', rarity: 'epic', w: 3, speed: 1.8, jump: 0.06, coins: 90, pts: 400, zone: 62 },
-  { id: 'lobster', name: 'Lobster Maxwell', emoji: '🦞', rarity: 'epic', w: 2.5, speed: 1.7, jump: 0.07, coins: 100, pts: 450, zone: 60 },
-  { id: 'golden', name: 'Golden Glorpfish', emoji: '🐟', rarity: 'legendary', w: 1, speed: 2.2, jump: 0.08, coins: 250, pts: 1000, zone: 52, gold: true },
+  { id: 'glorpfish', name: 'Glorpfish', emoji: '🐟', rarity: 'common', w: 30, speed: 0.55, jump: 0.01, coins: 12, pts: 60 },
+  { id: 'tropical', name: 'Ohio Tropical Fish', emoji: '🐠', rarity: 'common', w: 22, speed: 0.7, jump: 0.012, coins: 15, pts: 70 },
+  { id: 'boot', name: 'Old Boot', emoji: '🥾', rarity: 'junk', w: 12, speed: 0.2, jump: 0, coins: 2, pts: 10 },
+  { id: 'duck', name: 'Rubber Duck', emoji: '🦆', rarity: 'junk', w: 8, speed: 0.35, jump: 0.005, coins: 5, pts: 20 },
+  { id: 'puffer', name: 'Popcat Pufferfish', emoji: '🐡', rarity: 'uncommon', w: 12, speed: 1.0, jump: 0.02, coins: 30, pts: 120 },
+  { id: 'catfish', name: 'Literal Catfish', emoji: '🐱', rarity: 'uncommon', w: 10, speed: 1.1, jump: 0.025, coins: 40, pts: 140 },
+  { id: 'headphones', name: "Matt's Spare Headphones", emoji: '🎧', rarity: 'rare', w: 5, speed: 0.9, jump: 0.03, coins: 60, pts: 200 },
+  { id: 'shark', name: 'Baby Shark (doo doo)', emoji: '🦈', rarity: 'rare', w: 5, speed: 1.5, jump: 0.03, coins: 75, pts: 250 },
+  { id: 'card', name: "Winty's Business Card", emoji: '💳', rarity: 'rare', w: 4, speed: 1.3, jump: 0.05, coins: 50, pts: 180 },
+  { id: 'squid', name: 'OIIA Squid', emoji: '🦑', rarity: 'epic', w: 3, speed: 1.8, jump: 0.06, coins: 140, pts: 400, zone: 62 },
+  { id: 'lobster', name: 'Lobster Maxwell', emoji: '🦞', rarity: 'epic', w: 2.5, speed: 1.7, jump: 0.07, coins: 150, pts: 450, zone: 60 },
+  { id: 'golden', name: 'Golden Glorpfish', emoji: '🐟', rarity: 'legendary', w: 1, speed: 2.2, jump: 0.08, coins: 400, pts: 1000, zone: 52, gold: true },
 ];
 const totalW = FISH.reduce((a, f) => a + f.w, 0);
 function rollFish() {
@@ -43,6 +44,11 @@ const el = (tag, cls, text) => {
 export function createFishing({ wallet, ch, sfx, hud }) {
   const dex = read('simfish', {});
   const saveDex = () => write('simfish', dex);
+  // caught fish wait in the bucket (saved) until you sell them
+  const bucket = read('simbucket', []).filter((id) => FISH.some((f) => f.id === id));
+  const saveBucket = () => write('simbucket', bucket);
+  const fishById = (id) => FISH.find((f) => f.id === id);
+  const bucketValue = () => bucket.reduce((a, id) => a + fishById(id).coins, 0);
 
   function panel() {
     const root = el('div', 'casino fishing');
@@ -67,9 +73,37 @@ export function createFishing({ wallet, ch, sfx, hud }) {
     const btn = el('button', 'btn primary spin', 'CAST 🎣');
     btn.type = 'button';
     root.appendChild(btn);
+    const bucketRow = el('div', 'fish-bucket');
+    const bucketText = el('span');
+    const sell = el('button', 'btn small primary', 'SELL ALL');
+    sell.type = 'button';
+    bucketRow.append(bucketText, sell);
+    root.appendChild(bucketRow);
     const grid = el('div', 'fishdex');
     root.appendChild(grid);
-    root.appendChild(el('p', 'fine', 'Hold the button (or Space / E / tap the water) to raise the green zone. Keep the catch on it until the bar fills.'));
+    root.appendChild(el('p', 'fine', 'Hold the button (or Space / E / tap the water) to raise the green zone. Keep the catch on it until the bar fills. Sell your bucket to the Fisher Cat for Glorp Coins.'));
+
+    function renderBucket() {
+      const v = bucketValue();
+      bucketText.textContent = bucket.length ? `🪣 ${bucket.length} fish · worth ${v} 🪙` : '🪣 Bucket empty. Go catch something.';
+      sell.textContent = bucket.length ? `SELL ALL (+${v} 🪙)` : 'SELL ALL';
+      sell.disabled = !bucket.length;
+      coinsB.textContent = String(wallet.coins);
+    }
+    sell.addEventListener('click', () => {
+      if (!bucket.length) return;
+      const n = bucket.length;
+      const v = bucketValue();
+      bucket.length = 0;
+      saveBucket();
+      wallet.add(v);
+      hud.popup(`SOLD ${n} FISH +${v} 🪙`, '#ffe14d');
+      msg.textContent = `Fisher Cat: "pleasure doing business" +${v} 🪙`;
+      msg.style.color = '#ffe14d';
+      if (v >= 100) sfx.win();
+      else sfx.ding();
+      renderBucket();
+    });
 
     function renderDex() {
       grid.innerHTML = '';
@@ -79,12 +113,12 @@ export function createFishing({ wallet, ch, sfx, hud }) {
         if (n) found++;
         const c = el('div', 'fishdex-item' + (n ? '' : ' locked'));
         c.style.setProperty('--rarity', RARITY_COLORS[f.rarity]);
-        c.title = n ? `${f.name} (${f.rarity}) x${n}` : '???';
+        c.title = n ? `${f.name} (${f.rarity}) x${n} · sells for ${f.coins} 🪙` : '???';
         c.append(el('span', 'fe' + (f.gold ? ' gold' : ''), n ? f.emoji : '?'), el('small', null, n ? `x${n}` : ''));
         grid.appendChild(c);
       }
       dexB.textContent = `${found}/${FISH.length}`;
-      coinsB.textContent = String(wallet.coins);
+      renderBucket();
     }
     renderDex();
 
@@ -142,10 +176,11 @@ export function createFishing({ wallet, ch, sfx, hud }) {
       }
       dex[fish.id] = (dex[fish.id] || 0) + 1;
       saveDex();
-      wallet.add(fish.coins);
+      bucket.push(fish.id);
+      saveBucket();
       ch.chaos(fish.pts, `CAUGHT ${fish.name.toUpperCase()}`, RARITY_COLORS[fish.rarity]);
       ch.progress('fishing');
-      msg.textContent = `${fish.emoji} ${fish.name} (${fish.rarity})! +${fish.coins} 🪙`;
+      msg.textContent = `${fish.emoji} ${fish.name} (${fish.rarity})! Worth ${fish.coins} 🪙, in the bucket`;
       msg.style.color = RARITY_COLORS[fish.rarity];
       if (fish.rarity === 'legendary') {
         sfx.win();
@@ -346,5 +381,5 @@ export function createFishing({ wallet, ch, sfx, hud }) {
     return root;
   }
 
-  return { panel, dex };
+  return { panel, dex, bucket, bucketValue };
 }

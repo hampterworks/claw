@@ -231,7 +231,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const verb = touch ? 'TAP' : 'E';
     if (m === 'slots') hud.prompt(`🎰 GLORP SLOTS (${verb})`, () => openPanel('GLORP SLOTS', casino.slots()));
     else if (m === 'crate') hud.prompt(`📦 OPEN A CAT CRATE (${verb})`, () => openPanel('CAT CRATES', casino.crate()));
-    else if (m === 'fish') hud.prompt(`🎣 GO FISHING (${verb})`, () => openPanel("GONE FISHIN'", fishing.panel()));
+    else if (m === 'fish') hud.prompt(`🎣 GO FISHING${fishing.bucket.length ? ` · 🪣 ${fishing.bucket.length} TO SELL` : ''} (${verb})`, () => openPanel("GONE FISHIN'", fishing.panel()));
     else hud.prompt(null);
   }
   music.setEnabled(read('simmusic', true));

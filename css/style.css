@@ -1070,6 +1070,21 @@ footer {
   cursor: pointer;
   max-width: 100%;
 }
+.fish-bucket {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 2px solid #ffe14d;
+  border-radius: 10px;
+  background: #1d0b33;
+  font-weight: 700;
+}
+.fish-bucket .btn:disabled {
+  opacity: 0.5;
+}
 .fishdex {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
