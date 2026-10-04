@@ -198,6 +198,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
     setLoan(text, state = 'ok') {
       const l = $('.loan');
       l.hidden = !text;
+      wrap.classList.toggle('loan-on', !!text); // pushes the minimap (and phone feed) down a line
       if (!text) return;
       l.textContent = text;
       l.dataset.state = state;

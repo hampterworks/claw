@@ -612,7 +612,8 @@ footer {
 }
 .sim-map {
   position: absolute;
-  top: 96px;
+  /* --loan-shift makes room for the loan timer under the coins */
+  top: calc(96px + var(--loan-shift, 0px));
   left: 12px;
   width: 130px;
   height: 130px;
@@ -624,7 +625,10 @@ footer {
 .sim-wrap.touch .sim-map {
   width: 92px;
   height: 92px;
-  top: 88px;
+  top: calc(88px + var(--loan-shift, 0px));
+}
+.sim-wrap.loan-on {
+  --loan-shift: 28px;
 }
 .sim-timer {
   position: absolute;
@@ -1500,7 +1504,7 @@ footer {
 }
 .sim-wrap.touch .mp-feed {
   bottom: auto;
-  top: 150px;
+  top: calc(192px + var(--loan-shift, 0px)); /* under the minimap */
 }
 .mp-chat {
   position: absolute;
