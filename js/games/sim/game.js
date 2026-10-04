@@ -787,8 +787,36 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
             closeMenu();
           },
         },
+        { label: 'Credits', onClick: openCredits },
         { label: 'Arcade', onClick: exitToArcade },
       ],
+    });
+  }
+
+  function openCredits() {
+    sfx.click();
+    const box = document.createElement('div');
+    box.className = 'sim-credits';
+    const add = (tag, text, cls) => {
+      const el = document.createElement(tag);
+      el.textContent = text;
+      if (cls) el.className = cls;
+      box.appendChild(el);
+      return el;
+    };
+    add('p', 'HALL OF FAME', 'credits-label');
+    add('p', '🏆 ArcticGemstone 🏆', 'credits-champ');
+    add('p', 'First to play Claw Simulator. First to beat it.', 'credits-sub');
+    add('p', 'CLAW MUST BE BOILED', 'credits-boil');
+    add('h3', 'Starring');
+    add('p', 'Claw (deathclaw1551) as himself, the glorp. Matt as the Mayor of Ohio. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('h3', 'Made with');
+    add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
+    add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
+    showOverlay(wrap, {
+      title: 'CREDITS',
+      extra: box,
+      buttons: [{ label: 'Back', primary: true, onClick: openMenu }],
     });
   }
 

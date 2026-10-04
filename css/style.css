@@ -773,6 +773,45 @@ footer {
   font-size: 13px !important;
   color: var(--muted);
 }
+.sim-credits {
+  text-align: center;
+  max-width: 460px;
+}
+.sim-credits h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--green);
+  margin: 12px 0 2px;
+  font-size: 20px;
+}
+.sim-credits .credits-label {
+  font-family: var(--display);
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin: 0;
+}
+.sim-credits .credits-champ {
+  font-family: var(--display);
+  font-size: clamp(30px, 6vw, 42px) !important;
+  letter-spacing: 1px;
+  color: var(--yellow);
+  text-shadow: 2px 2px 0 #111, 0 0 18px rgba(255, 225, 77, 0.6);
+  margin: 2px 0;
+}
+.sim-credits .credits-sub {
+  color: var(--muted);
+  font-style: italic;
+}
+.sim-credits .credits-boil {
+  font-family: var(--display);
+  font-size: clamp(26px, 5vw, 36px) !important;
+  letter-spacing: 1px;
+  color: #ff9a3c;
+  text-shadow: 2px 2px 0 #111, 0 0 16px rgba(255, 90, 31, 0.7);
+  margin: 14px 0 4px;
+  animation: wobble 1.4s ease-in-out infinite;
+}
 .sim-wrap .overlay-card {
   max-width: min(560px, 100%);
 }
