@@ -95,6 +95,10 @@ export const sfx = {
     tone({ type: 'sawtooth', f: 330, f2: 60, dur: 0.6, vol: 0.14 });
     tone({ type: 'square', f: 165, f2: 40, dur: 0.6, vol: 0.06 });
   },
+  boing: () => {
+    tone({ type: 'sine', f: 140, f2: 620, dur: 0.35, vol: 0.2 });
+    tone({ type: 'triangle', f: 280, f2: 900, dur: 0.25, vol: 0.06, delay: 0.05 });
+  },
   win: () => [523, 659, 784, 1046].forEach((f, i) => tone({ type: 'triangle', f, dur: 0.22, vol: 0.14, delay: i * 0.11 })),
   boom: () => {
     noise({ dur: 0.6, f: 900, f2: 60, vol: 0.5 });

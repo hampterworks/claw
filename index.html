@@ -14,6 +14,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
   </head>
   <body>
     <button id="mute" class="mute" type="button" aria-label="Toggle sound">🔊</button>
@@ -39,6 +47,15 @@
             <h2>Boil the Claw</h2>
             <p>Keep the pot simmering, stop Claw from escaping, season with meme cats. 3 pots. 1 Claw. 0 mercy.</p>
             <span class="best" data-best="boil"></span>
+          </div>
+        </a>
+        <a class="card featured sim-card" href="#sim">
+          <img src="assets/sim-dance.png" alt="" class="card-art tall" />
+          <div class="card-body">
+            <span class="tag">NEW · 3D</span>
+            <h2>Claw Simulator</h2>
+            <p>Goat Simulator but you're Claw. Knock things off tables, lick stuff, flop, boil yourself in the giant soup pot. 10 Claw-lenges and unlockable mutators.</p>
+            <span class="best" data-best="sim"></span>
           </div>
         </a>
         <a class="card" href="#flappy">

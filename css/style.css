@@ -430,7 +430,320 @@ footer {
   color: var(--pink);
 }
 
+/* ---------- claw simulator (3D) ---------- */
+#stage-body[data-game='sim'] {
+  padding: 0 0 8px;
+}
+.sim-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 1400px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 3px solid #111;
+  box-shadow: 0 0 0 3px var(--green), 0 0 40px rgba(124, 255, 79, 0.35);
+  background: #8fd3ff;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sim-canvas {
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+.sim-status {
+  color: var(--cyan);
+  font-weight: 700;
+}
+.sim-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--display);
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #111, -1px -1px 0 #111, 1px -1px 0 #111, -1px 1px 0 #111;
+}
+.sim-score {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.sim-score .pts {
+  font-size: 40px;
+  color: var(--yellow);
+}
+.sim-score .pts.bump {
+  animation: score-bump 0.25s ease-out;
+}
+.sim-score .label {
+  font-size: 15px;
+  color: var(--green);
+}
+.sim-score .combo {
+  font-size: 24px;
+  color: var(--pink);
+  margin-top: 4px;
+}
+.sim-top-right {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.sim-chip {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border: 3px solid #111;
+  border-radius: 12px;
+  background: var(--bg2);
+  color: var(--yellow);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #111;
+}
+.sim-chip.menu {
+  background: var(--green);
+  color: #111;
+}
+.sim-popups {
+  position: absolute;
+  top: 22%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.sim-pop {
+  font-size: clamp(22px, 4vw, 36px);
+  transform: rotate(var(--rot));
+  animation: sim-pop 1.6s ease-out forwards;
+  text-align: center;
+  padding: 0 12px;
+}
+.sim-banner {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translate(-50%, -30px) scale(0.8);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
+  background: rgba(29, 11, 51, 0.92);
+  border: 3px solid var(--yellow);
+  border-radius: 16px;
+  padding: 10px 20px;
+  text-align: center;
+  max-width: 90%;
+}
+.sim-banner.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.sim-banner b {
+  display: block;
+  font-weight: 400;
+  font-size: clamp(24px, 4.5vw, 38px);
+  color: var(--yellow);
+}
+.sim-banner span {
+  font-family: var(--body);
+  font-weight: 700;
+  letter-spacing: 0;
+  font-size: 16px;
+  text-shadow: none;
+}
+.sim-energy {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(260px, 40%);
+  height: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #111;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sim-energy span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff1a1a, #ff9a1a, #fff21a, #36ff1a, #1a9cff, #7a1aff);
+}
+.sim-energy i {
+  position: absolute;
+  inset: 0;
+  font-style: normal;
+  font-size: 12px;
+  text-align: center;
+  line-height: 13px;
+}
+.sim-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--body);
+  font-weight: 700;
+  letter-spacing: 0;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 6px 14px;
+  border-radius: 10px;
+  text-shadow: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  max-width: 90%;
+  text-align: center;
+}
+.sim-hint.show {
+  opacity: 1;
+}
+.sim-wrap.touch .sim-hint {
+  bottom: 200px;
+}
+.sim-wrap.touch .sim-energy {
+  bottom: 8px;
+}
+.sim-touch {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sim-stick {
+  position: absolute;
+  left: 18px;
+  bottom: 40px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  pointer-events: auto;
+  touch-action: none;
+}
+.sim-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 3px solid #111;
+}
+.sim-buttons {
+  position: absolute;
+  right: 14px;
+  bottom: 36px;
+  display: grid;
+  grid-template-columns: repeat(2, 64px);
+  gap: 10px;
+  pointer-events: auto;
+}
+.sim-buttons button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid #111;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #111;
+  touch-action: none;
+  box-shadow: 0 3px 0 #111;
+}
+.sim-buttons button.big {
+  grid-column: 1 / -1;
+  width: 138px;
+  border-radius: 34px;
+  background: var(--green);
+  font-size: 20px;
+}
+.sim-buttons button.down {
+  transform: translateY(3px);
+  box-shadow: none;
+  background: var(--yellow);
+}
+.sim-menu {
+  text-align: left;
+  max-width: 460px;
+}
+.sim-menu h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--green);
+  margin: 6px 0;
+  font-size: 22px;
+}
+.sim-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 15px;
+}
+.sim-menu li.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.sim-mutators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-mutators .btn {
+  font-size: 15px;
+}
+.sim-mutators .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sim-help {
+  font-size: 13px !important;
+  color: var(--muted);
+}
+.sim-wrap .overlay-card {
+  max-width: min(560px, 100%);
+}
+
 /* ---------- animations ---------- */
+@keyframes sim-pop {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--rot)) scale(0.5);
+  }
+  12% {
+    opacity: 1;
+    transform: rotate(var(--rot)) scale(1.15);
+  }
+  25% {
+    transform: rotate(var(--rot)) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--rot)) translateY(-30px);
+  }
+}
+@keyframes score-bump {
+  50% {
+    transform: scale(1.2);
+  }
+}
 @keyframes wobble {
   0%,
   100% {
@@ -483,7 +796,7 @@ footer {
     width: 72px;
     height: 72px;
   }
-  .card:last-child:nth-child(even) {
+  .card:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
   .stage-bar h2 {
