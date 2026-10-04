@@ -95,7 +95,8 @@ export function createHud(wrap, { onMenu, onMusic }) {
         }
       }
     },
-    updateMap(px, pz, yaw, pois) {
+    // heading: Claw faces world direction (sin h, 0, cos h); map north (-z) is up.
+    updateMap(px, pz, heading, pois) {
       if (!mapBg) return;
       mctx.drawImage(mapBg, 0, 0);
       for (const p of pois) {
@@ -111,7 +112,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
       const y = toMap(pz);
       mctx.save();
       mctx.translate(x, y);
-      mctx.rotate(-yaw + Math.PI);
+      mctx.rotate(Math.PI - heading);
       mctx.beginPath();
       mctx.moveTo(0, -11);
       mctx.lineTo(7, 8);

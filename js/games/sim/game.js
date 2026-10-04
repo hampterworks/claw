@@ -198,7 +198,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const p = claw.position();
     const pois = [];
     for (const [id, spot] of Object.entries(QUEST_SPOTS)) if (spot && !ch.isDone(id)) pois.push({ x: spot.x, z: spot.z });
-    hud.updateMap(p.x, p.z, cam.yaw, pois);
+    hud.updateMap(p.x, p.z, claw.st.yaw, pois);
   }
 
   const cam = { yaw: Math.PI, pitch: 0.32, dist: 4.4, target: spawn.clone() };
