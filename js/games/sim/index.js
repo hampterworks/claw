@@ -44,7 +44,7 @@ export function mount(el, { fullscreen = false } = {}) {
         nameInput.maxLength = 20;
         nameInput.value = g.name;
         nameInput.setAttribute('aria-label', 'Your name in the shared Ohio');
-        nameInput.addEventListener('keydown', (e) => e.key === 'Enter' && g.start(nameInput.value));
+        nameInput.addEventListener('keydown', (e) => e.key === 'Enter' && g.start(nameInput.value, g.wantsOnline));
       }
       showOverlay(wrap, {
         title: 'CLAW SIMULATOR',
@@ -55,10 +55,15 @@ export function mount(el, { fullscreen = false } = {}) {
             ? 'Left stick moves, drag to look. Buttons: JUMP (x2), BONK, LICK, FLOP, ZOOM.'
             : 'WASD move, mouse look. Space jump (x2), F bonk, E lick, R flop, Shift zoomies, P menu.',
           'Finish Claw-lenges to unlock mutators.',
-          ...(g.mp ? ['🌐 Shared Ohio: your friends play in the same world. T to chat. Your name:'] : []),
+          ...(g.mp ? ['Play online in the shared Ohio with your friends (T to chat), or offline on your own. Same progress either way. Your name:'] : []),
         ],
         extra: nameInput,
-        buttons: [{ label: 'START GLORPING', primary: true, onClick: () => g.start(nameInput?.value) }],
+        buttons: g.mp
+          ? [
+              { label: '🌐 PLAY ONLINE', primary: g.wantsOnline, onClick: () => g.start(nameInput.value, true) },
+              { label: '🎮 PLAY OFFLINE', primary: !g.wantsOnline, onClick: () => g.start(nameInput.value, false) },
+            ]
+          : [{ label: 'START GLORPING', primary: true, onClick: () => g.start() }],
       });
     })
     .catch((err) => {

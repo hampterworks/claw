@@ -15,6 +15,7 @@ export function createNet(url) {
 
   function connect() {
     if (!url || st.closed) return;
+    if (st.ws && st.ws.readyState <= 1) return; // already connecting / connected
     let ws;
     try {
       ws = new WebSocket(url);
@@ -69,10 +70,20 @@ export function createNet(url) {
     },
     on,
     send,
+    get running() {
+      return !st.closed && !!st.hello;
+    },
     // hello() returns {name, skin, pet}; called on every (re)connect
     start(hello) {
-      st.hello = hello;
+      if (hello) st.hello = hello;
+      st.closed = false;
+      st.retry = 1000;
       connect();
+    },
+    // go offline (start() again to come back)
+    stop() {
+      st.closed = true;
+      st.ws?.close();
     },
     close() {
       st.closed = true;

@@ -345,7 +345,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   music.setEnabled(read('simmusic', true));
   hud.setMusic(music.enabled);
-  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled), onChat: () => mpUi?.openChat() });
+  const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled), onChat: () => online && mpUi?.openChat() });
 
   ch.state.babies.forEach((i) => S.babies[i] && (S.babies[i].visible = false));
   S.districts.reset(ch);
@@ -767,6 +767,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       touch,
       onSend: (text) => net.send({ t: 'chat', text }),
       onOpenChange: () => {},
+      onToggle: () => setOnline(!online),
     });
     players = createPlayers({
       RAPIER,
@@ -787,15 +788,32 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       },
     });
     net.on('status', (up) => {
-      mpUi.setStatus(up, players.count);
-      mpUi.feed(up ? 'Connected to the shared Ohio 🌐' : 'Lost connection, retrying…', up ? '#7CFF4F' : '#ff4f6d');
+      mpUi.setStatus(up, players.count, !online);
+      if (up) mpUi.feed('Connected to the shared Ohio 🌐', '#7CFF4F');
+      else if (online) mpUi.feed('Lost connection, retrying…', '#ff4f6d');
     });
     net.on('full', () => mpUi.feed('Ohio is full right now (12 Claws). Playing solo.', '#ff4f6d'));
     ch.onComplete((id) => {
       const c = ch.CHALLENGES.find((x) => x.id === id);
       if (c) net.send({ t: 'fx', text: `finished "${c.name}" 🏆` });
     });
-    mpUi.setStatus(false, 0);
+    mpUi.setStatus(false, 0, true);
+  }
+  // Online (shared Ohio) or offline (solo). Progress, coins and skins are the same either way.
+  let online = false;
+  function setOnline(on) {
+    if (!net) return;
+    online = on;
+    write('simonline', on);
+    if (on) {
+      net.start(() => ({ name: myName, skin: wallet.equipped, pet: wallet.pet }));
+      mpUi.setStatus(false, 0);
+      mpUi.feed('Going online…', '#7CFF4F');
+    } else {
+      net.stop();
+      mpUi.setStatus(false, 0, true);
+      mpUi.feed('Playing offline 🎮 (your progress is the same either way)', '#9aa0a8');
+    }
   }
   const mine = (pr) => !propSync || propSync.mine(pr);
   let netT = 0;
@@ -1064,6 +1082,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const setRow = document.createElement('div');
     setRow.className = 'sim-mutators';
     const toggles = [
+      ...(net ? [['Online', online, setOnline]] : []),
       ['Music', music.enabled, setMusic],
       ['Antenna glow', read('simglow', true), (v) => { claw.setGlow(v); write('simglow', v); }],
     ];
@@ -1204,14 +1223,14 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   let shadowFlip = false;
   raf = requestAnimationFrame(frame);
 
-  const start = (name) => {
+  const start = (name, goOnline = read('simonline', true)) => {
     if (typeof name === 'string' && name.trim()) {
       myName = name.trim().slice(0, 20);
       write('simname', myName);
     }
     if (net && !st.netStarted) {
       st.netStarted = true;
-      net.start(() => ({ name: myName, skin: wallet.equipped, pet: wallet.pet }));
+      setOnline(goOnline);
     }
     hideOverlay(wrap);
     playing = true;
@@ -1229,6 +1248,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     start,
     touch,
     mp: !!net,
+    get wantsOnline() {
+      return read('simonline', true);
+    },
     get name() {
       return myName;
     },

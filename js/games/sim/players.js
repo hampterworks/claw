@@ -176,11 +176,16 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
 }
 
 // Online chip, event feed and chat box. Text is always set with textContent.
-export function createMpUi(wrap, { touch, onSend, onOpenChange }) {
+export function createMpUi(wrap, { touch, onSend, onOpenChange, onToggle }) {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = 'sim-chip mp-online';
   chip.textContent = '🌐 …';
+  chip.title = 'Switch between online and offline';
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onToggle?.();
+  });
   wrap.querySelector('.sim-top-right')?.prepend(chip);
   const feed = document.createElement('div');
   feed.className = 'mp-feed';
@@ -236,8 +241,8 @@ export function createMpUi(wrap, { touch, onSend, onOpenChange }) {
       return !box.hidden;
     },
     openChat: open,
-    setStatus(connected, n) {
-      chip.textContent = connected ? `🌐 ${n + 1} online` : '🌐 offline';
+    setStatus(connected, n, solo = false) {
+      chip.textContent = solo ? '🎮 offline' : connected ? `🌐 ${n + 1} online` : '🌐 connecting…';
       chip.classList.toggle('off', !connected);
     },
     feed(text, color = '#fff') {

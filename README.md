@@ -64,7 +64,9 @@ in `server/wrangler.jsonc`.
 **Local testing:** `cd server && npx wrangler dev` (runs the Worker + Durable Object locally), serve the
 site, and open `glorp/?mp=ws://localhost:8787/ws` in two browser windows. `?mp=off` forces single-player.
 
-**In game:** T or Enter to chat (💬 on phones), F near another Claw to bonk them.
+**In game:** the start screen has **🌐 Play online** and **🎮 Play offline** (remembered for next time). Switch
+any time with the 🌐/🎮 chip at the top or **Online** in the pause menu. Progress, coins, skins and pets are the
+same in both. Online: T or Enter to chat (💬 on phones), F near another Claw to bonk them.
 
 ## Project layout
 
