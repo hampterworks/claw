@@ -69,10 +69,32 @@ export function mount(el, { fullscreen = false } = {}) {
     .catch((err) => {
       console.error(err);
       if (cancelled) return;
+      const msg = String(err && err.message ? err.message : err);
+      // Opened mid-update: the new page arrived before all the new files did. Reload once and it's fine.
+      const loadFail = /dynamically imported module|importing a module script failed|failed to fetch/i.test(msg);
+      let last = 0;
+      try {
+        last = +sessionStorage.getItem('claw.simretry') || 0;
+      } catch {
+        /* storage blocked */
+      }
+      if (loadFail && Date.now() - last > 60000) {
+        try {
+          sessionStorage.setItem('claw.simretry', String(Date.now()));
+        } catch {
+          /* storage blocked */
+        }
+        status.textContent = 'Ohio just got an update. Reloading…';
+        setTimeout(() => location.reload(), 1500);
+        return;
+      }
       showOverlay(wrap, {
         title: 'GLORP MALFUNCTION',
-        text: ['Claw Simulator needs WebGL and a modern browser.', String(err && err.message ? err.message : err)],
-        buttons: [{ label: 'Back to arcade', primary: true, onClick: exitToArcade }],
+        text: loadFail ? ['Part of Ohio failed to download (probably a fresh update still rolling out).', 'Wait a minute and try again.', msg] : ['Claw Simulator needs WebGL and a modern browser.', msg],
+        buttons: [
+          ...(loadFail ? [{ label: 'Try again', primary: true, onClick: () => location.reload() }] : []),
+          { label: 'Back to arcade', primary: !loadFail, onClick: exitToArcade },
+        ],
       });
     });
 
