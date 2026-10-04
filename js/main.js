@@ -119,9 +119,9 @@ window.addEventListener('keydown', unlockAudio, { once: true });
 $('#aura-icon').appendChild(memeIcon('oiia', 96));
 
 await loadImages({
-  leaf: 'assets/claw-leaf.png',
-  alien: 'assets/claw-alien.png',
-  stand: 'assets/claw-stand.png',
+  leaf: 'assets/claw-leaf.webp',
+  alien: 'assets/claw-alien.webp',
+  stand: 'assets/claw-stand.webp',
 });
 window.addEventListener('hashchange', route);
 route();

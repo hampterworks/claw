@@ -6,7 +6,7 @@ All models are CC0 (public domain). Credit isn't required, but these folks are g
 - **Furniture** (living room, studio desk): *Furniture Kit* by [Kenney](https://kenney.nl), CC0.
 - **Trees, bushes, rocks, corn, palms, cactus, lilypads**: *Ultimate Nature Pack* by [Quaternius](https://quaternius.com), CC0.
 - **Meowtown** (walls, fountain, stalls, lanterns, carts, windmill rotor, fences, trees): *Fantasy Town Kit 2.0* by [Kenney](https://kenney.nl), CC0.
-- **Pets** (all 24 casino pets): *Cube Pets* by [Kenney](https://kenney.nl), CC0. Icons in `assets/sim-pets.png` are the kit's previews.
+- **Pets** (all 24 casino pets): *Cube Pets* by [Kenney](https://kenney.nl), CC0. Icons in `assets/sim-pets.webp` are the kit's previews.
 - **Lyonia (Vash)** and his gold shrine statue: *Mini Characters* by [Kenney](https://kenney.nl), CC0 (recoloured, plus procedural ears, tail and heart eyes in `js/games/sim/vash.js`).
 - **Glorp Mini Golf** (course tiles, flag, castles, ball): *Minigolf Kit* by [Kenney](https://kenney.nl), CC0.
 

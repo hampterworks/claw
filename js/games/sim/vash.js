@@ -3,6 +3,7 @@
 // Also used, in gold, as the statue in the secret Vash Shrine.
 import * as THREE from 'three';
 import { markerTexture } from './textures.js';
+import { mergeChildren } from './merge.js';
 
 const PURPLE = '#8a5cff';
 const HAIR = '#3a2c34';
@@ -125,6 +126,8 @@ export function buildVash(gltf, { gold = false } = {}) {
   tail.add(seg(0.075, 0.2, HAIR, -0.08), seg(0.06, 0.14, HAIR, -0.21), seg(0.045, 0.1, PURPLE, -0.3));
   add(torso, tail, 0, 0.1, -0.19, 1.1, 0, 0); // tips point down and back
   if (gold) model.traverse((o) => o.isMesh && (o.material = goldMat));
+  // ~30 little accessory meshes -> a few merged ones per bone (fewer draw calls)
+  for (const b of [head, torso, tail]) mergeChildren(b);
   model.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;

@@ -1,6 +1,7 @@
 // CLAW SIMULATOR: the 3D sandbox. three.js renders, Rapier simulates.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
@@ -23,6 +24,7 @@ import { mpUrl } from './net-config.js';
 import { createNet } from './net.js';
 import { createPlayers, createMpUi, FLAG } from './players.js';
 import { createPropSync } from './props-sync.js';
+import { mergeStaticMeshes } from './merge.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -69,7 +71,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   if (isCancelled()) return null;
 
   onStatus('Summoning Claw...');
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); // world.glb + pets.glb are meshopt-compressed
   const [catGltf, maxGltf, worldGltf, petsGltf, vashGltf, vashStatueGltf, vashTex, matt, huh, baby, dance, forp, face, wintyTex, newsImg, clawImg, mattImg] = await Promise.all([
     loader.loadAsync('assets/models/claw.glb'),
     loader.loadAsync('assets/models/claw.glb'),
@@ -77,17 +79,17 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     loader.loadAsync('assets/models/pets.glb'),
     loader.loadAsync('assets/models/vash.glb'),
     loader.loadAsync('assets/models/vash.glb'), // second copy for the shrine statue
-    loadTexture('assets/sim-vash.png'),
-    loadTexture('assets/sim-matt.png'),
-    loadTexture('assets/sim-huh.png'),
-    loadTexture('assets/sim-baby.png'),
-    loadTexture('assets/sim-dance.png'),
+    loadTexture('assets/sim-vash.webp'),
+    loadTexture('assets/sim-matt.webp'),
+    loadTexture('assets/sim-huh.webp'),
+    loadTexture('assets/sim-baby.webp'),
+    loadTexture('assets/sim-dance.webp'),
     loadTexture('assets/sim-forp.webp'),
-    loadTexture('assets/claw-alien.png'),
-    loadTexture('assets/sim-winty.png'),
+    loadTexture('assets/claw-alien.webp'),
+    loadTexture('assets/sim-winty.webp'),
     loadImage('assets/sim-news.webp'),
-    loadImage('assets/claw-alien.png'),
-    loadImage('assets/sim-matt.png'),
+    loadImage('assets/claw-alien.webp'),
+    loadImage('assets/sim-matt.webp'),
   ]);
   if (isCancelled()) return null;
   onStatus('Building Ohio...');
@@ -97,11 +99,15 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.25 : 1.5));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  // shadows are re-rendered every other frame (with the sun moving in step), see frame()
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   const canvas = renderer.domElement;
   canvas.className = 'sim-canvas';
   wrap.appendChild(canvas);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 260);
+  // far plane = where the fog (world.js, 70..210) has hidden everything anyway
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 215);
   const gfx = createGraphics(renderer, scene, camera);
 
   function resize() {
@@ -139,6 +145,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   scene.traverse((o) => {
     if (o.isMesh) [].concat(o.material).forEach((m) => windy.has(m.name) && applyWind(m, m.name === 'plant' ? 0.05 : 0.02));
   });
+  // fewer draw calls: fold static code-built decoration into a few vertex-coloured meshes
+  const merged = mergeStaticMeshes(scene, W, [sky]);
+  if (debug) console.info('static merge', merged);
   // Quality ladder, stepped down automatically while the frame rate is poor.
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   const LADDER = [
@@ -378,6 +387,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     hud.updateMap(p.x, p.z, claw.st.yaw, pois);
   }
 
+  const sunAt = spawn.clone();
   const cam = { yaw: Math.PI, pitch: 0.32, dist: 4.4, target: spawn.clone() };
   const st = {
     bonkCd: 0,
@@ -850,9 +860,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     camera.position.copy(cam.target).addScaledVector(dir, d);
     camera.lookAt(cam.target);
     hideBlockingTrees();
-    // keep the shadow camera around Claw
-    S.sun.position.set(p.x + 14, p.y + 26, p.z + 9);
-    S.sun.target.position.set(p.x, p.y, p.z);
+    // where the shadow camera should be (applied when the shadow map is next refreshed)
+    sunAt.set(p.x, p.y, p.z);
   }
 
   // Trees between the camera and Claw get hidden so the canopy never blocks the view.
@@ -941,7 +950,21 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     S.trampMat.scale.y += (1 - S.trampMat.scale.y) * Math.min(1, dt * 8);
     W.update(dt, t);
     sky.position.copy(camera.position);
-    gfx.render(t);
+    // Behind a menu, panel or the start screen the world barely shows: render a fraction of
+    // the frames. Nothing at all in a background tab.
+    idleN++;
+    const covered = !playing || menuOpen;
+    if (!document.hidden && (!covered || idleN % (playing ? 8 : 4) === 0)) {
+      // Shadow pass (~35% of draw calls) only every other rendered frame. The sun follows Claw
+      // on the same frames, so shadows never slide against the map.
+      shadowFlip = !shadowFlip;
+      if (shadowFlip) {
+        S.sun.position.set(sunAt.x + 14, sunAt.y + 26, sunAt.z + 9);
+        S.sun.target.position.copy(sunAt);
+        renderer.shadowMap.needsUpdate = true;
+      }
+      gfx.render(t);
+    }
 
     // drop to Low graphics once if the device is struggling
     fpsT += dt;
@@ -1106,7 +1129,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     pogs.className = 'credits-pogs';
     for (let i = 0; i < 5; i++) {
       const img = document.createElement('img');
-      img.src = 'assets/sim-matt.png';
+      img.src = 'assets/sim-matt.webp';
       img.alt = i === 2 ? 'Mattpog' : '';
       img.style.animationDelay = `${-i * 0.18}s`;
       pogs.appendChild(img);
@@ -1169,6 +1192,16 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
+  // compile every shader now (behind the loading screen) instead of hitching on first sight
+  onStatus('Warming up shaders...');
+  try {
+    await renderer.compileAsync(scene, camera);
+    gfx.render(0);
+  } catch (e) {
+    console.warn('shader warm-up skipped', e);
+  }
+  let idleN = 0;
+  let shadowFlip = false;
   raf = requestAnimationFrame(frame);
 
   const start = (name) => {

@@ -169,7 +169,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
       if (pog) {
         for (const side of ['left', 'right']) {
           const img = document.createElement('img');
-          img.src = 'assets/sim-matt.png';
+          img.src = 'assets/sim-matt.webp';
           img.alt = '';
           img.className = 'sim-pog ' + side;
           banner.appendChild(img);

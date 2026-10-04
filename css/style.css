@@ -1130,7 +1130,7 @@ footer {
 .pet-icon {
   width: 56px;
   height: 56px;
-  background: url(../assets/sim-pets.png) 0 0 / 2400% 100% no-repeat;
+  background: url(../assets/sim-pets.webp) 0 0 / 2400% 100% no-repeat;
   image-rendering: auto;
   display: grid;
   place-items: center;

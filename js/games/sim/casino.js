@@ -53,7 +53,7 @@ export function skinSwatch(skin, owned = true) {
   if (skin.opacity != null) s.style.opacity = '0.6';
   if (skin.mattFace) {
     const img = el('img');
-    img.src = 'assets/sim-matt.png';
+    img.src = 'assets/sim-matt.webp';
     img.alt = '';
     s.appendChild(img);
   }
@@ -104,7 +104,7 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
   }
 
   const symbolSrc = {};
-  for (const s of SYMBOLS) symbolSrc[s.id] = s.id === 'matt' ? 'assets/sim-matt.png' : memeIcon(s.id, 72).toDataURL();
+  for (const s of SYMBOLS) symbolSrc[s.id] = s.id === 'matt' ? 'assets/sim-matt.webp' : memeIcon(s.id, 72).toDataURL();
 
   function coinsLine() {
     const c = el('div', 'casino-coins');

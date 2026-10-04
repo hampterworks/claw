@@ -2,7 +2,7 @@
 // Glorp and Pet Derby. Each pet boosts the coins Claw earns from points.
 import * as THREE from 'three';
 
-// Order matches the icon atlas (assets/sim-pets.png, 64px per pet, alphabetical).
+// Order matches the icon atlas (assets/sim-pets.webp, 64px per pet, alphabetical).
 const ATLAS = ['beaver', 'bee', 'bunny', 'cat', 'caterpillar', 'chick', 'cow', 'crab', 'deer', 'dog', 'elephant', 'fish',
   'fox', 'giraffe', 'hog', 'koala', 'lion', 'monkey', 'panda', 'parrot', 'penguin', 'pig', 'polar', 'tiger'];
 

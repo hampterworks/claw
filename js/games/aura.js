@@ -194,7 +194,7 @@ export function mount(el) {
   }
 
   const stoveIcon = new Image();
-  stoveIcon.src = 'assets/claw-leaf.png';
+  stoveIcon.src = 'assets/claw-leaf.webp';
   stoveIcon.alt = '';
   stoveIcon.width = stoveIcon.height = 52;
   addRow({

@@ -1,0 +1,2 @@
+Rapier 0.21.0 (@dimforge/rapier3d-compat). The compat build embeds its wasm as base64; it was extracted
+into rapier_wasm3d_bg.wasm and init() points at it with new URL('./rapier_wasm3d_bg.wasm', import.meta.url).

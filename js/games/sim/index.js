@@ -18,7 +18,7 @@ export function mount(el, { fullscreen = false } = {}) {
   const status = document.createElement('p');
   status.className = 'sim-status';
   status.textContent = 'Loading glorp...';
-  showOverlay(wrap, { title: 'CLAW SIMULATOR', img: 'assets/sim-dance.png', extra: status, buttons: [] });
+  showOverlay(wrap, { title: 'CLAW SIMULATOR', img: 'assets/sim-dance.webp', extra: status, buttons: [] });
 
   import('./game.js')
     .then((m) =>
@@ -48,7 +48,7 @@ export function mount(el, { fullscreen = false } = {}) {
       }
       showOverlay(wrap, {
         title: 'CLAW SIMULATOR',
-        img: 'assets/sim-dance.png',
+        img: 'assets/sim-dance.webp',
         text: [
           'You are Claw. Cause chaos. Knock things off tables. Boil yourself.',
           g.touch
