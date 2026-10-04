@@ -5,12 +5,14 @@ export function createHud(wrap, { onMenu, onMusic }) {
   el.innerHTML = `
     <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="combo"></span></div>
     <div class="sim-top-right">
-      <button type="button" class="sim-chip trophies">🏆 0/10</button>
+      <button type="button" class="sim-chip trophies">🏆 0</button>
       <button type="button" class="sim-chip music" aria-label="Toggle music">♪ ON</button>
       <button type="button" class="sim-chip menu" aria-label="Menu">☰</button>
     </div>
     <div class="sim-popups"></div>
     <div class="sim-banner"></div>
+    <canvas class="sim-map" width="260" height="260" aria-hidden="true"></canvas>
+    <div class="sim-timer"></div>
     <div class="sim-energy"><span></span><i>3AM ENERGY</i></div>
     <div class="sim-hint"></div>
   `;
@@ -30,6 +32,13 @@ export function createHud(wrap, { onMenu, onMusic }) {
     e.stopPropagation();
     onMusic();
   });
+
+  const timer = $('.sim-timer');
+  const mapCanvas = $('.sim-map');
+  const mctx = mapCanvas.getContext('2d');
+  let mapBg = null;
+  let mapBounds = 92;
+  const toMap = (v) => ((v + mapBounds) / (2 * mapBounds)) * 260;
 
   let bannerTimer = 0;
   let hintTimer = 0;
@@ -51,6 +60,69 @@ export function createHud(wrap, { onMenu, onMusic }) {
       musicBtn.textContent = on ? '♪ ON' : '♪ OFF';
       musicBtn.classList.toggle('off', !on);
       musicBtn.setAttribute('aria-pressed', String(on));
+    },
+    setTimer(text) {
+      timer.textContent = text || '';
+      timer.classList.toggle('show', !!text);
+    },
+    // features: [{ x, z, w, d, color, label }] drawn once; POIs + Claw drawn every update.
+    setupMap(bounds, features) {
+      mapBounds = bounds;
+      mapBg = document.createElement('canvas');
+      mapBg.width = mapBg.height = 260;
+      const c = mapBg.getContext('2d');
+      c.fillStyle = '#4f9a3a';
+      c.fillRect(0, 0, 260, 260);
+      c.font = "bold 13px 'Comic Neue', sans-serif";
+      c.textAlign = 'center';
+      for (const f of features) {
+        c.fillStyle = f.color;
+        const x = toMap(f.x);
+        const y = toMap(f.z);
+        const w = (f.w / (2 * bounds)) * 260;
+        const d = (f.d / (2 * bounds)) * 260;
+        if (f.round) {
+          c.beginPath();
+          c.ellipse(x, y, w / 2, d / 2, 0, 0, Math.PI * 2);
+          c.fill();
+        } else c.fillRect(x - w / 2, y - d / 2, w, d);
+        if (f.label) {
+          c.fillStyle = '#fff';
+          c.strokeStyle = '#111';
+          c.lineWidth = 3;
+          c.strokeText(f.label, x, y + 4);
+          c.fillText(f.label, x, y + 4);
+        }
+      }
+    },
+    updateMap(px, pz, yaw, pois) {
+      if (!mapBg) return;
+      mctx.drawImage(mapBg, 0, 0);
+      for (const p of pois) {
+        mctx.beginPath();
+        mctx.arc(toMap(p.x), toMap(p.z), 5, 0, Math.PI * 2);
+        mctx.fillStyle = p.color || '#ffe14d';
+        mctx.fill();
+        mctx.lineWidth = 2;
+        mctx.strokeStyle = '#111';
+        mctx.stroke();
+      }
+      const x = toMap(px);
+      const y = toMap(pz);
+      mctx.save();
+      mctx.translate(x, y);
+      mctx.rotate(-yaw + Math.PI);
+      mctx.beginPath();
+      mctx.moveTo(0, -11);
+      mctx.lineTo(7, 8);
+      mctx.lineTo(-7, 8);
+      mctx.closePath();
+      mctx.fillStyle = '#7CFF4F';
+      mctx.fill();
+      mctx.lineWidth = 2.5;
+      mctx.strokeStyle = '#111';
+      mctx.stroke();
+      mctx.restore();
     },
     setTrophies(done, total) {
       trophies.textContent = `🏆 ${done}/${total}`;

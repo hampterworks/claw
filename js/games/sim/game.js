@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
-import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, BOUNDS } from './world.js';
+import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
+import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE } from './districts.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
 import { createChallenges } from './challenges.js';
@@ -65,7 +66,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   canvas.className = 'sim-canvas';
   wrap.appendChild(canvas);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 260);
   const gfx = createGraphics(renderer, scene, camera);
 
   function resize() {
@@ -103,7 +104,23 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   scene.traverse((o) => {
     if (o.isMesh) [].concat(o.material).forEach((m) => windy.has(m.name) && applyWind(m, m.name === 'plant' ? 0.05 : 0.02));
   });
-  gfx.setQuality(forceHigh ? 'high' : read('simgfx', touch ? 'low' : 'high'));
+  // Quality ladder, stepped down automatically while the frame rate is poor.
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const LADDER = [
+    { q: 'high', pr: Math.min(DPR, 1.5) },
+    { q: 'high', pr: Math.min(DPR, 1) },
+    { q: 'low', pr: Math.min(DPR, 1) },
+    { q: 'low', pr: Math.min(DPR, 0.75) },
+  ];
+  const savedGfx = read('simgfx', null);
+  let rung = forceHigh ? 0 : savedGfx === 'low' ? 2 : savedGfx === 'high' ? 0 : touch ? 2 : 0;
+  function setRung(i) {
+    rung = i;
+    gfx.setQuality(LADDER[i].q);
+    renderer.setPixelRatio(LADDER[i].pr);
+    resize();
+  }
+  setRung(rung);
   const spawn = new THREE.Vector3(HOUSE.x + 2, 0.8, HOUSE.z + 2.8);
   const claw = createClaw({ RAPIER, world, scene, gltf: catGltf, faceTex: face, spawn });
   // Let everything settle before scoring starts, so nothing counts as "knocked" on load.
@@ -137,7 +154,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   // ---------- game state ----------
   let menuOpen = false;
   let playing = false;
-  const mut = { gravity: false, cursed: false, big: false, oiia: false, popcat: false };
+  const mut = { gravity: false, cursed: false, big: false, oiia: false, popcat: false, tiny: false, matt: false };
 
   const hud = createHud(wrap, { onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
   const ch = createChallenges(hud);
@@ -146,6 +163,38 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   const controls = createControls(wrap, canvas, { touch, onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
 
   ch.state.babies.forEach((i) => S.babies[i] && (S.babies[i].visible = false));
+  S.districts.reset(ch);
+
+  // minimap
+  hud.setupMap(BOUNDS, [
+    { x: 0, z: -52, w: 170, d: 6, color: '#3b3f4a' },
+    { x: LAKE.x, z: LAKE.z, w: 48, d: 32, color: '#2a9fd6', round: true, label: 'LAKE' },
+    { x: RACE.x, z: RACE.z, w: 39, d: 53, color: '#b8875a', round: true, label: 'RACE' },
+    { x: HOUSE.x, z: HOUSE.z, w: 13, d: 11, color: '#c99a6b', label: 'HOME' },
+    { x: STUDIO.x, z: STUDIO.z, w: 11, d: 7, color: '#2b2f4a', label: 'NEWS' },
+    { x: CORN.x, z: CORN.z, w: 12, d: 12, color: '#d9c27a', label: 'OHIO' },
+    { x: PARK_POT.x, z: PARK_POT.z, w: 5, d: 5, color: '#ff9a3c', round: true, label: 'POT' },
+    { x: TOWER.x, z: TOWER.z, w: 5, d: 5, color: '#d33f2f', round: true },
+    { x: CAFE.x, z: CAFE.z, w: 9, d: 7, color: '#ff7bf2', label: 'CAFÉ' },
+    { x: TOWERS.x, z: TOWERS.z, w: 9, d: 7, color: '#9aa3b5' },
+    { x: MATT_HOUSE.x, z: MATT_HOUSE.z, w: 7, d: 7, color: '#ffe14d', label: 'MATT' },
+    { x: UFO.x, z: UFO.z, w: 9, d: 9, color: '#9dff6a', round: true, label: 'UFO' },
+    { x: CAT_TREE.x, z: CAT_TREE.z, w: 7, d: 7, color: '#c98bdb', round: true, label: 'CAT TREE' },
+  ]);
+  const QUEST_SPOTS = {
+    boil: PARK_POT, tower: TOWER, news: STUDIO, huh: CORN, maxwell: STATUE, sky: TRAMP, flop: null, box: null, knock: null, babies: null,
+    mugs: CAFE, fish: LAKE, headphones: CAT_TREE, roof: TOWERS, cannonball: TOWERS, lap: RACE, ufo: UFO, swim: LAKE, king: CAT_TREE, gold: null,
+  };
+  let mapT = 0;
+  function updateMap(dt) {
+    mapT -= dt;
+    if (mapT > 0) return;
+    mapT = 0.12;
+    const p = claw.position();
+    const pois = [];
+    for (const [id, spot] of Object.entries(QUEST_SPOTS)) if (spot && !ch.isDone(id)) pois.push({ x: spot.x, z: spot.z });
+    hud.updateMap(p.x, p.z, cam.yaw, pois);
+  }
 
   const cam = { yaw: Math.PI, pitch: 0.32, dist: 4.4, target: spawn.clone() };
   const st = {
@@ -319,6 +368,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         pr.knocked = true;
         ch.chaos(50, pick(KNOCK), '#ffe14d');
         ch.progress('knock');
+        if (pr.kind === 'mug') ch.progress('mugs');
       }
     }
 
@@ -450,6 +500,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     if (p.y < -6) claw.teleport(spawn.x, 2, spawn.z);
 
+    S.districts.check(dt, t, { claw, ch, hud, sfx });
+
     // OIIA mode soundtrack
     if (mut.oiia) {
       st.oiiaT -= dt;
@@ -474,8 +526,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   function applyMutators() {
     world.gravity = { x: 0, y: mut.gravity ? -6.5 : -20, z: 0 };
-    claw.setScale(mut.big ? 2.6 : 1);
-    cam.dist = mut.big ? 8.5 : 4.4;
+    claw.setScale(mut.big ? 2.6 : mut.tiny ? 0.45 : 1);
+    cam.dist = mut.big ? 8.5 : mut.tiny ? 2.6 : 4.4;
+    claw.setFaceTexture(mut.matt && matt ? matt : face);
   }
 
   // ---------- camera ----------
@@ -516,7 +569,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       u = Math.max(0, Math.min(1, u));
       const px = ax + dx * u - tr.x;
       const pz = az + dz * u - tr.z;
-      tr.mesh.visible = !(px * px + pz * pz < 6.5 && camera.position.y < tr.h);
+      tr.handle.setVisible(!(px * px + pz * pz < 6.5 && camera.position.y < tr.h));
     }
   }
 
@@ -563,6 +616,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       checks(dt, t);
       ch.update(dt);
       hud.setEnergy(claw.st.energy);
+      updateMap(dt);
       updateCamera(dt, { lookX: 0, lookY: 0 });
       st.saveT += dt;
       if (st.saveT > 5) {
@@ -584,10 +638,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     fpsN++;
     if (fpsT > 4) {
       const fps = fpsN / fpsT;
-      if (playing && !forceHigh && fps < 28 && gfx.quality === 'high' && !st.autoLow) {
-        st.autoLow = true;
-        gfx.setQuality('low');
-        hud.hint('Graphics set to Low for smoother glorping (change it in the menu).', 4000);
+      if (playing && !menuOpen && !forceHigh && fps < 40 && rung < LADDER.length - 1) {
+        setRung(rung + 1);
+        if (LADDER[rung].q === 'low' && LADDER[rung - 1].q === 'high') hud.hint('Graphics set to Low for smoother glorping (change it in the menu).', 4000);
       }
       fpsT = 0;
       fpsN = 0;
@@ -632,6 +685,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       b.title = m.desc;
       b.addEventListener('click', () => {
         mut[m.id] = !mut[m.id];
+        if (m.id === 'big' && mut.big) mut.tiny = false;
+        if (m.id === 'tiny' && mut.tiny) mut.big = false;
         applyMutators();
         sfx.click();
         openMenu();
@@ -650,7 +705,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       b.className = 'btn small' + (gfx.quality === qv ? ' primary' : '');
       b.textContent = qv === 'high' ? 'High (bloom, shadows)' : 'Low (fast)';
       b.addEventListener('click', () => {
-        gfx.setQuality(qv);
+        setRung(qv === 'high' ? 0 : 2);
         write('simgfx', qv);
         sfx.click();
         openMenu();
@@ -739,7 +794,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   raf = requestAnimationFrame(frame);

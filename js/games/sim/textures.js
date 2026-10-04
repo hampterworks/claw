@@ -152,3 +152,56 @@ export function newsTexture(newsImg, liveImg, mattImg) {
   }
   return { texture: tex, update };
 }
+
+// Meme cat on a transparent background, for billboard NPCs.
+export function memeSpriteTexture(id) {
+  return canvasTexture(256, 256, (ctx, w, h) => {
+    drawMeme(ctx, id, w / 2 + (id === 'nyan' ? 40 : 0), h / 2 + 18, id === 'nyan' ? 120 : 170, 0.3);
+  });
+}
+
+// Floating quest marker.
+export function markerTexture(char = '!') {
+  return canvasTexture(128, 128, (ctx) => {
+    ctx.beginPath();
+    ctx.arc(64, 64, 54, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffe14d';
+    ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#111';
+    ctx.stroke();
+    ctx.font = "84px 'Bangers', Impact, sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#111';
+    ctx.fillText(char, 64, 70);
+  });
+}
+
+// Sisal rope wrapping for the giant cat tree.
+export function ropeTexture() {
+  const t = canvasTexture(128, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#c9a66b';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(90,60,20,0.45)';
+    ctx.lineWidth = 5;
+    for (let y = 0; y < h; y += 10) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y + 4);
+      ctx.stroke();
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 12);
+  return t;
+}
+
+export function checkerTexture() {
+  return canvasTexture(256, 64, (ctx, w, h) => {
+    for (let x = 0; x < w; x += 16) for (let y = 0; y < h; y += 16) {
+      ctx.fillStyle = (x / 16 + y / 16) % 2 ? '#111' : '#fff';
+      ctx.fillRect(x, y, 16, 16);
+    }
+  });
+}

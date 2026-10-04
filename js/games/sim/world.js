@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { makeCat } from './claw.js';
 import { memeStandeeTexture, signTexture, yarnTexture, newsTexture } from './textures.js';
 import { soupMaterial } from './graphics.js';
+import { createBuilder } from './builder.js';
+import { buildDistricts } from './districts.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
 export const PARK_POT = new THREE.Vector3(16, 0, 12);
@@ -12,7 +14,7 @@ export const STATUE = new THREE.Vector3(23, 0, 0);
 export const TOWER = new THREE.Vector3(-26, 0, 22);
 export const STUDIO = new THREE.Vector3(0, 0, -27);
 export const CORN = new THREE.Vector3(25, 0, -24);
-export const BOUNDS = 44;
+export const BOUNDS = 92;
 
 const POT_R = 2.3;
 const POT_H = 1.45;
@@ -29,111 +31,15 @@ function rng(seed) {
 
 export function buildWorld({ RAPIER, world, scene, models, catGltf, images, textures }) {
   const rand = rng(1551);
-  const props = [];
   const disposables = [];
   const animated = [];
   const special = {};
-  const bboxCache = new Map();
-
-  const yawQ = (y) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), y);
-
-  function template(name) {
-    const obj = models.getObjectByName(name);
-    if (!obj) throw new Error('missing model ' + name);
-    if (!bboxCache.has(name)) {
-      const size = new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3());
-      bboxCache.set(name, size);
-    }
-    return { obj, size: bboxCache.get(name) };
-  }
-
-  function cloneModel(name, shadows = true) {
-    const { obj, size } = template(name);
-    const c = obj.clone(true);
-    c.position.set(0, 0, 0);
-    c.traverse((m) => {
-      if (m.isMesh) {
-        m.castShadow = shadows;
-        m.receiveShadow = true;
-      }
-    });
-    return { mesh: c, size };
-  }
-
-  function fixed(x, y, z, q) {
-    const d = RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z);
-    if (q) d.setRotation(q);
-    return world.createRigidBody(d);
-  }
-
-  function staticBox(x, y, z, hx, hy, hz, rotY = 0, rotQ = null) {
-    const q = rotQ || yawQ(rotY);
-    const b = fixed(x, y, z, q);
-    return world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setFriction(0.8), b);
-  }
-
-  function deco(name, x, y, z, rotY = 0, scale = 1, shadows = true) {
-    const { mesh } = cloneModel(name, shadows);
-    mesh.position.set(x, y, z);
-    mesh.rotation.y = rotY;
-    mesh.scale.setScalar(scale);
-    scene.add(mesh);
-    return mesh;
-  }
-
-  function staticModel(name, x, y, z, rotY = 0) {
-    const mesh = deco(name, x, y, z, rotY);
-    const { size } = template(name);
-    staticBox(x, y + size.y / 2, z, size.x / 2, size.y / 2, size.z / 2, rotY);
-    return mesh;
-  }
-
-  // Dynamic, knockable prop. Model feet are at y=0, so the body sits half a height up.
-  function prop(name, x, y, z, rotY = 0, o = {}) {
-    const { mesh, size } = cloneModel(name);
-    const s = o.scale || 1;
-    mesh.scale.setScalar(s);
-    const hx = (size.x * s) / 2;
-    const hy = (size.y * s) / 2;
-    const hz = (size.z * s) / 2;
-    const p = addBody(mesh, RAPIER.ColliderDesc.cuboid(hx, Math.max(hy, 0.03), hz), x, y, z, rotY, hy, { ...o, name });
-    p.half = new THREE.Vector3(hx, hy, hz);
-    return p;
-  }
-
-  function addBody(mesh, colliderDesc, x, y, z, rotY, hy, o = {}) {
-    const q = yawQ(rotY);
-    const body = world.createRigidBody(
-      RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(x, y + hy, z)
-        .setRotation(q)
-        .setLinearDamping(0.1)
-        .setAngularDamping(0.3)
-        .setCanSleep(true)
-    );
-    world.createCollider(colliderDesc.setDensity(o.density ?? 0.6).setFriction(o.friction ?? 0.7).setRestitution(o.bounce ?? 0.1), body);
-    body.sleep();
-    scene.add(mesh);
-    const p = {
-      body,
-      mesh,
-      hy: o.centered ? 0 : hy,
-      baseOff: hy,
-      kind: o.kind || 'prop',
-      name: o.name || o.kind || 'prop',
-      spawn: new THREE.Vector3(x, y + hy, z),
-      elevated: y > 0.3,
-      knocked: false,
-      moved: false,
-      bonked: false,
-    };
-    props.push(p);
-    return p;
-  }
+  const B = createBuilder({ RAPIER, world, scene, models });
+  const { props, yawQ, template, deco, fixed, staticBox, staticModel, prop, addBody } = B;
 
   // ---------- sky, light, ground ----------
   scene.background = new THREE.Color('#8fd3ff');
-  scene.fog = new THREE.Fog('#bfe6ff', 45, 120);
+  scene.fog = new THREE.Fog('#c4ecff', 70, 210);
   const hemi = new THREE.HemisphereLight('#e6f6ff', '#4f7a2f', 1.5);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff6dd', 2.4);
@@ -149,7 +55,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   special.sun = sun;
 
   {
-    const geo = new THREE.PlaneGeometry(160, 160, 48, 48);
+    const geo = new THREE.PlaneGeometry(300, 300, 72, 72);
     geo.rotateX(-Math.PI / 2);
     const colors = [];
     const c = new THREE.Color();
@@ -161,65 +67,48 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
     ground.receiveShadow = true;
     scene.add(ground);
-    staticBox(0, -0.5, 0, 80, 0.5, 80);
+    staticBox(0, -0.5, 0, 150, 0.5, 150);
     // invisible borders of Ohio
     for (const [x, z, hx, hz] of [[BOUNDS, 0, 0.5, BOUNDS], [-BOUNDS, 0, 0.5, BOUNDS], [0, BOUNDS, BOUNDS, 0.5], [0, -BOUNDS, BOUNDS, 0.5]]) staticBox(x, 10, z, hx, 10, hz);
   }
 
-  // clouds
+  // clouds: one instanced mesh, 4 puffs per cloud
   {
-    const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true, roughness: 1 });
-    const geo = new THREE.IcosahedronGeometry(1, 0);
-    for (let i = 0; i < 10; i++) {
-      const g = new THREE.Group();
-      for (let k = 0; k < 4; k++) {
-        const m = new THREE.Mesh(geo, mat);
-        m.position.set(k * 1.6 - 2.4, rand() * 0.6, rand() * 1.2);
-        m.scale.setScalar(1.4 + rand() * 1.2);
-        g.add(m);
-      }
-      g.position.set(rand() * 120 - 60, 24 + rand() * 10, rand() * 120 - 60);
-      g.userData.speed = 0.6 + rand() * 0.8;
-      scene.add(g);
-      animated.push((dt) => {
-        g.position.x += g.userData.speed * dt;
-        if (g.position.x > 70) g.position.x = -70;
+    const N = 16;
+    const puffs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true, roughness: 1 }), N * 4);
+    const clouds = [];
+    for (let i = 0; i < N; i++) {
+      clouds.push({
+        x: rand() * 240 - 120,
+        y: 26 + rand() * 14,
+        z: rand() * 240 - 120,
+        speed: 0.6 + rand() * 0.8,
+        parts: [0, 1, 2, 3].map((k) => [k * 1.6 - 2.4, rand() * 0.6, rand() * 1.2, 1.4 + rand() * 1.2]),
       });
     }
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pv = new THREE.Vector3();
+    const sv = new THREE.Vector3();
+    puffs.frustumCulled = false;
+    scene.add(puffs);
+    animated.push((dt) => {
+      clouds.forEach((c, i) => {
+        c.x += c.speed * dt;
+        if (c.x > 130) c.x = -130;
+        c.parts.forEach(([dx, dy, dz, s], k) => puffs.setMatrixAt(i * 4 + k, m.compose(pv.set(c.x + dx * 2, c.y + dy, c.z + dz), q, sv.set(s * 2, s * 1.4, s * 2))));
+      });
+      puffs.instanceMatrix.needsUpdate = true;
+    });
   }
 
   // ---------- the living room ----------
   const H = HOUSE;
   {
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.06, 11), new THREE.MeshStandardMaterial({ color: '#c99a6b', roughness: 0.9 }));
-    floor.position.set(H.x, 0.03, H.z);
-    floor.receiveShadow = true;
-    scene.add(floor);
-    staticBox(H.x, 0.03, H.z, 6.6, 0.03, 5.5);
+    B.room(H.x, H.z, 6, 5, { doors: ['s2', 's3', 'e1'], windows: ['n1', 'n4', 's1', 's4', 'w1', 'w3', 'e3'] });
 
-    const wallPiece = (type, x, z, rotY) => {
-      deco(type, x, 0, z, rotY);
-      const q = yawQ(rotY);
-      if (type === 'k_wallDoorway') {
-        const off = new THREE.Vector3(0.8, 0, 0).applyQuaternion(q);
-        staticBox(x + off.x, 1.42, z + off.z, 0.3, 1.42, 0.09, rotY);
-        staticBox(x - off.x, 1.42, z - off.z, 0.3, 1.42, 0.09, rotY);
-        staticBox(x, 2.5, z, 1.1, 0.34, 0.09, rotY);
-      } else {
-        staticBox(x, 1.42, z, 1.1, 1.42, 0.09, rotY);
-      }
-    };
-    const back = ['k_wall', 'k_wallWindow', 'k_wall', 'k_wall', 'k_wallWindow', 'k_wall'];
-    const front = ['k_wall', 'k_wallWindow', 'k_wallDoorway', 'k_wallDoorway', 'k_wallWindow', 'k_wall'];
-    back.forEach((t, i) => wallPiece(t, H.x - 5.5 + i * 2.2, H.z - 5.5, 0));
-    front.forEach((t, i) => wallPiece(t, H.x - 5.5 + i * 2.2, H.z + 5.5, Math.PI));
-    const left = ['k_wall', 'k_wallWindow', 'k_wall', 'k_wallWindow', 'k_wall'];
-    const right = ['k_wall', 'k_wallDoorway', 'k_wall', 'k_wallWindow', 'k_wall'];
-    left.forEach((t, i) => wallPiece(t, H.x - 6.6, H.z - 4.4 + i * 2.2, Math.PI / 2));
-    right.forEach((t, i) => wallPiece(t, H.x + 6.6, H.z - 4.4 + i * 2.2, -Math.PI / 2));
-
-    deco('k_rugRectangle', H.x, 0.06, H.z + 1);
-    deco('k_rugRound', H.x - 4, 0.06, H.z + 1.5);
+    deco('k_rugRectangle', H.x, 0.06, H.z + 1, 0, 1, false);
+    deco('k_rugRound', H.x - 4, 0.06, H.z + 1.5, 0, 1, false);
 
     // lounge corner
     prop('k_loungeSofa', H.x, 0.06, H.z + 4.6, Math.PI, { density: 0.8 });
@@ -325,17 +214,16 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
       const a = (i / 6) * Math.PI * 2;
       deco('n_Rock_2', P.x + Math.cos(a) * 1.6, 0, P.z + Math.sin(a) * 1.6, a, 0.7, false);
     }
-    // over-bright (HDR) colours so the flames bloom
-    const fireMats = ['#ff3b1f', '#ff9a1f', '#ffe14d'].map((c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(2.2) }));
-    const flames = [];
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * Math.PI * 2;
-      const r = POT_R + 0.15;
-      const f = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.9, 5), fireMats[i % 3]);
-      f.position.set(P.x + Math.cos(a) * r, 0.4, P.z + Math.sin(a) * r);
-      scene.add(f);
-      flames.push(f);
-    }
+    // over-bright (HDR) colours so the flames bloom; one instanced mesh for all flames
+    const flameMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+    const flames = new THREE.InstancedMesh(new THREE.ConeGeometry(0.22, 0.9, 5), flameMat, 14);
+    const fireCols = ['#ff3b1f', '#ff9a1f', '#ffe14d'].map((c) => new THREE.Color(c).multiplyScalar(2.2));
+    const fm = new THREE.Matrix4();
+    const fq = new THREE.Quaternion();
+    const fp = new THREE.Vector3();
+    const fs = new THREE.Vector3();
+    for (let i = 0; i < 14; i++) flames.setColorAt(i, fireCols[i % 3]);
+    scene.add(flames);
     // colliders: ring of walls + inner floor
     const segs = 18;
     for (let i = 0; i < segs; i++) {
@@ -346,46 +234,35 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     staticBox(P.x, 0.65, P.z, POT_R - 0.15, 0.15, POT_R - 0.15);
     // steam + bubbles
     const steamMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false });
-    const steamGeo = new THREE.IcosahedronGeometry(0.4, 0);
-    const steam = [];
-    for (let i = 0; i < 12; i++) {
-      const m = new THREE.Mesh(steamGeo, steamMat);
-      m.userData = { k: i / 12, a: rand() * Math.PI * 2, r: rand() * 1.6 };
-      scene.add(m);
-      steam.push(m);
-    }
-    const bubbleGeo = new THREE.SphereGeometry(0.12, 8, 6);
-    const bubbleMat = new THREE.MeshStandardMaterial({ color: '#ffcf8a', roughness: 0.3 });
-    const bubbles = [];
-    for (let i = 0; i < 10; i++) {
-      const b = new THREE.Mesh(bubbleGeo, bubbleMat);
-      b.userData = { k: rand(), a: rand() * Math.PI * 2, r: rand() * 1.8 };
-      scene.add(b);
-      bubbles.push(b);
-    }
+    const steamMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.4, 0), steamMat, 12);
+    const steam = Array.from({ length: 12 }, (_, i) => ({ k: i / 12, a: rand() * Math.PI * 2, r: rand() * 1.6 }));
+    const bubbleMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshStandardMaterial({ color: '#ffcf8a', roughness: 0.3 }), 10);
+    const bubbles = Array.from({ length: 10 }, () => ({ k: rand(), a: rand() * Math.PI * 2, r: rand() * 1.8 }));
+    scene.add(steamMesh, bubbleMesh);
     animated.push((dt, t) => {
-      flames.forEach((f, i) => {
-        const s = 0.75 + 0.35 * Math.sin(t * 13 + i * 1.7);
-        f.scale.set(1, s, 1);
-        f.position.y = 0.45 * s;
-      });
-      for (const m of steam) {
-        const u = m.userData;
-        u.k = (u.k + dt * 0.25) % 1;
-        m.position.set(P.x + Math.cos(u.a) * u.r, soup.position.y + 0.2 + u.k * 4, P.z + Math.sin(u.a) * u.r);
-        m.scale.setScalar(0.5 + u.k * 1.8);
-        m.rotation.y += dt;
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        const r = POT_R + 0.15;
+        const sc = 0.75 + 0.35 * Math.sin(t * 13 + i * 1.7);
+        flames.setMatrixAt(i, fm.compose(fp.set(P.x + Math.cos(a) * r, 0.45 * sc, P.z + Math.sin(a) * r), fq, fs.set(1, sc, 1)));
       }
-      for (const b of bubbles) {
-        const u = b.userData;
+      flames.instanceMatrix.needsUpdate = true;
+      steam.forEach((u, i) => {
+        u.k = (u.k + dt * 0.25) % 1;
+        const sc = 0.5 + u.k * 1.8;
+        steamMesh.setMatrixAt(i, fm.compose(fp.set(P.x + Math.cos(u.a) * u.r, soup.position.y + 0.2 + u.k * 4, P.z + Math.sin(u.a) * u.r), fq, fs.set(sc, sc, sc)));
+      });
+      bubbles.forEach((u, i) => {
         u.k = (u.k + dt * 0.8) % 1;
-        b.position.set(P.x + Math.cos(u.a) * u.r, soup.position.y + 0.02, P.z + Math.sin(u.a) * u.r);
-        b.scale.setScalar(u.k < 0.85 ? u.k * 1.5 : 0.001);
         if (u.k < 0.02) {
           u.a = rand() * Math.PI * 2;
           u.r = rand() * 1.8;
         }
-      }
+        const sc = u.k < 0.85 ? u.k * 1.5 : 0.001;
+        bubbleMesh.setMatrixAt(i, fm.compose(fp.set(P.x + Math.cos(u.a) * u.r, soup.position.y + 0.02, P.z + Math.sin(u.a) * u.r), fq, fs.set(sc, sc, sc)));
+      });
+      steamMesh.instanceMatrix.needsUpdate = true;
+      bubbleMesh.instanceMatrix.needsUpdate = true;
     });
     // ramp up to the rim
     const rampLen = 4.2;
@@ -470,22 +347,24 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     pole.castShadow = true;
     scene.add(pole);
     world.createCollider(RAPIER.ColliderDesc.cylinder((topY + 2) / 2, 0.42), fixed(T.x, (topY + 2) / 2, T.z));
-    const stepGeo = new THREE.BoxGeometry(1.5, 0.2, 1.0);
+    const steps = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.2, 1.0), new THREE.MeshStandardMaterial({ flatShading: true }), TOWER_STEPS);
+    steps.castShadow = steps.receiveShadow = true;
     special.towerSteps = [];
+    const red = new THREE.Color('#d33f2f');
+    const wht = new THREE.Color('#f2f2f2');
     for (let i = 0; i < TOWER_STEPS; i++) {
       const a = i * 0.62;
       const r = 1.55;
       const x = T.x + Math.cos(a) * r;
       const z = T.z + Math.sin(a) * r;
       const y = 0.55 + i * STEP_RISE;
-      const m = new THREE.Mesh(stepGeo, i % 2 ? metal : white);
-      m.position.set(x, y, z);
-      m.rotation.y = -a;
-      m.castShadow = m.receiveShadow = true;
-      scene.add(m);
+      steps.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), yawQ(-a), new THREE.Vector3(1, 1, 1)));
+      steps.setColorAt(i, i % 2 ? red : wht);
       staticBox(x, y, z, 0.75, 0.1, 0.5, -a);
       special.towerSteps.push(new THREE.Vector3(x, y, z));
     }
+    steps.computeBoundingSphere();
+    scene.add(steps);
     const plat = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.3, 16), white);
     plat.position.set(T.x, topY + 0.7, T.z);
     plat.receiveShadow = true;
@@ -682,43 +561,54 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     });
   }
 
+  // ---------- the rest of Ohio (downtown, raceway, UFO, lake, cat tree) ----------
+  const districts = buildDistricts({ B, RAPIER, world, scene, rand, animated, disposables, textures, props });
+  special.districts = districts;
+
   // ---------- nature ----------
   const clear = [
+    ...districts.clear,
     [HOUSE.x, HOUSE.z, 9.5], [PARK_POT.x, PARK_POT.z, 6], [TRAMP.x, TRAMP.z, 4], [STATUE.x, STATUE.z, 3.5],
     [TOWER.x, TOWER.z, 4.5], [STUDIO.x, STUDIO.z + 2, 8], [CORN.x, CORN.z, 8], [-28, -12, 3.5], [4, 4, 3], [18, 21, 3], [-6, 14, 3], [0, 0, 6],
   ];
   const free = (x, z, pad = 0) => clear.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r + pad);
-  const trees = ['n_CommonTree_1', 'n_CommonTree_2', 'n_CommonTree_3', 'n_PineTree_1', 'n_PineTree_2', 'n_BirchTree_1', 'n_Willow_1'];
+  const trees = ['n_CommonTree_1', 'n_CommonTree_2', 'n_CommonTree_3', 'n_CommonTree_4', 'n_CommonTree_Autumn_1', 'n_PineTree_1', 'n_PineTree_2', 'n_PineTree_3', 'n_BirchTree_1', 'n_Willow_1', 'n_Willow_2'];
   function place(n, pad, fn) {
     let placed = 0;
     for (let tries = 0; placed < n && tries < n * 30; tries++) {
-      const x = rand() * 84 - 42;
-      const z = rand() * 84 - 42;
+      const x = rand() * 176 - 88;
+      const z = rand() * 176 - 88;
+      if (Math.abs(z + 52) < 7) continue; // keep the road clear
       if (!free(x, z, pad)) continue;
       fn(x, z);
       placed++;
     }
   }
   special.trees = [];
-  place(46, 1.5, (x, z) => {
+  place(130, 1.5, (x, z) => {
     const name = trees[Math.floor(rand() * trees.length)];
     const sc = 0.8 + rand() * 0.5;
-    const mesh = deco(name, x, 0, z, rand() * 6, sc);
-    special.trees.push({ mesh, x, z, h: template(name).size.y * sc });
+    const handle = deco(name, x, 0, z, rand() * 6, sc);
+    special.trees.push({ handle, x, z, h: template(name).size.y * sc });
     world.createCollider(RAPIER.ColliderDesc.cylinder(1.6, 0.35), fixed(x, 1.6, z));
     clear.push([x, z, 1.5]);
   });
-  place(18, 0.8, (x, z) => deco(rand() < 0.5 ? 'n_Bush_1' : 'n_BushBerries_1', x, 0, z, rand() * 6, 0.8 + rand() * 0.4));
-  place(14, 0.8, (x, z) => {
-    const name = ['n_Rock_1', 'n_Rock_2', 'n_Rock_Moss_1'][Math.floor(rand() * 3)];
+  place(50, 0.8, (x, z) => deco(['n_Bush_1', 'n_BushBerries_1', 'n_BushBerries_2'][Math.floor(rand() * 3)], x, 0, z, rand() * 6, 0.8 + rand() * 0.4));
+  place(36, 0.8, (x, z) => {
+    const name = ['n_Rock_1', 'n_Rock_2', 'n_Rock_3', 'n_Rock_Moss_1', 'n_Rock_Moss_2'][Math.floor(rand() * 5)];
     staticModel(name, x, 0, z, rand() * 6);
   });
-  place(60, 0.3, (x, z) => deco(['n_Flowers', 'n_Grass', 'n_Plant_1'][Math.floor(rand() * 3)], x, 0, z, rand() * 6, 0.9, false));
-  place(4, 1, (x, z) => staticModel(rand() < 0.5 ? 'n_TreeStump' : 'n_WoodLog', x, 0, z, rand() * 6));
+  place(220, 0.3, (x, z) => deco(['n_Flowers', 'n_Grass', 'n_Plant_1'][Math.floor(rand() * 3)], x, 0, z, rand() * 6, 0.9, false));
+  place(12, 1, (x, z) => staticModel(rand() < 0.5 ? 'n_TreeStump' : 'n_WoodLog', x, 0, z, rand() * 6));
 
   // extra boxes outside, for sitting
   prop('k_cardboardBoxOpen', 11, 0, 9, 0.8, { density: 0.25, kind: 'box' });
   prop('k_cardboardBoxClosed', -2, 0, -9, 0.2, { density: 0.25, kind: 'box' });
+
+  // the cactus patch of eastern Ohio
+  for (let i = 0; i < 9; i++) staticModel('n_Cactus_1', 84 - rand() * 6, 0, 30 + rand() * 30, rand() * 6, 1 + rand() * 0.6);
+
+  B.finalize();
 
   // ---------- per-frame ----------
   const tq = new THREE.Quaternion();
@@ -752,6 +642,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
       for (const f of animated) f(dt, t);
     },
     dispose() {
+      B.dispose();
       for (const d of disposables) d.dispose?.();
     },
   };

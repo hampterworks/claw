@@ -13,14 +13,26 @@ export const CHALLENGES = [
   { id: 'maxwell', name: 'Bonk the Maxwell statue' },
   { id: 'sky', name: 'Trampoline higher than the tower' },
   { id: 'huh', name: 'Find Huh Cat in the Ohio corn' },
+  { id: 'mugs', name: 'Café chaos: knock 10 mugs off at the Glorp Café', goal: 10 },
+  { id: 'fish', name: 'Fish heist: carry a dock fish to the Glorp Café' },
+  { id: 'headphones', name: "Bring Matt's headphones home (they're on the Cat Tree)" },
+  { id: 'roof', name: 'Climb to the Glorp Towers rooftop' },
+  { id: 'cannonball', name: 'Cannonball into the pool from the roof' },
+  { id: 'lap', name: 'Zoomies lap: all 6 arches in 40 seconds' },
+  { id: 'ufo', name: 'Get abducted by the UFO' },
+  { id: 'swim', name: 'Cats hate water: fall in Lake Meowchigan' },
+  { id: 'king', name: 'King of the Cat Tree (reach the crown)' },
+  { id: 'gold', name: 'Collect all 8 golden yarn balls', goal: 8 },
 ];
 
 export const MUTATORS = [
   { id: 'gravity', name: 'Glorp Gravity', desc: 'moon jumps', need: 2 },
-  { id: 'cursed', name: 'Cursed Face', desc: "Claw's real face", need: 3 },
-  { id: 'big', name: 'Big Claw', desc: '3x size', need: 4 },
-  { id: 'oiia', name: 'OIIA Mode', desc: 'spin forever', need: 6 },
-  { id: 'popcat', name: 'Popcat Mode', desc: 'every bonk pops', need: 8 },
+  { id: 'cursed', name: 'Cursed Face', desc: "Claw's real face", need: 4 },
+  { id: 'big', name: 'Big Claw', desc: '3x size', need: 6 },
+  { id: 'oiia', name: 'OIIA Mode', desc: 'spin forever', need: 9 },
+  { id: 'popcat', name: 'Popcat Mode', desc: 'every bonk pops', need: 12 },
+  { id: 'tiny', name: 'Tiny Claw', desc: 'smol', need: 15 },
+  { id: 'matt', name: 'Matt Mode', desc: 'Claw becomes Matt', need: 18 },
 ];
 
 export function createChallenges(hud) {
@@ -29,6 +41,7 @@ export function createChallenges(hud) {
     done: saved.done || {},
     progress: saved.progress || {},
     babies: saved.babies || [],
+    gold: saved.gold || [],
     mutators: {},
   };
   let score = 0;
@@ -36,7 +49,7 @@ export function createChallenges(hud) {
   let comboT = 0;
   const listeners = new Set();
 
-  const save = () => write('sim', { done: st.done, progress: st.progress, babies: st.babies });
+  const save = () => write('sim', { done: st.done, progress: st.progress, babies: st.babies, gold: st.gold });
   const count = () => CHALLENGES.filter((c) => st.done[c.id]).length;
 
   function refresh() {
@@ -107,6 +120,14 @@ export function createChallenges(hud) {
       progress('babies');
       return true;
     },
+    // Generic collectible list (e.g. 'gold'); the quest with the same id tracks it.
+    collect(list, i) {
+      if (st[list].includes(i)) return false;
+      st[list].push(i);
+      save();
+      progress(list);
+      return true;
+    },
     onComplete: (f) => listeners.add(f),
     update(dt) {
       if (comboT > 0) {
@@ -122,6 +143,7 @@ export function createChallenges(hud) {
       st.done = {};
       st.progress = {};
       st.babies = [];
+      st.gold = [];
       st.mutators = {};
       save();
       refresh();

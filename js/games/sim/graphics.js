@@ -63,7 +63,11 @@ export function applyWind(material, strength = 0.03) {
       '#include <begin_vertex>',
       `#include <begin_vertex>
       {
-        vec4 wp = modelMatrix * vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          vec4 wp = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+        #else
+          vec4 wp = modelMatrix * vec4(transformed, 1.0);
+        #endif
         float h = max(transformed.y, 0.0);
         float w = sin(uTime * 1.8 + wp.x * 0.35 + wp.z * 0.27) + 0.4 * sin(uTime * 3.7 + wp.x * 1.3);
         transformed.x += w * h * ${strength.toFixed(4)};
@@ -200,4 +204,56 @@ export function createGraphics(renderer, scene, camera) {
       bloom.dispose();
     },
   };
+}
+
+// Stylized water: depth tint, moving ripples, sun glints, fresnel sky reflection, foam at the edge.
+// `round` uses radial UVs (circle/ellipse); otherwise the edge is the rectangle border.
+export function waterMaterial({ shallow = '#4fd0e8', deep = '#145a8a', round = true } = {}) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    uniforms: {
+      uTime,
+      shallow: { value: new THREE.Color(shallow) },
+      deep: { value: new THREE.Color(deep) },
+      sunDir: { value: new THREE.Vector3(14, 26, 9).normalize() },
+    },
+    defines: round ? { ROUND: 1 } : {},
+    vertexShader: /* glsl */ `
+      uniform float uTime;
+      varying vec2 vUv;
+      varying vec3 vWorld;
+      void main() {
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        wp.y += sin(wp.x * 0.6 + uTime * 1.4) * 0.04 + sin(wp.z * 0.8 - uTime * 1.1) * 0.04;
+        vWorld = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform vec3 shallow, deep, sunDir;
+      varying vec2 vUv;
+      varying vec3 vWorld;
+      void main() {
+        #ifdef ROUND
+          float edge = length(vUv - 0.5) * 2.0;
+        #else
+          vec2 q = abs(vUv - 0.5) * 2.0;
+          float edge = max(q.x, q.y);
+        #endif
+        vec3 col = mix(deep, shallow, smoothstep(0.35, 1.0, edge));
+        float r1 = sin(vWorld.x * 1.7 + uTime * 1.6) * sin(vWorld.z * 1.3 - uTime * 1.2);
+        float r2 = sin((vWorld.x + vWorld.z) * 2.3 - uTime * 2.1);
+        vec3 n = normalize(vec3(r1 * 0.12, 1.0, r2 * 0.12));
+        vec3 viewDir = normalize(cameraPosition - vWorld);
+        float fres = pow(1.0 - max(dot(viewDir, n), 0.0), 3.0);
+        col = mix(col, vec3(0.78, 0.92, 1.0), fres * 0.55);
+        float spec = pow(max(dot(reflect(-normalize(sunDir), n), viewDir), 0.0), 60.0);
+        col += vec3(1.0, 0.95, 0.8) * spec * 1.6;
+        col += vec3(1.0) * smoothstep(0.9, 1.0, edge) * (0.55 + 0.25 * sin(uTime * 3.0 + vWorld.x));
+        gl_FragColor = vec4(col, 0.88);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
 }

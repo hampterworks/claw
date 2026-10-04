@@ -1,5 +1,6 @@
 // Claw: the Quaternius cat, made green and glorpy, on a Rapier ball body.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { sfx } from '../../audio.js';
 import { applyRim } from './graphics.js';
 
@@ -12,24 +13,42 @@ const fwdV = new THREE.Vector3();
 // fiddly), recolour it, scale it to `length` metres, face +z, feet at y=0.
 export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   const root = gltf.scene;
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    o.castShadow = true;
-    o.frustumCulled = false;
-    const mats = [].concat(o.material).map((m) => {
-      const c = m.clone();
-      if (colors[m.name]) c.color.set(colors[m.name]);
-      c.flatShading = true;
-      if (emissive) {
-        c.emissive = new THREE.Color(emissive);
-        c.emissiveIntensity = 0.15;
-      }
-      return c;
-    });
-    o.material = Array.isArray(o.material) ? mats : mats[0];
+  // Measure before merging: a freshly merged skinned mesh has no posed skeleton yet,
+  // so its bounds would come out 100x too big.
+  const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+  // The converted cat comes in 72 skinned pieces (one per material group). They share
+  // one skeleton, so merge them into a single skinned mesh with vertex colours: 1 draw call.
+  const pieces = [];
+  root.traverse((o) => o.isSkinnedMesh && pieces.push(o));
+  const col = new THREE.Color();
+  const geos = pieces.map((m) => {
+    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    const mat = Array.isArray(m.material) ? m.material[0] : m.material;
+    col.copy(mat.color);
+    if (colors[mat.name]) col.set(colors[mat.name]);
+    const n = g.getAttribute('position').count;
+    const c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) col.toArray(c, i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    g.deleteAttribute('normal');
+    return g;
   });
-  const box = new THREE.Box3().setFromObject(root);
-  const size = box.getSize(new THREE.Vector3());
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 });
+  if (emissive) {
+    material.emissive = new THREE.Color(emissive);
+    material.emissiveIntensity = 0.15;
+  }
+  const first = pieces[0];
+  const merged = new THREE.SkinnedMesh(mergeGeometries(geos), material);
+  geos.forEach((g) => g.dispose());
+  merged.position.copy(first.position);
+  merged.quaternion.copy(first.quaternion);
+  merged.scale.copy(first.scale);
+  first.parent.add(merged);
+  merged.bind(first.skeleton, first.bindMatrix);
+  merged.castShadow = true;
+  merged.frustumCulled = false;
+  pieces.forEach((m) => m.parent.remove(m));
   const scale = length / size.x;
   root.scale.setScalar(scale);
   root.rotation.y = -Math.PI / 2; // model faces +x, we want +z
@@ -73,7 +92,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
     colors: { Grey: '#5fe03a', White: '#d4ffad', Pink: '#ff8fb1' },
     emissive: '#3cff3c',
   });
-  cat.wrapper.traverse((o) => o.isMesh && [].concat(o.material).forEach((m) => applyRim(m)));
+  cat.wrapper.traverse((o) => o.isSkinnedMesh && applyRim(o.material));
   const pivot = new THREE.Group();
   const body3 = new THREE.Group(); // tilt/lunge layer
   pivot.add(body3);
@@ -200,6 +219,12 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
     },
     lungeNow() {
       st.lunge = 1;
+    },
+    setFaceTexture(tex) {
+      if (tex && face.material.map !== tex) {
+        face.material.map = tex;
+        face.material.needsUpdate = true;
+      }
     },
     setGlow(on) {
       ballMat.emissiveIntensity = on ? 3 : 0;
@@ -329,7 +354,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn }) {
         s.rotation.x = -0.25 - Math.min(0.5, hs * 0.04);
       }
 
-      face.visible = !!mut.cursed;
+      face.visible = !!(mut.cursed || mut.matt);
       if (face.visible) {
         fwdV.set(0, 0, 1).applyQuaternion(pivot.quaternion);
         face.position.copy(antenna.position).addScaledVector(UP, -0.1 * st.scaleK).addScaledVector(fwdV, 0.1 * st.scaleK);
