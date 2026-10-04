@@ -17,6 +17,8 @@ export const CAT_TREE = new THREE.Vector3(-66, 0, 4);
 export const CASINO = new THREE.Vector3(36, 0, -40);
 export const SHRINE = new THREE.Vector3(-76, 0, 74);
 export const HAMPTER_HOUSE = new THREE.Vector3(68, 0, -65);
+export const BANK = new THREE.Vector3(-30, 0, -40);
+export const CASTLE = new THREE.Vector3(-48, 0, 46);
 
 const RACE_A = 17;
 const RACE_B = 24;
@@ -583,6 +585,298 @@ export function buildDistricts(ctx) {
     }
     animated.push((dt, t) => flames.forEach((f, i) => f.scale.set(1, 1.2 + Math.sin(t * 13 + i * 2) * 0.35, 1)));
     clear.push([S.x, S.z, 8]);
+  }
+
+  // ---------- Bank of Romni (loans!) ----------
+  {
+    const K = BANK; // door faces the road (-z)
+    const marble = '#efe9dc';
+    const W = 12;
+    const D = 10;
+    const H = 5;
+    const front = K.z - D / 2;
+    solidBox(K.x, 0.17, K.z, W + 1, 0.34, D + 1, '#d8d0c0'); // plinth
+    solidBox(K.x, 0.085, front - 1.1, 8, 0.17, 1.2, '#d8d0c0', { shadow: false }); // step
+    const wall = (x, z, w, d, h = H) => solidBox(x, 0.34 + h / 2, z, w, h, d, marble);
+    wall(K.x, K.z + D / 2, W, 0.4); // back
+    wall(K.x - W / 2, K.z, 0.4, D); // sides
+    wall(K.x + W / 2, K.z, 0.4, D);
+    wall(K.x - 3.65, front, 4.7, 0.4); // front, with a 2.6 m door
+    wall(K.x + 3.65, front, 4.7, 0.4);
+    solidBox(K.x, 0.34 + 3.9, front, 2.6, 2.2, 0.4, marble);
+    // portico: columns, beam and pediment
+    for (const dx of [-4.5, -2.7, -0.9, 0.9, 2.7, 4.5]) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, H, 14), new THREE.MeshStandardMaterial({ color: '#fbf7ee', roughness: 0.6 }));
+      c.position.set(K.x + dx, 0.34 + H / 2, front - 1.4);
+      c.castShadow = true;
+      scene.add(c);
+      world.createCollider(RAPIER.ColliderDesc.cylinder(H / 2, 0.32), fixed(K.x + dx, 0.34 + H / 2, front - 1.4));
+    }
+    solidBox(K.x, 0.34 + H + 0.3, front - 0.8, W + 0.6, 0.6, 2.2, '#e6dfcf');
+    const ped = new THREE.Shape();
+    ped.moveTo(-(W + 0.6) / 2, 0);
+    ped.lineTo((W + 0.6) / 2, 0);
+    ped.lineTo(0, 1.6);
+    ped.closePath();
+    const pedMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(ped, { depth: 1.6, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: '#e6dfcf', flatShading: true }));
+    pedMesh.position.set(K.x, 0.34 + H + 0.6, front - 1.6);
+    pedMesh.castShadow = true;
+    scene.add(pedMesh);
+    sign(['BANK OF ROMNI'], K.x, 0.34 + H + 0.3, front - 1.93, Math.PI, 7.5, 0.55, { size: 46, color: '#c9a227', bg: '#e6dfcf', border: '#e6dfcf' });
+    sign(['$  LOANS  $'], K.x, 0.34 + H + 1.05, front - 1.6 - 0.01, Math.PI, 2.6, 0.55, { size: 52, color: '#2f7d2a', bg: '#e6dfcf', border: '#c9a227' });
+    // counter, vault, gold, rules poster
+    solidBox(K.x, 0.34 + 0.55, K.z + 1.2, 7, 1.1, 0.8, '#6b4226');
+    solidBox(K.x, 0.34 + 1.14, K.z + 1.2, 7.2, 0.08, 1.0, '#f4f1ea', { collide: false });
+    const gold = new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 0.35, roughness: 0.35, emissive: '#3a2600' }); // no env map here, so keep it readable as gold
+    const vault = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 28), gold);
+    vault.rotation.x = Math.PI / 2;
+    vault.position.set(K.x + 3.2, 0.34 + 2.0, K.z + D / 2 - 0.35);
+    scene.add(vault);
+    for (let k = 0; k < 6; k++) {
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.6, 0.12), gold);
+      spoke.position.set(K.x + 3.2, 0.34 + 2.0, K.z + D / 2 - 0.62);
+      spoke.rotation.z = (k / 6) * Math.PI;
+      scene.add(spoke);
+    }
+    for (const [dx, dz, n] of [[-4.6, 3.6, 7], [-3.8, 4.2, 5], [4.8, 1.0, 6]]) {
+      for (let i = 0; i < n; i++) {
+        const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.09, 14), gold);
+        coin.position.set(K.x + dx + (i % 2) * 0.05, 0.34 + 0.05 + i * 0.09, K.z + dz);
+        scene.add(coin);
+      }
+    }
+    sign(['LOANS 20% INTEREST', 'PAY BACK IN 5 MIN', 'OR WINTY COMES'], K.x - 3.4, 2.6, K.z + D / 2 - 0.22, Math.PI, 2.6, 1.3, { size: 34, color: '#1a1420', bg: '#fff6d8', border: '#c9a227', colors: ['#1a1420', '#2f7d2a', '#c0182f'] });
+    deco('k_pottedPlant', K.x - 5.2, 0.34, front + 0.8, 0);
+    deco('k_pottedPlant', K.x + 5.2, 0.34, front + 0.8, 0);
+    out.bank = { romni: new THREE.Vector3(K.x, 0.34, K.z + 2.6), counter: new THREE.Vector3(K.x, 0, K.z + 0.2) };
+    clear.push([K.x, K.z, 9]);
+  }
+
+  // ---------- Winter's Castle: dungeon + a not-so-secret room ----------
+  {
+    const C = CASTLE; // gate faces east (+x)
+    const ice = '#cfe0ec';
+    const stone = '#9fb4c6';
+    const dark = '#3a3f4f';
+    const HW = 14; // half width (x)
+    const HD = 12; // half depth (z)
+    const WH = 6.5;
+    const T = 1.2;
+    // curtain walls, gate on the east wall (z -2..2)
+    solidBox(C.x - HW, WH / 2, C.z, T, WH, HD * 2, ice);
+    solidBox(C.x, WH / 2, C.z - HD, HW * 2, WH, T, ice);
+    solidBox(C.x, WH / 2, C.z + HD, HW * 2, WH, T, ice);
+    solidBox(C.x + HW, WH / 2, C.z - 7, T, WH, HD - 2, ice);
+    solidBox(C.x + HW, WH / 2, C.z + 7, T, WH, HD - 2, ice);
+    solidBox(C.x + HW, 4.5 + (WH - 4.5) / 2, C.z, T, WH - 4.5, 4, ice);
+    // battlements
+    for (let i = -HW; i <= HW; i += 1.6) {
+      solidBox(C.x + i, WH + 0.35, C.z - HD, 0.8, 0.7, T, stone, { collide: false });
+      solidBox(C.x + i, WH + 0.35, C.z + HD, 0.8, 0.7, T, stone, { collide: false });
+    }
+    for (let i = -HD; i <= HD; i += 1.6) {
+      solidBox(C.x - HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { collide: false });
+      if (Math.abs(i) > 2.2) solidBox(C.x + HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { collide: false });
+    }
+    // towers with icy roofs and snow caps
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const tx = C.x + sx * HW;
+      const tz = C.z + sz * HD;
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 9.5, 14), new THREE.MeshStandardMaterial({ color: ice, roughness: 0.7, flatShading: true }));
+      tower.position.set(tx, 4.75, tz);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(2.9, 4, 14), new THREE.MeshStandardMaterial({ color: '#5b8fd6', flatShading: true }));
+      roof.position.set(tx, 11.5, tz);
+      const snow = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.6, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true }));
+      snow.position.set(tx, 12.75, tz);
+      for (const m of [tower, roof, snow]) {
+        m.castShadow = true;
+        scene.add(m);
+      }
+      world.createCollider(RAPIER.ColliderDesc.cylinder(4.75, 2.4), fixed(tx, 4.75, tz));
+    }
+    // gate: raised portcullis, banners, name
+    for (let k = -1.6; k <= 1.6; k += 0.4) solidBox(C.x + HW + 0.65, 4.2, C.z + k, 0.08, 0.6, 0.08, dark, { collide: false });
+    solidBox(C.x + HW + 0.65, 4.45, C.z, 0.1, 0.1, 4, dark, { collide: false });
+    sign(["WINTER'S CASTLE"], C.x + HW + 0.62, 5.5, C.z, Math.PI / 2, 5.5, 0.9, { size: 50, color: '#dff4ff', bg: '#24456e', border: '#9fd4ff' });
+    for (const dz of [-3.2, 3.2]) {
+      const banner = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 3), new THREE.MeshStandardMaterial({ color: '#2d6bd1', side: THREE.DoubleSide }));
+      banner.position.set(C.x + HW + 0.62, 3.6, C.z + dz);
+      banner.rotation.y = Math.PI / 2;
+      scene.add(banner);
+    }
+    // courtyard: snow patches and a frozen fountain
+    for (const [x, z, w, d] of [[6, -7, 4, 3], [9, 6, 3, 4], [2, 8, 3, 2]]) solidBox(C.x + x, 0.02, C.z + z, w, 0.04, d, '#f7fbff', { collide: false, shadow: false });
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2, 0.6, 20), new THREE.MeshStandardMaterial({ color: stone }));
+    basin.position.set(C.x + 5, 0.3, C.z);
+    const iceTop = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.08, 20), new THREE.MeshStandardMaterial({ color: '#bfe9ff', roughness: 0.1, metalness: 0.2 }));
+    iceTop.position.set(C.x + 5, 0.6, C.z);
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.8, 8), new THREE.MeshStandardMaterial({ color: '#d6f3ff', roughness: 0.1 }));
+    spike.position.set(C.x + 5, 1.5, C.z);
+    scene.add(basin, iceTop, spike);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(0.3, 1.9), fixed(C.x + 5, 0.3, C.z));
+
+    // throne hall: x -8..-2, z -10.8..0 (door on its east wall at z -5)
+    const HH = 5.5;
+    const wall = (x0, x1, z0, z1, h = HH, col = stone) => solidBox(C.x + (x0 + x1) / 2, h / 2, C.z + (z0 + z1) / 2, Math.max(0.4, x1 - x0), h, Math.max(0.4, z1 - z0), col);
+    wall(-12.8, -2, -0.2, 0.2); // south side of the hall (shared with the dungeon)
+    // inner walls flush with the rooms, so signs and frames hang on something
+    wall(-13.0, -12.6, -10.8, -0.2);
+    wall(-12.8, -2, -11.0, -10.6);
+    wall(-2.2, -1.8, -10.8, -6.2); // east wall, door gap z -6.2..-3.8
+    wall(-2.2, -1.8, -3.8, -0.2);
+    wall(-8.2, -7.8, -10.8, -7.9); // west wall, bookcase gap z -7.9..-6.1
+    wall(-8.2, -7.8, -6.1, 0);
+    solidBox(C.x - 2, HH - 0.6, C.z - 5, 0.4, 1.2, 2.4, stone); // lintel
+    solidBox(C.x - 5, 0.03, C.z - 5.4, 1.6, 0.06, 9.6, '#a3132b', { collide: false, shadow: false }); // red carpet
+    const throneMat = new THREE.MeshStandardMaterial({ color: '#2d6bd1', roughness: 0.5 });
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 1.2), throneMat);
+    seat.position.set(C.x - 5, 0.35, C.z - 9.8);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, 0.3), throneMat);
+    back.position.set(C.x - 5, 1.3, C.z - 10.35);
+    const crownTop = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.6, 5), new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 0.8, roughness: 0.3 }));
+    crownTop.position.set(C.x - 5, 2.9, C.z - 10.35);
+    scene.add(seat, back, crownTop);
+    staticBox(C.x - 5, 0.35, C.z - 9.9, 0.7, 0.35, 0.6);
+    sign(['THRONE OF MS WINTER'], C.x - 5, 3.5, C.z - 10.55, 0, 3, 0.5, { size: 44, color: '#dff4ff', bg: '#24456e', border: '#9fd4ff' });
+
+    // the secret room behind the bookcase: x -12.8..-8, z -10.8..-3
+    wall(-12.8, -8, -3.2, -2.8);
+    const S = { x0: -12.8, x1: -8, z0: -10.8, z1: -3 };
+    solidBox(C.x + (S.x0 + S.x1) / 2, 0.03, C.z + (S.z0 + S.z1) / 2, S.x1 - S.x0, 0.06, S.z1 - S.z0, '#2a1a3d', { collide: false, shadow: false });
+    // neon + business plan + rules
+    const neon = (lines, x, y, z, rot, w, h, color) => {
+      const m = sign(lines, x, y, z, rot, w, h, { size: 44, color, bg: '#12041f', border: color });
+      m.material.color.setScalar(1.8); // over-bright so it blooms
+      return m;
+    };
+    neon(["WINTY'S PHARMACY"], C.x - 10.4, 3.6, C.z - 10.55, 0, 4.2, 0.7, '#ff4fd8');
+    neon(['(UNLICENSED)'], C.x - 10.4, 2.95, C.z - 10.55, 0, 2.4, 0.45, '#7CFF4F');
+    neon(['OPEN 24/7'], C.x - 12.55, 3.2, C.z - 4.4, Math.PI / 2, 2.0, 0.5, '#5ff2ff');
+    sign(['BUSINESS PLAN', '1. sell fent', '2. ???', '3. castle'], C.x - 12.55, 1.9, C.z - 7.4, Math.PI / 2, 2.0, 1.5, { size: 34, color: '#1a1420', bg: '#ffffff', border: '#9aa0a8', colors: ['#c0182f', '#1a1420', '#1a1420', '#2f7d2a'] });
+    sign(['NO REFUNDS', 'NO SNITCHES'], C.x - 10.6, 1.4, C.z - 3.25, Math.PI, 1.8, 0.7, { size: 40, color: '#ffe14d', bg: '#1a1420', border: '#ffe14d' });
+    // the table of business
+    solidBox(C.x - 10.4, 0.45, C.z - 8.6, 2.6, 0.9, 1.2, '#4a3426');
+    const white = new THREE.MeshStandardMaterial({ color: '#fbfbfb', roughness: 0.9 });
+    for (let i = 0; i < 10; i++) {
+      const bag = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), white);
+      bag.position.set(C.x - 11.4 + (i % 5) * 0.22, 0.93, C.z - 8.9 + Math.floor(i / 5) * 0.2);
+      bag.rotation.y = (i * 0.37) % 0.6;
+      scene.add(bag);
+    }
+    const pile = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.18, 10), white);
+    pile.position.set(C.x - 10.3, 0.99, C.z - 8.3);
+    scene.add(pile);
+    const scale = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.3), new THREE.MeshStandardMaterial({ color: '#c0c6cf', metalness: 0.7, roughness: 0.3 }));
+    scale.position.set(C.x - 9.6, 0.94, C.z - 8.9);
+    const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.08), new THREE.MeshBasicMaterial({ color: new THREE.Color('#7CFF4F').multiplyScalar(1.5) }));
+    lcd.position.set(C.x - 9.6, 0.985, C.z - 8.74);
+    lcd.rotation.x = -Math.PI / 3;
+    scene.add(scale, lcd);
+    const cashMat = new THREE.MeshStandardMaterial({ color: '#4caf50', roughness: 0.8 });
+    const bandMat = new THREE.MeshStandardMaterial({ color: '#f4f1ea' });
+    const cash = (x, y, z) => {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.15), cashMat);
+      c.position.set(x, y, z);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.125, 0.155), bandMat);
+      b.position.set(x, y, z);
+      scene.add(c, b);
+    };
+    for (let i = 0; i < 9; i++) cash(C.x - 9.4 + (i % 3) * 0.32, 0.96 + Math.floor(i / 3) * 0.12, C.z - 8.3);
+    // burner phones
+    for (let i = 0; i < 4; i++) {
+      const ph = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.15), new THREE.MeshStandardMaterial({ color: '#111' }));
+      ph.position.set(C.x - 11.5 + i * 0.12, 0.92, C.z - 8.2);
+      ph.rotation.y = i * 0.4;
+      scene.add(ph);
+    }
+    // the safe, an open briefcase of cash, money bags, a couch
+    solidBox(C.x - 12.1, 0.7, C.z - 4.2, 1.1, 1.4, 1.0, '#2b2f3a');
+    const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 0.8, roughness: 0.3 }));
+    dial.rotation.z = Math.PI / 2;
+    dial.position.set(C.x - 11.52, 0.8, C.z - 4.2);
+    scene.add(dial);
+    solidBox(C.x - 9.0, 0.12, C.z - 4.6, 1.0, 0.24, 0.7, '#3b2a1a');
+    for (let i = 0; i < 6; i++) cash(C.x - 9.25 + (i % 3) * 0.28, 0.3, C.z - 4.75 + Math.floor(i / 3) * 0.3);
+    for (const [x, z] of [[-12.2, -9.9], [-11.6, -10.2]]) {
+      const bag = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), new THREE.MeshStandardMaterial({ color: '#b9a37a', flatShading: true }));
+      bag.position.set(C.x + x, 0.4, C.z + z);
+      bag.scale.y = 0.95;
+      scene.add(bag);
+      sign(['$'], C.x + x, 0.45, C.z + z + 0.43, 0, 0.35, 0.35, { size: 120, color: '#2f7d2a', bg: '#b9a37a', border: '#b9a37a' });
+    }
+    deco('k_loungeSofa', C.x - 9.4, 0.06, C.z - 6.3, -Math.PI / 2);
+    // purple mood lighting
+    solidBox(C.x - 10.4, 4.0, C.z - 10.75, 4.6, 0.06, 0.06, '#c25cff', { collide: false, shadow: false });
+    // family portraits: the four images, in gold frames
+    if (textures.winterArt) {
+      const frameMat = new THREE.MeshStandardMaterial({ color: '#c9a227', metalness: 0.5, roughness: 0.4 });
+      const spots = [
+        [C.x - 12.55, C.z - 9.4, Math.PI / 2],
+        [C.x - 12.55, C.z - 5.8, Math.PI / 2],
+        [C.x - 8.25, C.z - 9.3, -Math.PI / 2],
+        [C.x - 8.25, C.z - 4.4, -Math.PI / 2],
+      ];
+      textures.winterArt.forEach((tex, i) => {
+        if (!tex || !spots[i]) return;
+        const [x, z, r] = spots[i];
+        const h = 1.3;
+        const w = (h * tex.image.width) / tex.image.height;
+        const f = new THREE.Mesh(new THREE.BoxGeometry(w + 0.14, h + 0.14, 0.06), frameMat);
+        f.position.set(x, 2.1, z);
+        f.rotation.y = r;
+        const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+        pic.position.set(x, 2.1, z).add(new THREE.Vector3(0, 0, 0.04).applyAxisAngle(new THREE.Vector3(0, 1, 0), r));
+        pic.rotation.y = r;
+        scene.add(f, pic);
+      });
+    }
+    out.castle = {
+      center: C.clone(),
+      bookcase: new THREE.Vector3(C.x - 7.75, 0, C.z - 7.0), // slides +z to open
+      secret: new THREE.Vector3(C.x - 10.4, 0, C.z - 7),
+    };
+
+    // the dungeon: x -12.8..-2, z 0.2..10.8, roofed, two cells along the west wall
+    const DH = 4;
+    wall(-13.0, -12.6, 0.2, 10.8, DH, dark);
+    wall(-12.8, -2, 10.6, 11.0, DH, dark);
+    wall(-2.2, -1.8, 0.2, 5.1, DH, dark); // east wall, door gap z 5.1..6.9
+    wall(-2.2, -1.8, 6.9, 10.8, DH, dark);
+    solidBox(C.x - 2, DH - 0.5, C.z + 6, 0.4, 1, 1.8, dark);
+    solidBox(C.x - 7.4, DH + 0.15, C.z + 5.5, 11.2, 0.3, 11, dark); // roof
+    solidBox(C.x - 7.4, 0.03, C.z + 5.5, 10.8, 0.06, 10.6, '#4a4f5c', { collide: false, shadow: false });
+    sign(['DUNGEON', '(for people who', "don't pay)"], C.x - 1.62, 2.5, C.z + 8.6, Math.PI / 2, 2.0, 1.1, { size: 40, color: '#ff4f6d', bg: '#1a1420', border: '#ff4f6d', colors: ['#ff4f6d', '#dff4ff', '#dff4ff'] });
+    // cells: x -12.8..-9.5; cell A z 0.6..5.4 (the jail, door at z 2.2..4.0), cell B z 6..10.6
+    const barMat = new THREE.MeshStandardMaterial({ color: '#555b66', metalness: 0.7, roughness: 0.4 });
+    const bars = (z0, z1) => {
+      for (let z = z0 + 0.15; z < z1; z += 0.3) {
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, DH, 6), barMat);
+        b.position.set(C.x - 9.5, DH / 2, C.z + z);
+        scene.add(b);
+      }
+      staticBox(C.x - 9.5, DH / 2, C.z + (z0 + z1) / 2, 0.08, DH / 2, (z1 - z0) / 2);
+    };
+    bars(0.2, 2.2);
+    bars(4.0, 5.8);
+    bars(5.8, 10.8);
+    wall(-12.8, -9.5, 5.6, 6.0, DH, dark); // between the cells
+    solidBox(C.x - 11.15, 0.25, C.z + 1.0, 2.6, 0.5, 0.8, '#6b4a2a'); // a sad bench
+    out.castle.cell = new THREE.Vector3(C.x - 11.0, 0.6, C.z + 3.1);
+    out.castle.cellDoor = { x: C.x - 9.5, z0: C.z + 2.2, z1: C.z + 4.0, h: DH };
+    out.castle.lever = new THREE.Vector3(C.x - 7.6, 0, C.z + 2.0);
+    // torches
+    const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff9a3c').multiplyScalar(2.6) });
+    const flames = [];
+    for (const [x, z] of [[-2.45, 3], [-2.45, 9], [-7, 10.55], [-7, 0.45]]) {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6), new THREE.MeshStandardMaterial({ color: '#4a3426' }));
+      stick.position.set(C.x + x, 2.3, C.z + z);
+      const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 7), flameMat);
+      f.position.set(C.x + x, 2.7, C.z + z);
+      scene.add(stick, f);
+      flames.push(f);
+    }
+    animated.push((dt, t) => flames.forEach((f, i) => f.scale.set(1, 1 + Math.sin(t * 11 + i * 1.7) * 0.3, 1)));
+    clear.push([C.x, C.z, 20]);
   }
 
   // ---------- Zoomies Raceway ----------

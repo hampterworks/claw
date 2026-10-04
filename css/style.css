@@ -731,6 +731,36 @@ footer {
   max-width: 90%;
   text-align: center;
 }
+.sim-score .loan {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(18, 4, 31, 0.75);
+  color: #ffe14d;
+  width: max-content;
+}
+.sim-score .loan[hidden] {
+  display: none;
+}
+.sim-score .loan[data-state='soon'] {
+  color: #ff9a3c;
+}
+.sim-score .loan[data-state='late'],
+.sim-score .loan[data-state='collect'] {
+  color: #ff4f6d;
+  animation: loan-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes loan-pulse {
+  to {
+    transform: scale(1.06);
+  }
+}
+.casino.bank .bets {
+  flex-direction: column;
+  align-items: stretch;
+}
 .sim-say {
   position: absolute;
   left: 50%;

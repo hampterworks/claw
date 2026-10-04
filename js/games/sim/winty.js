@@ -18,6 +18,8 @@ const PITCH = [
   'WAIT. bulk pricing',
 ];
 const GIVE_UP = ['fine. ur loss', "whatever. I'll ask Matt", 'nobody appreciates small businesses'];
+const COLLECT = ['ROMNI SENT ME. PAY UP.', 'you owe the bank, glorp', 'I have a castle. it has a dungeon.', 'interest is compounding, babe', 'running only makes it worse', 'debt collection is my side hustle'];
+const COLLECT_SPEED = 7.4; // faster than walking, slower than zoomies (which run out)
 const CHASE_TIME = 10;
 const SPEED = 4.3; // a bit slower than Claw's walk (4.8), way slower than zoomies
 
@@ -31,7 +33,7 @@ export function createWinty({ scene, texture, hud, sfx, ch }) {
   scene.add(sprite);
 
   const st = {
-    mode: 'idle', // idle | chase | home
+    mode: 'idle', // idle | chase | home | collect
     t: 0,
     cd: 0,
     lineT: 0,
@@ -55,11 +57,48 @@ export function createWinty({ scene, texture, hud, sfx, ch }) {
     get mode() {
       return st.mode;
     },
+    // debt collection: she shows up ~22 m away and doesn't give up until she catches you
+    collect(claw, onCatch) {
+      const p = claw.position();
+      const a = Math.random() * Math.PI * 2;
+      pos.set(p.x + Math.cos(a) * 22, 0, p.z + Math.sin(a) * 22);
+      st.mode = 'collect';
+      st.onCatch = onCatch;
+      st.lineT = 0;
+      say(COLLECT[0], 4);
+      sfx.mrrp();
+    },
+    stopCollect() {
+      if (st.mode !== 'collect') return;
+      st.mode = 'home';
+      st.cd = 20;
+      say('...fine. you paid. this time.', 4);
+    },
     update(dt, t, claw) {
       const p = claw.position();
       const dist = Math.hypot(p.x - pos.x, p.z - pos.z);
       st.cd -= dt;
       st.caughtCd -= dt;
+      if (st.mode === 'collect') {
+        if (dist > 0.01) {
+          dir.set(p.x - pos.x, 0, p.z - pos.z).normalize();
+          pos.addScaledVector(dir, Math.min(dist, COLLECT_SPEED * dt));
+        }
+        pos.y = Math.abs(Math.sin(t * 11)) * 0.25;
+        sprite.material.rotation = Math.sin(t * 11) * 0.12;
+        st.lineT -= dt;
+        if (st.lineT <= 0) {
+          st.lineT = 3;
+          say(COLLECT[1 + Math.floor(Math.random() * (COLLECT.length - 1))], 4);
+        }
+        if (dist < 1.3 && Math.abs(p.y - pos.y) < 2.5) {
+          st.mode = 'home';
+          st.cd = 30;
+          pos.copy(WINTY_HOME); // she drops you off and heads back to the park
+          st.onCatch?.();
+        }
+        return;
+      }
 
       if (st.mode === 'idle') {
         pos.y = Math.abs(Math.sin(t * 2)) * 0.05;

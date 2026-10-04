@@ -6,7 +6,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import RAPIER from '../../../vendor/rapier/rapier.mjs';
 import { createClaw } from './claw.js';
 import { buildWorld, HOUSE, PARK_POT, TOWER, STATUE, STUDIO, CORN, TRAMP, BOUNDS } from './world.js';
-import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO, HAMPTER_HOUSE } from './districts.js';
+import { CAFE, TOWERS, MATT_HOUSE, RACE, UFO, LAKE, CAT_TREE, CASINO, HAMPTER_HOUSE, BANK, CASTLE } from './districts.js';
 import { MEOWTOWN, WINDMILL, GOLF } from './town.js';
 import { createControls, isTouchDevice } from './controls.js';
 import { createHud } from './hud.js';
@@ -26,6 +26,9 @@ import { createPlayers, createMpUi, FLAG } from './players.js';
 import { createPropSync } from './props-sync.js';
 import { mergeStaticMeshes } from './merge.js';
 import { createHampter } from './hampter.js';
+import { createRomni } from './romni.js';
+import { createCastle } from './castle.js';
+import { createLoans } from './loan.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -95,6 +98,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   if (isCancelled()) return null;
   // the Hampter Works gallery (small, loaded alongside)
   const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
+  const winterArt = await Promise.all([1, 2, 3, 4].map((i) => loadTexture(`assets/sim-winter-${i}.webp`)));
   onStatus('Building Ohio...');
 
   // ---------- renderer ----------
@@ -137,7 +141,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     models: worldGltf.scene,
     catGltf: maxGltf,
     images: { news: newsImg, claw: clawImg, matt: mattImg },
-    textures: { matt, huh, baby, dance, forp, vash: vashTex, hampterArt },
+    textures: { matt, huh, baby, dance, forp, vash: vashTex, hampterArt, winterArt },
   });
   const S = W.special;
   const sky = createSky(scene, new THREE.Vector3(14, 26, 9));
@@ -258,6 +262,34 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   });
   const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
   // Lyonia (Vash), next to Matt, and his gold statue in the secret shrine
+  // Bank of Romni, Winter's Castle, and what happens when you don't pay
+  const romni = createRomni({ scene, world, RAPIER, hud, claw, at: S.districts.bank.romni });
+  const castle = createCastle({ scene, world, RAPIER, castle: S.districts.castle });
+  function dragToDungeon() {
+    const took = loans.settle();
+    castle.jail(claw);
+    sfx.boom();
+    sfx.fail();
+    hud.banner('WINTY DRAGGED YOU TO HER DUNGEON', `She took ${took} 🪙. Respawn from the menu to escape, or get a friend to pull the lever outside your cell.`);
+    net?.send({ t: 'fx', text: "got dragged to Winty's dungeon ⛓️" });
+  }
+  const loans = createLoans({
+    wallet,
+    hud,
+    sfx,
+    onCollect: () => {
+      hud.banner('WINTY IS COMING', 'Romni called in your debt. Pay up at the bank, or run.');
+      if (winty) winty.collect(claw, dragToDungeon);
+      else dragToDungeon();
+    },
+  });
+  function pullLever() {
+    castle.openCell();
+    sfx.click();
+    sfx.boom();
+    hud.popup('CELL DOOR OPENED', '#7CFF4F');
+    net?.send({ t: 'unlock' });
+  }
   const hampter = createHampter({ scene, world, RAPIER, hud, sfx, claw, home: S.districts.hampterHome, wheelAt: S.districts.hampterWheel });
   const vash = createVash({ scene, world, RAPIER, gltf: vashGltf, hud, sfx, ch, claw, home: S.districts.vashHome });
   {
@@ -328,6 +360,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   };
   MACHINES.shrine = { prompt: '🙏 PAY RESPECTS', run: payRespects };
   MACHINES.hampter = { prompt: '🐹 PET HAMPTER', run: () => hampter.squeak() };
+  MACHINES.bank = { prompt: '💰 TALK TO ROMNI', title: 'BANK OF ROMNI', open: () => (romni.wave(), loans.panel()) };
+  MACHINES.lever = { prompt: '🔓 OPEN THE CELL', run: pullLever };
+  MACHINES.bookcase = { prompt: '📚 PULL THE SUSPICIOUS BOOK', run: () => (castle.pullBook(), sfx.boom(), hud.popup('...a secret room?!', '#ff7bf2')) };
   const playMachine = (m) => (MACHINES[m].run ? MACHINES[m].run() : openPanel(MACHINES[m].title, MACHINES[m].open()));
   let machine = null;
   function updateMachines() {
@@ -339,6 +374,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const sh = S.districts.shrine.altar;
     if (!m && Math.hypot(p.x - sh.x, p.z - sh.z) < 1.6) m = 'shrine';
     if (!m && Math.hypot(p.x - hampter.pos.x, p.z - hampter.pos.z) < 1.7) m = 'hampter';
+    const bc = S.districts.bank.counter;
+    if (!m && Math.hypot(p.x - bc.x, p.z - bc.z) < 2.2) m = 'bank';
+    if (!m && Math.hypot(p.x - castle.leverAt.x, p.z - castle.leverAt.z) < 1.6) m = 'lever';
+    if (!m && !castle.shelfOpen && Math.hypot(p.x - castle.shelfAt.x, p.z - castle.shelfAt.z) < 1.5) m = 'bookcase';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
     if (m === machine) return;
@@ -370,6 +409,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     { x: TOWERS.x, z: TOWERS.z, w: 9, d: 7, color: '#9aa3b5' },
     { x: MATT_HOUSE.x, z: MATT_HOUSE.z, w: 7, d: 7, color: '#ffe14d', label: 'MATT' },
     { x: HAMPTER_HOUSE.x, z: HAMPTER_HOUSE.z, w: 9, d: 7, color: '#ffb347', label: 'HAMPTER' },
+    { x: BANK.x, z: BANK.z, w: 13, d: 11, color: '#efe9dc', label: 'BANK' },
+    { x: CASTLE.x, z: CASTLE.z, w: 28, d: 24, color: '#9fb4c6', label: 'CASTLE' },
     { x: UFO.x, z: UFO.z, w: 9, d: 9, color: '#9dff6a', round: true, label: 'UFO' },
     { x: CAT_TREE.x, z: CAT_TREE.z, w: 7, d: 7, color: '#c98bdb', round: true, label: 'CAT TREE' },
     { x: MEOWTOWN.x, z: MEOWTOWN.z, w: 30, d: 30, color: '#b9b2a6', label: 'MEOWTOWN' },
@@ -750,6 +791,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     pets.update(dt);
     vash.update(dt, t);
     hampter.update(dt, t);
+    romni.update(dt, t);
+    castle.update(dt);
+    loans.update(dt);
+    if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(); // paid while she was on the way
     respectCd -= dt;
 
     // OIIA mode soundtrack
@@ -801,6 +846,13 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       else if (online) mpUi.feed('Lost connection, retrying…', '#ff4f6d');
     });
     net.on('full', () => mpUi.feed('Ohio is full right now (12 Claws). Playing solo.', '#ff4f6d'));
+    // someone pulled the dungeon lever: every cell door opens for a few seconds
+    net.on('unlock', (m) => {
+      castle.openCell();
+      const who = players.remotes.get(m.id)?.name || 'Someone';
+      mpUi.feed(`${who} opened the dungeon cell 🔓`, '#7CFF4F');
+      if (castle.inCell(claw.position())) hud.banner('YOU ARE FREE', `${who} opened your cell. RUN.`);
+    });
     ch.onComplete((id) => {
       const c = ch.CHALLENGES.find((x) => x.id === id);
       if (c) net.send({ t: 'fx', text: `finished "${c.name}" 🏆` });
@@ -1178,7 +1230,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets, Mini Characters), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
@@ -1216,7 +1268,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1279,6 +1331,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       pets.dispose();
       vash.dispose();
       hampter.dispose();
+      romni.dispose();
+      castle.dispose();
       W.dispose();
       gfx.dispose();
       music.dispose();

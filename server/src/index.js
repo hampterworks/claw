@@ -202,6 +202,11 @@ export class Ohio extends DurableObject {
         if (target && d) this.send(target, { t: 'hit', from: id, d });
         break;
       }
+      case 'unlock': {
+        // the dungeon lever: open every cell door for everyone
+        this.broadcast({ t: 'unlock', id }, ws);
+        break;
+      }
       case 'chat': {
         const s = text(m.text, 80);
         if (s) this.broadcast({ t: 'chat', id, text: s });

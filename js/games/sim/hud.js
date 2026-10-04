@@ -3,7 +3,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
   const el = document.createElement('div');
   el.className = 'sim-hud';
   el.innerHTML = `
-    <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="coins">🪙 0</span><span class="combo"></span></div>
+    <div class="sim-score"><b class="pts">0</b><span class="label">GLORP POINTS</span><span class="coins">🪙 0</span><span class="loan" hidden></span><span class="combo"></span></div>
     <button type="button" class="sim-prompt"></button>
     <div class="sim-top-right">
       <button type="button" class="sim-chip trophies">🏆 0</button>
@@ -193,6 +193,14 @@ export function createHud(wrap, { onMenu, onMusic }) {
       box.classList.add('show');
       clearTimeout(sayTimer);
       sayTimer = setTimeout(() => box.classList.remove('show'), ms);
+    },
+    // loan countdown under the coins (null hides it); state: ok | soon | late | collect
+    setLoan(text, state = 'ok') {
+      const l = $('.loan');
+      l.hidden = !text;
+      if (!text) return;
+      l.textContent = text;
+      l.dataset.state = state;
     },
     hint(text, ms = 4000) {
       hint.textContent = text;
