@@ -24,18 +24,23 @@ jobs:
           WANTED: hampterworks hampter-claw glorp-ohio
         run: |
           api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/subdomain"
-          cur=$(curl -s -H "Authorization: Bearer $CF_TOKEN" "$api" | jq -r '.result.subdomain // empty')
+          auth="Authorization: Bearer $CF_TOKEN"
+          put() { curl -s -X PUT -H "$auth" -H "Content-Type: application/json" --data "{\"subdomain\":\"$1\"}" "$api" | jq -r '.success'; }
+          cur=$(curl -s -H "$auth" "$api" | jq -r '.result.subdomain // empty')
           for name in $WANTED; do
             if [ "$cur" = "$name" ]; then echo "workers.dev subdomain: $cur"; exit 0; fi
           done
+          # an existing subdomain can't be renamed in place: delete it, then register a group name
+          if [ -n "$cur" ]; then
+            curl -s -X DELETE -H "$auth" "$api" | jq -c '{success, errors}'
+          fi
           for name in $WANTED; do
-            res=$(curl -s -X PUT -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
-              --data "{\"subdomain\":\"$name\"}" "$api")
-            if [ "$(echo "$res" | jq -r '.success')" = "true" ]; then echo "workers.dev subdomain: $name (was: ${cur:-none})"; exit 0; fi
-            echo "Could not use $name: $(echo "$res" | jq -c '.errors')"
+            if [ "$(put "$name")" = "true" ]; then echo "workers.dev subdomain: $name"; exit 0; fi
+            echo "Could not use $name"
           done
-          if [ -n "$cur" ]; then echo "::warning::Kept the existing subdomain"; exit 0; fi
-          echo "::error::Could not register a workers.dev subdomain. Check the API token has the 'Edit Cloudflare Workers' permissions."
+          # put the old one back rather than leave the Worker unreachable (not printed: it may be a personal name)
+          if [ -n "$cur" ] && [ "$(put "$cur")" = "true" ]; then echo "::warning::Kept the previous subdomain"; exit 0; fi
+          echo "::error::Could not set a workers.dev subdomain. Check the API token has the 'Edit Cloudflare Workers' permissions."
           exit 1
       - name: Deploy claw-ohio
         uses: cloudflare/wrangler-action@v3
