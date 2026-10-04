@@ -32,7 +32,7 @@ import { createCastle } from './castle.js';
 import { createLoans } from './loan.js';
 import { createBattles } from './battle.js';
 import { createHideSeek } from './hideseek.js';
-import { createClicky } from './clicky.js';
+import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
@@ -103,7 +103,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   if (isCancelled()) return null;
   // the Hampter Works gallery (small, loaded alongside)
   // Clicky the wizard and Mega Matt (Kenney Mini Characters)
-  const [clickyGltf, megaMattGltf] = await Promise.all([loader.loadAsync('assets/models/clicky.glb'), loader.loadAsync('assets/models/megamatt.glb')]);
+  const [clickyGltf, megaMattGltf] = await Promise.all([loader.loadAsync('assets/models/wizard.glb'), loader.loadAsync('assets/models/megamatt.glb')]);
   const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
   const winterArt = await Promise.all([1, 2, 3, 4].map((i) => loadTexture(`assets/sim-winter-${i}.webp`)));
   onStatus('Building Ohio...');

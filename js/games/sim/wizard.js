@@ -118,7 +118,7 @@ function runeTexture(lit) {
   return t;
 }
 
-// the wizard himself (gltf: assets/models/clicky.glb)
+// the wizard himself (gltf: assets/models/wizard.glb)
 export function buildClicky(gltf) {
   const model = gltf.scene;
   model.updateMatrixWorld(true);
