@@ -204,7 +204,7 @@ function buildMatt(gltf, mattTex) {
   return { model, cape };
 }
 
-export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf, mattTex, applyMutators, net, players, onFx, env }) {
+export function createKaiju({ RAPIER, scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf, mattTex, applyMutators, net, players, onFx, env }) {
   const bm = createBattleMusic({ isEnabled: () => music.enabled });
   // event HUD
   const ui = document.createElement('div');
@@ -313,21 +313,6 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
   }
 
   // ---------- flinging the local player ----------
-  function flingTo(target, T) {
-    const p = claw.position();
-    const g = -GRAV;
-    let vx = (target.x - p.x) / T;
-    let vz = (target.z - p.z) / T;
-    const h = Math.hypot(vx, vz);
-    if (h > 48) {
-      vx *= 48 / h;
-      vz *= 48 / h;
-    }
-    const vy = (target.y - p.y + 0.5 * g * T * T) / T;
-    claw.setFlop?.(true);
-    claw.body.setLinvel({ x: vx, y: Math.min(vy, 60), z: vz }, true);
-    claw.body.setAngvel({ x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 8, z: (Math.random() - 0.5) * 8 }, true);
-  }
   function seat() {
     // my spot on the spectator ring (the side I'm already on)
     const p = claw.position();
@@ -335,15 +320,34 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
     if (Math.hypot(p.x - FOCUS.x, p.z - FOCUS.z) < 5) a = Math.random() * Math.PI * 2;
     // not inside the titans: nudge off the fight axis
     if (Math.abs(Math.sin(a)) < 0.35) a += (Math.sin(a) >= 0 ? 1 : -1) * 0.6;
-    return new THREE.Vector3(FOCUS.x + Math.sin(a) * RING, 9, FOCUS.z + Math.cos(a) * RING);
+    return new THREE.Vector3(FOCUS.x + Math.sin(a) * RING, HOVER, FOCUS.z + Math.cos(a) * RING);
   }
-  function relaunch(power = 1) {
-    const p = claw.position();
-    const s = seat();
-    const v = claw.body.linvel();
-    claw.setFlop?.(true);
-    claw.body.setLinvel({ x: v.x * 0.3 + (s.x - p.x) * 0.12, y: Math.max(v.y, 13 * power), z: v.z * 0.3 + (s.z - p.z) * 0.12 }, true);
-    claw.body.setAngvel({ x: (Math.random() - 0.5) * 10, y: (Math.random() - 0.5) * 10, z: (Math.random() - 0.5) * 10 }, true);
+  // During the show Claw is a ghost: no collisions, no gravity, steered through the air, so no
+  // building or room can trap you. At the end you're set down on open lawn by the lake.
+  const HOVER = 18; // above every roof in Ohio
+  const LAND = new THREE.Vector3(0, 0, 33);
+  function ghost(on, r = run) {
+    const col = claw.collider;
+    if (on) {
+      r.groups = col.collisionGroups();
+      col.setCollisionGroups(0);
+    } else if (r.groups != null) col.setCollisionGroups(r.groups);
+    claw.body.setGravityScale(on ? 0 : 1, true);
+  }
+  function spin(k = 1) {
+    claw.body.setAngvel({ x: (Math.random() - 0.5) * 10 * k, y: (Math.random() - 0.5) * 10 * k, z: (Math.random() - 0.5) * 10 * k }, true);
+  }
+  const downRay = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
+  function land() {
+    // a spot on the lawn between the park and the lake, on top of whatever is there
+    const a = Math.random() * Math.PI * 2;
+    const x = LAND.x + Math.cos(a) * (3 + Math.random() * 7);
+    const z = LAND.z + Math.sin(a) * (3 + Math.random() * 5);
+    downRay.origin = { x, y: 40, z };
+    const hit = world.castRay(downRay, 60, true, undefined, undefined, undefined, claw.body);
+    const y = hit ? 40 - hit.timeOfImpact : 0;
+    claw.setFlop?.(false);
+    claw.teleport(x, y + claw.radius() + 0.4, z);
   }
   // host only: titan impacts shove props around
   function shoveProps(at, radius = 35, power = 1) {
@@ -449,6 +453,10 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
     if (music.enabled) music.start();
     ui.hidden = true;
     wrap.classList.remove('kj-on');
+    if (r.seated) {
+      ghost(false, r);
+      land();
+    }
     claw.setFlop?.(false);
     applyMutators(); // restores gravity
   }
@@ -748,18 +756,40 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
     const t = evT();
     if (!run.seated && t >= BAR) {
       run.seated = true;
-      world.gravity = { x: 0, y: GRAV, z: 0 };
-      const s = seat();
-      const d = Math.hypot(s.x - claw.position().x, s.z - claw.position().z);
-      flingTo(s, Math.max(BAR * 2, d / 44));
+      run.seat = seat();
+      run.bump = 1;
+      run.phase = Math.random() * 6;
+      world.gravity = { x: 0, y: GRAV, z: 0 }; // (props fly floaty too)
+      ghost(true);
+      claw.setFlop?.(true);
+      spin();
       hud.popup('WHEEEEE', '#ff7bf2');
     }
     if (run.wantFling) {
       run.wantFling = false;
-      if (run.seated) relaunch(claw.position().y < 4 ? 1.2 : 0.6);
+      run.bump = 1;
+      spin(1.3);
     }
-    // landed during the fight? keep the show going
-    if (run.seated && claw.st.grounded && t < B_END_FIGHT && Math.random() < dt * 0.8) relaunch(0.8);
+    if (run.seated) {
+      // (Big/Tiny mutators rebuild the collider: keep it a ghost)
+      if (claw.collider.collisionGroups() !== 0) claw.collider.setCollisionGroups(0);
+      // steer toward a hover spot (bobbing, bumped up by big hits); in the outro, drift down to the lawn
+      run.bump = Math.max(0, run.bump - dt * 1.8);
+      const outro = THREE.MathUtils.clamp((t - S.outro * BAR) / ((S.end - S.outro) * BAR), 0, 1);
+      const p = claw.position();
+      const tx = THREE.MathUtils.lerp(run.seat.x, LAND.x, outro);
+      const tz = THREE.MathUtils.lerp(run.seat.z, LAND.z, outro);
+      const ty = THREE.MathUtils.lerp(HOVER + Math.sin(t * 1.3 + run.phase) * 1.5 + run.bump * 9, 4, outro);
+      let vx = (tx - p.x) * 1.4;
+      let vz = (tz - p.z) * 1.4;
+      const h = Math.hypot(vx, vz);
+      if (h > 40) {
+        vx *= 40 / h;
+        vz *= 40 / h;
+      }
+      const vy = THREE.MathUtils.clamp((ty - p.y) * 2.5, -25, 30);
+      claw.body.setLinvel({ x: vx, y: vy, z: vz }, true);
+    }
     // cheers go to the server once a second
     local.sendT -= dt;
     if (net?.connected && local.sendT <= 0 && (local.m || local.g)) {
@@ -768,7 +798,6 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
       local.m = local.g = 0;
     }
   }
-  const B_END_FIGHT = S.victory * BAR;
 
   const v3 = new THREE.Vector3();
   return {

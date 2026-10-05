@@ -986,7 +986,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   });
   MACHINES.clicky = { prompt: '🧙 TALK TO CLICKY', title: 'CLICKY THE WIZARD', open: () => clicky.panel(!!net?.connected) };
   var kaiju = createKaiju( // var: setMusic and updateCamera above may run first
-    { scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf: megaMattGltf, mattTex: matt, applyMutators, net, players, onFx: fx, env });
+    { RAPIER, scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf: megaMattGltf, mattTex: matt, applyMutators, net, players, onFx: fx, env });
   if (net) {
     net.on('welcome', (m) => typeof m.now === 'number' && env.setServerOffset(m.now - Date.now()));
     net.on('ev', (m) => kaiju.onEv(m));
