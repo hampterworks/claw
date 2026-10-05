@@ -41,7 +41,7 @@ import { createEmotes } from './emotes.js';
 import { createDaily, trackDaily } from './daily.js';
 import { createSpeedrun, resetProgress } from './speedrun.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
-import { sfx } from '../../audio.js';
+import { sfx, isMuted, getVolume, setVolume, audioBus } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
 
 const CLAW_ROASTS = [
@@ -1340,6 +1340,41 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       gfxRow.appendChild(b);
     }
     box.appendChild(gfxRow);
+    // volume sliders (saved; the 🔊 button is still the quick mute)
+    const hv = document.createElement('h3');
+    hv.textContent = 'Sound';
+    box.appendChild(hv);
+    const vol = document.createElement('div');
+    vol.className = 'sim-volume';
+    for (const [kind, label] of [['master', '🔊 Master'], ['music', '🎵 Music'], ['sfx', '💥 Sound effects'], ['ambient', '🌧️ Rain & weather']]) {
+      const row = document.createElement('label');
+      row.className = 'sim-vol';
+      const name = document.createElement('span');
+      name.textContent = label;
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = '100';
+      slider.step = '5';
+      slider.dataset.kind = kind;
+      slider.value = String(Math.round(getVolume(kind) * 100));
+      const pct = document.createElement('b');
+      pct.textContent = `${slider.value}%`;
+      slider.addEventListener('input', () => {
+        setVolume(kind, slider.value / 100);
+        pct.textContent = `${slider.value}%`;
+      });
+      if (kind === 'master' || kind === 'sfx') slider.addEventListener('change', () => sfx.click()); // preview
+      row.append(name, slider, pct);
+      vol.appendChild(row);
+    }
+    if (isMuted()) {
+      const p = document.createElement('p');
+      p.className = 'fine';
+      p.textContent = 'Sound is muted: tap 🔊 (bottom right) to unmute.';
+      vol.appendChild(p);
+    }
+    box.appendChild(vol);
     const h4 = document.createElement('h3');
     h4.textContent = 'Settings';
     box.appendChild(h4);
@@ -1444,7 +1479,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
           ['J', 'Quest log'],
           ['H', 'This controls card'],
           ['P / Tab', 'Menu (press again to close)'],
-          ['M', 'Music on / off'],
+          ['M', 'Music on / off (volume sliders are in the P menu)'],
           ['Y / N', 'Answer invites (Hide and Seek, pet battles)'],
         ];
     for (const [k, what] of rows) {
@@ -1595,7 +1630,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { audio: { getVolume, setVolume, audioBus }, claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight

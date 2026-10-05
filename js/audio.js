@@ -28,6 +28,55 @@ function audio() {
   return getAudioContext();
 }
 
+// ---------- volume: a tiny mixer (sfx, music and ambience buses into a master bus) ----------
+const KINDS = ['master', 'music', 'sfx', 'ambient'];
+const volume = { master: 1, music: 1, sfx: 1, ambient: 1 };
+{
+  const saved = read('volume', null);
+  if (saved && typeof saved === 'object') for (const k of KINDS) if (typeof saved[k] === 'number') volume[k] = Math.min(1, Math.max(0, saved[k]));
+}
+const volumeListeners = new Set();
+let buses = null;
+const curve = (v) => v * v; // sliders feel even this way
+
+function applyVolume() {
+  if (!buses) return;
+  for (const k of KINDS) buses[k].gain.setTargetAtTime(curve(volume[k]), ac.currentTime, 0.03);
+}
+
+// where sounds connect: 'sfx', 'music' or 'ambient' (rain); null when there is no audio at all
+export function audioBus(kind = 'sfx') {
+  const a = getAudioContext();
+  if (!a) return null;
+  if (!buses) {
+    buses = {};
+    for (const k of KINDS) {
+      buses[k] = a.createGain();
+      buses[k].gain.value = curve(volume[k]);
+    }
+    buses.master.connect(a.destination);
+    buses.music.connect(buses.master);
+    buses.sfx.connect(buses.master);
+    buses.ambient.connect(buses.master);
+  }
+  return buses[kind] || buses.sfx;
+}
+
+export const getVolume = (kind) => volume[kind] ?? 1;
+
+export function setVolume(kind, v) {
+  if (!KINDS.includes(kind)) return;
+  volume[kind] = Math.min(1, Math.max(0, Number(v) || 0));
+  write('volume', volume);
+  applyVolume();
+  volumeListeners.forEach((f) => f(kind, volume[kind]));
+}
+
+export function onVolumeChange(fn) {
+  volumeListeners.add(fn);
+  return () => volumeListeners.delete(fn);
+}
+
 export const isMuted = () => muted;
 
 export function toggleMuted() {
@@ -58,7 +107,7 @@ function tone({ type = 'sine', f = 440, f2, dur = 0.15, vol = 0.18, delay = 0 })
   if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + dur);
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g).connect(a.destination);
+  o.connect(g).connect(audioBus('sfx'));
   o.start(t);
   o.stop(t + dur + 0.02);
 }
@@ -83,7 +132,7 @@ function noise({ dur = 0.2, vol = 0.2, type = 'lowpass', f = 1000, f2, q = 1, de
   const g = a.createGain();
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(filt).connect(g).connect(a.destination);
+  src.connect(filt).connect(g).connect(audioBus('sfx'));
   src.start(t);
   src.stop(t + dur + 0.02);
 }
@@ -120,11 +169,11 @@ export const sfx = {
   },
   meow: (pitch) => {
     const a = audio();
-    if (a) meow(a, a.destination, a.currentTime, { pitch: pitch || 480 + Math.random() * 200, vol: 0.28 });
+    if (a) meow(a, audioBus('sfx'), a.currentTime, { pitch: pitch || 480 + Math.random() * 200, vol: 0.28 });
   },
   mrrp: () => {
     const a = audio();
-    if (a) mrrp(a, a.destination, a.currentTime, { pitch: 300 + Math.random() * 80 });
+    if (a) mrrp(a, audioBus('sfx'), a.currentTime, { pitch: 300 + Math.random() * 80 });
   },
   // Ducky: a short nasal honk, twice
   quack: () => {
@@ -135,7 +184,7 @@ export const sfx = {
   },
   purr: () => {
     const a = audio();
-    if (a) purr(a, a.destination, a.currentTime, { len: 1.2, vol: 0.3 });
+    if (a) purr(a, audioBus('sfx'), a.currentTime, { len: 1.2, vol: 0.3 });
   },
   win: () => [523, 659, 784, 1046].forEach((f, i) => tone({ type: 'triangle', f, dur: 0.22, vol: 0.14, delay: i * 0.11 })),
   boom: () => {

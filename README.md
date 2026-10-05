@@ -85,6 +85,9 @@ spell pages and bonk 3 summoning stones awake, and he quits by summoning a kaiju
 fight Mega Godzilla to an original battle theme (every hit lands on the beat). Everyone online is flung into the air
 with the camera locked on the fight; BONK cheers for Matt, LICK for Godzilla, and the crowd decides who wins.
 
+**Sound:** the P menu has volume sliders for master, music, sound effects and rain (saved between visits); the 🔊
+button is still the quick mute.
+
 **Ducky:** outrun Winty's sales pitch 3 times and Ducky, her little brother (and Romni's oldest business
 associate), waddles into Ohio. His sibling prank on his sister: bonk her castle sign crooked, egg her throne, then steal her crown while she chases you. That
 unlocks Ducky Mode (also in the P menu): Ducky follows you as a bodyguard (other players see him too), Winty runs

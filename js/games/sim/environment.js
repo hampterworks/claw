@@ -3,7 +3,7 @@
 // A day is 24 minutes: dawn, ~17 min of day, dusk, ~3.5 min of night. Owns the sky colours, fog
 // colour, sun/moon light, hemisphere light and exposure; the kaiju battle blends its storm on top.
 import * as THREE from 'three';
-import { getAudioContext, isMuted } from '../../audio.js';
+import { getAudioContext, isMuted, audioBus } from '../../audio.js';
 import { noiseBuffer } from '../../catvoice.js';
 import { WATER_LIGHT } from './graphics.js';
 
@@ -249,7 +249,7 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lam
       f.Q.value = 0.4;
       const g = ac.createGain();
       g.gain.value = 0;
-      src.connect(f).connect(g).connect(ac.destination);
+      src.connect(f).connect(g).connect(audioBus('ambient'));
       src.start();
       rainAudio = { src, g };
     }

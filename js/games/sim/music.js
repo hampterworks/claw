@@ -1,7 +1,7 @@
 // "Glorp Groove": an original chiptune (so it's ours, royalty free), sequenced
 // live with WebAudio. Pulse lead, pulse arpeggio, triangle bass, noise drums,
 // and a cat section: meows, mrrps and purrs land on the beat.
-import { getAudioContext, isMuted, onMuteChange } from '../../audio.js';
+import { getAudioContext, isMuted, onMuteChange, audioBus } from '../../audio.js';
 import { meow, mrrp, purr, noiseBuffer } from '../../catvoice.js';
 
 const BPM = 140;
@@ -73,7 +73,7 @@ export function createMusic({ context } = {}) {
       const comp = ac.createDynamicsCompressor();
       comp.threshold.value = -14;
       comp.ratio.value = 4;
-      master.connect(comp).connect(ac.destination);
+      master.connect(comp).connect(context ? ac.destination : audioBus('music')); // (offline renders go straight out)
       waves = { lead: pulseWave(ac, 0.25), arp: pulseWave(ac, 0.125) };
     }
     return true;

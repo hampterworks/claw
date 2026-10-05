@@ -2,7 +2,7 @@
 // with WebAudio like Glorp Groove: brass power chords, a string ostinato, taiko drums,
 // orchestra hits, and a choir of cats (meow chants on the chord tones).
 // The fight in kaiju.js runs on this song's clock: BAR seconds per bar, hits on downbeats.
-import { getAudioContext, isMuted } from '../../audio.js';
+import { getAudioContext, isMuted, audioBus } from '../../audio.js';
 import { meow, mrrp, purr, noiseBuffer } from '../../catvoice.js';
 
 export const BPM = 150;
@@ -97,7 +97,7 @@ export function createBattleMusic({ isEnabled = () => true } = {}) {
       const comp = ac.createDynamicsCompressor();
       comp.threshold.value = -16;
       comp.ratio.value = 5;
-      master.connect(comp).connect(ac.destination);
+      master.connect(comp).connect(audioBus('music'));
     }
     return true;
   }

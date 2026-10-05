@@ -903,6 +903,29 @@ footer {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.sim-volume {
+  display: grid;
+  gap: 6px;
+  max-width: 460px;
+}
+.sim-vol {
+  display: grid;
+  grid-template-columns: minmax(96px, 9.5em) 1fr 3.2em;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+.sim-vol input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+.sim-vol b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--yellow);
+}
 .sim-help {
   font-size: 13px !important;
   color: var(--muted);
