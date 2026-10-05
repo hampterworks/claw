@@ -35,6 +35,7 @@ import { createHideSeek } from './hideseek.js';
 import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
 import { refreshDetailTextures } from './detail.js';
+import { createEnvironment } from './environment.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -163,6 +164,26 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   // fewer draw calls: fold static code-built decoration into a few vertex-coloured meshes
   const merged = mergeStaticMeshes(scene, W, [sky]);
   if (debug) console.info('static merge', merged);
+  // time of day + weather (shared clock), lamps glow at night, snow at Winter's Castle
+  const env = createEnvironment({
+    scene,
+    renderer,
+    sky,
+    sun: S.sun,
+    camera,
+    lamps: S.districts.lamps,
+    snowAt: CASTLE,
+    glowSpots: [
+      { x: CASTLE.x + 15.2, y: 3.4, z: CASTLE.z - 2.3, color: '#9fd4ff', size: 2.5 },
+      { x: CASTLE.x + 15.2, y: 3.4, z: CASTLE.z + 2.3, color: '#9fd4ff', size: 2.5 },
+      { x: CASINO.x, y: 3.2, z: CASINO.z - 4.6, color: '#ff7bf2', size: 7 },
+      { x: BANK.x, y: 4.2, z: BANK.z - 6.6, color: '#ffd28a', size: 6 },
+      { x: ARENA.x - 2.6, y: 5.2, z: ARENA.z - 17, color: '#ff9a3c' },
+      { x: ARENA.x + 2.6, y: 5.2, z: ARENA.z - 17, color: '#ff9a3c' },
+      { x: HAMPTER_HOUSE.x, y: 2.6, z: HAMPTER_HOUSE.z + 4.4, color: '#ffb347' },
+      { x: MATT_HOUSE.x, y: 2.6, z: MATT_HOUSE.z + 4.4, color: '#ffe14d' },
+    ],
+  });
   // Quality ladder, stepped down automatically while the frame rate is poor.
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   const LADDER = [
@@ -176,6 +197,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   function setRung(i) {
     rung = i;
     gfx.setQuality(LADDER[i].q);
+    env?.setQuality(LADDER[i].q);
     renderer.setPixelRatio(LADDER[i].pr);
     resize();
   }
@@ -932,8 +954,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   });
   MACHINES.clicky = { prompt: '🧙 TALK TO CLICKY', title: 'CLICKY THE WIZARD', open: () => clicky.panel(!!net?.connected) };
   var kaiju = createKaiju( // var: setMusic and updateCamera above may run first
-    { scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf: megaMattGltf, mattTex: matt, applyMutators, net, players, onFx: fx });
+    { scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf: megaMattGltf, mattTex: matt, applyMutators, net, players, onFx: fx, env });
   if (net) {
+    net.on('welcome', (m) => typeof m.now === 'number' && env.setServerOffset(m.now - Date.now()));
     net.on('ev', (m) => kaiju.onEv(m));
     net.on('welcome', (m) => kaiju.onWelcome(m));
   }
@@ -1131,6 +1154,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     S.trampMat.scale.y += (1 - S.trampMat.scale.y) * Math.min(1, dt * 8);
     W.update(dt, t);
     kaiju.update(dt);
+    env.update(dt, t);
     sky.position.copy(camera.position);
     // Behind a menu, panel or the start screen the world barely shows: render a fraction of
     // the frames. Nothing at all in a background tab.
@@ -1141,7 +1165,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       // on the same frames, so shadows never slide against the map.
       shadowFlip = !shadowFlip;
       if (shadowFlip) {
-        S.sun.position.set(sunAt.x + 14, sunAt.y + 26, sunAt.z + 9);
+        S.sun.position.copy(sunAt).add(env.sunOffset);
         S.sun.target.position.copy(sunAt);
         renderer.shadowMap.needsUpdate = true;
       }
@@ -1486,7 +1510,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1557,6 +1581,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hampter.dispose();
       clicky.dispose();
       kaiju.dispose();
+      env.dispose();
       romni.dispose();
       castle.dispose();
       hs.dispose();

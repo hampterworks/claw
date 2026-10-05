@@ -95,6 +95,7 @@ export function buildDistricts(ctx) {
     post.computeBoundingSphere();
     bulb.computeBoundingSphere();
     scene.add(post, bulb);
+    out.lamps = { bulb, positions: Array.from({ length: N }, (_, i) => [-78 + (i % 12) * 14, i < 12 ? -57 : -47]) }; // lit up at night (environment.js)
   }
   for (const x of [-30, -6, 36, 58]) staticModel('k_bench', x, 0, -57.6, Math.PI);
 

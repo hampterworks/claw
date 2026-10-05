@@ -13,7 +13,6 @@ const M_HOME = new THREE.Vector3(0, 0, 27); // Matt lands in the park
 const RING = 62; // spectators get flung onto this circle around the fight
 const END = S.end * BAR; // 80 s
 const GRAV = -6;
-const STORM = { top: new THREE.Color('#2a0f3d'), horizon: new THREE.Color('#7a3a5a'), bottom: new THREE.Color('#3a2030'), fog: new THREE.Color('#5a3550') };
 
 export const winnerFor = (m, g) => (g > m * 1.5 + 10 ? 'g' : 'm');
 
@@ -205,7 +204,7 @@ function buildMatt(gltf, mattTex) {
   return { model, cape };
 }
 
-export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf, mattTex, applyMutators, net, players, onFx }) {
+export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, world, W, sky, music, mattGltf, mattTex, applyMutators, net, players, onFx, env }) {
   const bm = createBattleMusic({ isEnabled: () => music.enabled });
   // event HUD
   const ui = document.createElement('div');
@@ -231,15 +230,11 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
 
   // remember what we change so it all goes back afterwards
   const saved = {};
+  // the storm colours are blended in by the environment (over whatever time of day it is)
   function setStorm(k) {
-    const u = sky.material.uniforms;
-    u.top.value.copy(saved.top).lerp(STORM.top, k);
-    u.horizon.value.copy(saved.horizon).lerp(STORM.horizon, k);
-    u.bottom.value.copy(saved.bottom).lerp(STORM.bottom, k);
-    scene.fog.color.copy(saved.fog).lerp(STORM.fog, k);
+    if (env) env.storm = k;
     scene.fog.near = THREE.MathUtils.lerp(saved.near, 160, k);
     scene.fog.far = THREE.MathUtils.lerp(saved.far, 700, k);
-    if (saved.sun) saved.sun.intensity = THREE.MathUtils.lerp(saved.sunI, saved.sunI * 0.55, k);
   }
 
   // ---------- effects ----------
@@ -424,15 +419,9 @@ export function createKaiju({ scene, camera, wrap, hud, sfx, ch, wallet, claw, w
       winnerShown: null,
     };
     // world changes
-    saved.top = sky.material.uniforms.top.value.clone();
-    saved.horizon = sky.material.uniforms.horizon.value.clone();
-    saved.bottom = sky.material.uniforms.bottom.value.clone();
-    saved.fog = scene.fog.color.clone();
     saved.near = scene.fog.near;
     saved.far = scene.fog.far;
     saved.camFar = camera.far;
-    saved.sun = W?.special?.sun || null;
-    saved.sunI = saved.sun ? saved.sun.intensity : 1;
     camera.far = 760;
     camera.updateProjectionMatrix();
     music.stop();
