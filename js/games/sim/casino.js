@@ -51,6 +51,7 @@ export function skinSwatch(skin, owned = true) {
   s.style.background = `radial-gradient(circle at 50% 70%, ${skin.belly} 0 28%, transparent 29%), radial-gradient(circle at 25% 18%, ${skin.ears} 0 14%, transparent 15%), radial-gradient(circle at 75% 18%, ${skin.ears} 0 14%, transparent 15%), ${skin.body}`;
   if (skin.metal) s.classList.add('metal');
   if (skin.opacity != null) s.style.opacity = '0.6';
+  if (skin.outfit === 'bikini') s.appendChild(el('span', 'skin-badge', '👙'));
   if (skin.mattFace) {
     const img = el('img');
     img.src = 'assets/sim-matt.webp';
@@ -324,7 +325,7 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
       refund: DUPE_REFUND,
       roll: rollSkin,
       card: skinCard,
-      items: SKINS,
+      items: SKINS.filter((x) => !x.free),
       give: grantSkin,
       equip: onEquip,
       blurb: `${CRATE_PRICE} 🪙 per Cat Crate. Duplicates refund ${DUPE_REFUND} 🪙.`,

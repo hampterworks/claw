@@ -85,6 +85,9 @@ spell pages and bonk 3 summoning stones awake, and he quits by summoning a kaiju
 fight Mega Godzilla to an original battle theme (every hit lands on the beat). Everyone online is flung into the air
 with the camera locked on the fight; BONK cheers for Matt, LICK for Godzilla, and the crowd decides who wins.
 
+**Bikini Claw:** a free skin everyone owns (Skins & Pets): a polka-dot pink bikini painted onto Claw so it moves with
+every animation, heart sunglasses and a hibiscus by the ear.
+
 **Sound:** the P menu has volume sliders for master, music, sound effects and rain (saved between visits); the 🔊
 button is still the quick mute.
 

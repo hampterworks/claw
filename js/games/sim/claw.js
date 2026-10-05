@@ -14,6 +14,10 @@ const rimWhite = new THREE.Color('#ffffff');
 
 // Take a freshly loaded cat GLB (each cat gets its own load, skinned clones are
 // fiddly), recolour it, scale it to `length` metres, face +z, feet at y=0.
+// where the bikini sits along the body (fractions of tail-to-nose length)
+// top/bottom: [u from, u to, v from, v to] (u: tail 0 -> nose 1, v: feet 0 -> ears 1)
+const OUTFIT = { top: [0.44, 0.57, 0.24, 0.56], bottom: [0.1, 0.25, 0.24, 0.56], shades: [-0.036, 0.098], flower: [0.07, 0.03, -0.02] };
+
 export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   const root = gltf.scene;
   // Measure before merging: a freshly merged skinned mesh has no posed skeleton yet,
@@ -71,6 +75,36 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   wrapper.updateMatrixWorld(true);
   const height = b2.max.y - b2.min.y;
 
+  // Outfit zones (Bikini Claw): sort every triangle by where it sits on the body in the bind pose
+  // (u: tail 0 -> nose 1, v: feet 0 -> ears 1). 0 = skin, 1 = top, 2 = bottoms; +4 marks a polka dot.
+  const zone = new Uint8Array(merged.geometry.getAttribute('position').count);
+  {
+    const pos = merged.geometry.getAttribute('position');
+    const m = merged.matrixWorld; // the wrapper has no parent yet, so this is wrapper space
+    const a = new THREE.Vector3();
+    const cs = [];
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    for (let i = 0; i < pos.count; i += 3) {
+      const c = new THREE.Vector3();
+      for (let k = 0; k < 3; k++) c.add(a.fromBufferAttribute(pos, i + k).applyMatrix4(m));
+      c.multiplyScalar(1 / 3);
+      cs.push(c);
+      z0 = Math.min(z0, c.z);
+      z1 = Math.max(z1, c.z);
+    }
+    cs.forEach((c, t) => {
+      const u = (c.z - z0) / (z1 - z0);
+      const v = c.y / height;
+      let zn = 0;
+      if (u > OUTFIT.top[0] && u < OUTFIT.top[1] && v > OUTFIT.top[2] && v < OUTFIT.top[3]) zn = 1;
+      else if (u > OUTFIT.bottom[0] && u < OUTFIT.bottom[1] && v > OUTFIT.bottom[2] && v < OUTFIT.bottom[3]) zn = 2;
+      // polka dots: a stable hash of the triangle's position
+      if (zn && Math.abs(Math.sin(c.x * 91.7 + c.y * 47.3 + c.z * 63.1) * 43758.5) % 1 < 0.22) zn |= 4;
+      zone[t * 3] = zone[t * 3 + 1] = zone[t * 3 + 2] = zn;
+    });
+  }
+
   // Head bone = the most forward bone in the upper half of the body.
   let head = null;
   let best = -Infinity;
@@ -94,10 +128,17 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   // Repaint the cat: colours = [body, belly/paws, ears/nose].
   const colorAttr = merged.geometry.getAttribute('color');
   const pc = [new THREE.Color(), new THREE.Color(), new THREE.Color()];
-  function recolor(cols) {
+  const oMain = new THREE.Color();
+  const oDots = new THREE.Color();
+  // outfit: { main, dots } paints the outfit zones over the skin
+  function recolor(cols, outfit) {
     cols.forEach((c, i) => pc[i].set(c));
+    if (outfit) {
+      oMain.set(outfit.main);
+      oDots.set(outfit.dots || outfit.main);
+    }
     for (let i = 0; i < parts.length; i++) {
-      const c = pc[parts[i]];
+      const c = outfit && zone[i] ? (zone[i] & 4 ? oDots : oMain) : pc[parts[i]];
       colorAttr.setXYZ(i, c.r, c.g, c.b);
     }
     colorAttr.needsUpdate = true;
@@ -147,6 +188,56 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     stalks.push(g);
   }
   scene.add(antenna);
+
+  // Bikini Claw extras, riding on the head with the antennae: heart sunglasses + a hibiscus
+  const outfit = new THREE.Group();
+  outfit.visible = false;
+  {
+    const heart = new THREE.Shape();
+    heart.moveTo(0, -0.035);
+    heart.bezierCurveTo(-0.01, -0.025, -0.05, -0.005, -0.045, 0.02);
+    heart.bezierCurveTo(-0.04, 0.042, -0.012, 0.045, 0, 0.025);
+    heart.bezierCurveTo(0.012, 0.045, 0.04, 0.042, 0.045, 0.02);
+    heart.bezierCurveTo(0.05, -0.005, 0.01, -0.025, 0, -0.035);
+    const lensGeo = new THREE.ExtrudeGeometry(heart, { depth: 0.012, bevelEnabled: false, curveSegments: 6 });
+    const lensMat = new THREE.MeshStandardMaterial({ color: '#2a0a1e', roughness: 0.15, metalness: 0.4 });
+    const frameMat = new THREE.MeshStandardMaterial({ color: '#ff3fa4', roughness: 0.4 });
+    const shades = new THREE.Group();
+    for (const sx of [-1, 1]) {
+      const rim = new THREE.Mesh(lensGeo, frameMat);
+      rim.scale.set(1.18, 1.18, 0.6);
+      rim.position.set(sx * 0.043, 0, -0.003);
+      const lens = new THREE.Mesh(lensGeo, lensMat);
+      lens.position.set(sx * 0.043, 0, 0);
+      shades.add(rim, lens);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.008, 0.008), frameMat);
+    bridge.position.set(0, 0.018, 0.006);
+    shades.add(bridge);
+    shades.position.set(0, OUTFIT.shades[0], OUTFIT.shades[1]);
+    shades.rotation.x = -0.25; // follows the slope of the face
+    shades.scale.setScalar(0.9);
+    outfit.add(shades);
+    outfit.userData.shades = shades;
+    // hibiscus by the right ear
+    const flower = new THREE.Group();
+    const petalMat = new THREE.MeshStandardMaterial({ color: '#ff2f6d', roughness: 0.6, flatShading: true });
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), petalMat);
+      p.scale.set(1, 0.45, 1.5);
+      p.position.set(Math.cos(a) * 0.028, 0, Math.sin(a) * 0.028);
+      p.rotation.y = -a + Math.PI / 2;
+      flower.add(p);
+    }
+    const middle = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 4), new THREE.MeshStandardMaterial({ color: '#ffe14d', emissive: '#ffb000', emissiveIntensity: 0.4 }));
+    middle.position.y = 0.012;
+    flower.add(middle);
+    flower.position.set(...OUTFIT.flower);
+    flower.rotation.set(0.9, 0, -0.5);
+    outfit.add(flower);
+  }
+  antenna.add(outfit);
 
   // Cursed mode face decal
   const face = new THREE.Mesh(
@@ -330,7 +421,8 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     setSkin(skin) {
       st.skin = skin;
       const m = cat.material;
-      cat.recolor([skin.body, skin.belly, skin.ears]);
+      cat.recolor([skin.body, skin.belly, skin.ears], skin.bikini);
+      outfit.visible = skin.outfit === 'bikini';
       stalkMat.color.set(skin.body);
       m.metalness = skin.metal || 0;
       m.roughness = skin.rough ?? 0.8;
@@ -513,6 +605,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       }
 
       face.visible = !!(mut.cursed || mut.matt || (st.skin && st.skin.mattFace));
+      if (outfit.visible) outfit.userData.shades.visible = !face.visible; // the face decal wins
       if (face.visible) {
         fwdV.set(0, 0, 1).applyQuaternion(pivot.quaternion);
         face.position.copy(antenna.position).addScaledVector(UP, -0.1 * st.scaleK).addScaledVector(fwdV, 0.1 * st.scaleK);
