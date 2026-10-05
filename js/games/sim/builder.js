@@ -211,13 +211,15 @@ export function createBuilder({ RAPIER, world, scene, models }) {
 
   // A walled room from Kenney wall pieces (2.2 m each). `doors`/`windows` are
   // sets like 'n2' (north side, piece 2). Open roof so the camera can see in.
-  function room(cx, cz, nx, nz, { doors = [], windows = [], y = 0, floor = '#c99a6b', floorCollide = true } = {}) {
+  const windows = [];
+  function room(cx, cz, nx, nz, { doors = [], windows: winSet = [], y = 0, floor = '#c99a6b', floorCollide = true } = {}) {
     const W = nx * 2.2;
     const D = nz * 2.2;
     if (floor) solidBox(cx, y + 0.03, cz, W, 0.06, D, floor, { shadow: false, collide: floorCollide });
-    const piece = (side, i) => (doors.includes(side + i) ? 'k_wallDoorway' : windows.includes(side + i) ? 'k_wallWindow' : 'k_wall');
+    const piece = (side, i) => (doors.includes(side + i) ? 'k_wallDoorway' : winSet.includes(side + i) ? 'k_wallWindow' : 'k_wall');
     const place = (type, x, z, rotY) => {
       deco(type, x, y, z, rotY);
+      if (type === 'k_wallWindow') windows.push({ x, y: y + 1.5, z, rotY }); // they glow at night
       const q = yawQ(rotY);
       if (type === 'k_wallDoorway') {
         const off = new THREE.Vector3(0.8, 0, 0).applyQuaternion(q);
@@ -254,6 +256,7 @@ export function createBuilder({ RAPIER, world, scene, models }) {
     addBody,
     prop,
     room,
+    windows,
     natureMat,
     furnitureMat,
     dispose() {

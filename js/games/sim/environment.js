@@ -1,6 +1,6 @@
 // Time of day and weather. One clock for everyone (wall time, plus the server offset when
 // online), so all players share the same sunset and the same rain without any server work.
-// A day is 24 minutes: dawn, ~14 min of day, dusk, ~6 min of night. Owns the sky colours, fog
+// A day is 24 minutes: dawn, ~17 min of day, dusk, ~3.5 min of night. Owns the sky colours, fog
 // colour, sun/moon light, hemisphere light and exposure; the kaiju battle blends its storm on top.
 import * as THREE from 'three';
 import { getAudioContext, isMuted } from '../../audio.js';
@@ -8,11 +8,12 @@ import { noiseBuffer } from '../../catvoice.js';
 
 export const DAY_LEN = 24 * 60; // seconds
 const SLOT = 6 * 60; // weather changes every 6 minutes
+const SUN_END = 0.85; // the sun is up from phase 0 (dawn) to here; the moon has the rest (~3.6 min)
 const C = (h) => new THREE.Color(h);
 const LOOKS = {
   day: { top: C('#2f7fe0'), horizon: C('#c4ecff'), bottom: C('#e8f7ff'), fog: C('#c4ecff'), sun: C('#fff6dd'), sunI: 2.4, hemiSky: C('#e6f6ff'), hemiGround: C('#4f7a2f'), hemiI: 1.5, glow: C('#fff2c4') },
   gold: { top: C('#3a5fb0'), horizon: C('#ffb37a'), bottom: C('#ffd9b0'), fog: C('#f2b48a'), sun: C('#ffae66'), sunI: 1.9, hemiSky: C('#ffd2b8'), hemiGround: C('#5a5a32'), hemiI: 1.25, glow: C('#ffb36b') },
-  night: { top: C('#040820'), horizon: C('#1b2a55'), bottom: C('#0b1430'), fog: C('#18264a'), sun: C('#9fb4ff'), sunI: 0.5, hemiSky: C('#41528c'), hemiGround: C('#151b28'), hemiI: 0.65, glow: C('#c9d6ff') },
+  night: { top: C('#060c2a'), horizon: C('#24366a'), bottom: C('#101a3a'), fog: C('#22325c'), sun: C('#aabfff'), sunI: 0.85, hemiSky: C('#5466a8'), hemiGround: C('#222a3c'), hemiI: 1.0, glow: C('#c9d6ff') },
   rain: { top: C('#59677a'), horizon: C('#9aa6b2'), bottom: C('#b3bcc4'), fog: C('#8f99a4') },
   storm: { top: C('#2a0f3d'), horizon: C('#7a3a5a'), bottom: C('#3a2030'), fog: C('#5a3550') },
 };
@@ -111,7 +112,7 @@ function makeFall({ count, size, speed, color, snow }) {
   return obj;
 }
 
-export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, glowSpots = [], snowAt, quality = 'high' }) {
+export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lampSets = [], windows = [], fireflyAt = [], glowSpots = [], snowAt, quality = 'high' }) {
   const hemi = (() => {
     let h = null;
     scene.traverse((o) => o.isHemisphereLight && (h = o));
@@ -145,14 +146,76 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
   const gtex = glowTexture();
   const pools = [];
   const poolMat = new THREE.MeshBasicMaterial({ map: gtex, color: '#ffcf7a', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
-  if (lamps?.positions?.length) {
-    const pm = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9).rotateX(-Math.PI / 2), poolMat, lamps.positions.length);
+  const allLamps = lampSets.filter(Boolean).flatMap((l) => l.positions || []);
+  if (allLamps.length) {
+    const pm = new THREE.InstancedMesh(new THREE.PlaneGeometry(10, 10).rotateX(-Math.PI / 2), poolMat, allLamps.length);
     const m = new THREE.Matrix4();
-    lamps.positions.forEach(([x, z], i) => pm.setMatrixAt(i, m.makeTranslation(x, 0.06, z)));
+    allLamps.forEach(([x, z], i) => pm.setMatrixAt(i, m.makeTranslation(x, 0.06, z)));
     pm.computeBoundingSphere();
     scene.add(pm);
     pools.push(pm);
   }
+  // warm glowing windows
+  const winMat = new THREE.MeshBasicMaterial({ color: '#ffc46b', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  if (windows.length) {
+    const wm = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.1, 0.95), winMat, windows.length);
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const one = new THREE.Vector3(1, 1, 1);
+    windows.forEach((w, i) => wm.setMatrixAt(i, m.compose(new THREE.Vector3(w.x, w.y, w.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), w.rotY), one)));
+    wm.computeBoundingSphere();
+    scene.add(wm);
+    pools.push(wm);
+  }
+  // Claw's lantern: a soft warm light that follows you at night
+  const lantern = new THREE.PointLight('#ffd9a0', 0, 11, 1.6);
+  scene.add(lantern);
+  // fireflies in the parks
+  const flies = (() => {
+    if (!fireflyAt.length) return null;
+    const per = 40;
+    const pos = new Float32Array(fireflyAt.length * per * 3);
+    let k = 0;
+    for (const [cx, cz, r] of fireflyAt) {
+      for (let i = 0; i < per; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.sqrt(Math.random()) * r;
+        pos.set([cx + Math.cos(a) * d, 0.5 + Math.random() * 2.5, cz + Math.sin(a) * d], k++ * 3);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 } },
+      vertexShader: /* glsl */ `
+        uniform float uTime;
+        varying float vBlink;
+        void main() {
+          vec3 p = position;
+          float s = position.x * 0.37 + position.z * 0.53;
+          p += vec3(sin(uTime * 0.7 + s), sin(uTime * 1.1 + s * 2.0) * 0.4, cos(uTime * 0.6 + s)) * 0.8;
+          vBlink = 0.5 + 0.5 * sin(uTime * 3.0 + s * 5.0);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = clamp(3.0 * (30.0 / -mv.z), 1.5, 6.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform float uOpacity;
+        varying float vBlink;
+        void main() {
+          vec2 c = gl_PointCoord - 0.5;
+          float d = 1.0 - smoothstep(0.0, 0.5, length(c));
+          gl_FragColor = vec4(vec3(0.85, 1.0, 0.45) * d, d * uOpacity * vBlink);
+        }`,
+    });
+    const pts = new THREE.Points(g, mat);
+    pts.frustumCulled = false;
+    scene.add(pts);
+    return pts;
+  })();
   const glows = glowSpots.map(({ x, y, z, color = '#ffb36b', size = 4 }) => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: gtex, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
     s.position.set(x, y, z);
@@ -160,7 +223,7 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
     scene.add(s);
     return s;
   });
-  const bulbBase = lamps?.bulb ? lamps.bulb.material.color.clone() : null;
+  const bulbs = lampSets.filter((l) => l?.bulb).map((l) => ({ mat: l.bulb.material, base: l.bulb.material.color.clone() }));
 
   // weather particles
   const lowQ = () => quality === 'low';
@@ -232,13 +295,16 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
     set storm(k) {
       st.storm = k;
     },
+    setClaw(c) {
+      claw = c;
+    },
     setServerOffset(ms) {
       st.offset = ms / 1000;
     },
     setQuality(q) {
       quality = q;
     },
-    // debug: force a time of day (0..1, 0 = dawn, 0.4 = noon, 0.72 = dusk, 0.85 = night) or weather
+    // debug: force a time of day (0..1, 0 = dawn, 0.42 = noon, 0.82 = dusk, 0.93 = night) or weather
     setTime(f) {
       st.forced = f;
     },
@@ -247,9 +313,9 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
     },
     update(dt, t) {
       const g = phase();
-      // the sun: up from dawn (g=0) to the end of dusk (g=0.75), moon the rest of the time
-      const sp = Math.min(1, g / 0.75);
-      const elev = g < 0.75 ? Math.sin(sp * Math.PI) : -Math.sin(((g - 0.75) / 0.25) * Math.PI) * 0.6;
+      // the sun: up from dawn (g=0) to the end of dusk (g=SUN_END), the moon the rest of the time
+      const sp = Math.min(1, g / SUN_END);
+      const elev = g < SUN_END ? Math.sin(sp * Math.PI) : -Math.sin(((g - SUN_END) / (1 - SUN_END)) * Math.PI) * 0.6;
       const L = THREE.MathUtils.smoothstep(elev, -0.05, 0.22);
       const G = L * (1 - THREE.MathUtils.smoothstep(elev, 0.08, 0.42));
       st.night = 1 - L;
@@ -270,7 +336,7 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
         const a = sp * Math.PI;
         sunOffset.set(-Math.cos(a) * 26, 6 + Math.max(0, elev) * 24, 9);
       } else {
-        const q = (g - 0.75) / 0.25;
+        const q = (g - SUN_END) / (1 - SUN_END);
         sunOffset.set(Math.cos(q * Math.PI) * 18, 24, -12);
       }
       const sunCol = mix3('sun', L, G, 0, 0);
@@ -308,7 +374,19 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
         s.material.opacity = lampK * 0.45;
         s.visible = lampK > 0.01;
       }
-      if (bulbBase) lamps.bulb.material.color.copy(bulbBase).multiplyScalar(0.6 + lampK * 1.2);
+      for (const b of bulbs) b.mat.color.copy(b.base).multiplyScalar(0.6 + lampK * 1.2);
+      winMat.opacity = lampK * 0.55;
+      if (claw) {
+        const p = claw.position();
+        lantern.position.set(p.x, p.y + 1.4, p.z);
+        lantern.intensity = lampK * 9;
+        lantern.visible = lampK > 0.01;
+      }
+      if (flies) {
+        flies.material.uniforms.uTime.value = t;
+        flies.material.uniforms.uOpacity.value = lampK * (1 - R);
+        flies.visible = lampK > 0.01 && R < 0.9;
+      }
       // rain follows the camera; snow is always on at Winter's Castle
       rain.visible = R > 0.02;
       rain.material.uniforms.uOpacity.value = R * 0.75;
@@ -327,7 +405,8 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
       rainSound(R);
     },
     dispose() {
-      scene.remove(sky2, rain, ...pools, ...glows);
+      scene.remove(sky2, rain, lantern, ...pools, ...glows);
+      if (flies) scene.remove(flies);
       if (snow) scene.remove(snow);
       if (rainAudio) {
         try {

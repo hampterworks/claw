@@ -5,10 +5,12 @@ import { makeCat } from './claw.js';
 import { memeStandeeTexture, signTexture, yarnTexture, newsTexture } from './textures.js';
 import { soupMaterial } from './graphics.js';
 import { createBuilder } from './builder.js';
-import { buildDistricts } from './districts.js';
-import { buildTown } from './town.js';
+import { buildDistricts, CASTLE, LAKE, HAMPTER_HOUSE, MATT_HOUSE } from './districts.js';
+import { buildTown, MEOWTOWN } from './town.js';
 import { buildPark } from './park.js';
 import { applyDetail } from './detail.js';
+import { buildLamps, lampsAlong } from './lamps.js';
+import { ARENA, MAZE } from './park.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
 export const PARK_POT = new THREE.Vector3(16, 0, 12);
@@ -595,8 +597,10 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     [TOWER.x, TOWER.z, 4.5], [STUDIO.x, STUDIO.z + 2, 8], [CORN.x, CORN.z, 8], [-28, -12, 3.5], [4, 4, 3], [18, 21, 3], [-6, 14, 3], [0, 0, 6],
   ];
   // dirt paths between the main spots (trees keep off them)
+  const lampSpots = [];
   for (const pts of PATHS) {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'catmullrom', 0.4);
+    lampSpots.push(...lampsAlong(curve));
     const n = Math.ceil(curve.getLength() / 0.8);
     const pos = [];
     const idx = [];
@@ -622,6 +626,19 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     scene.add(mesh);
     disposables.push(geo, mat);
   }
+  // more lamps: castle courtyard, lake dock, Meowtown square, the houses (trees keep clear)
+  {
+    const C = CASTLE;
+    const fs = districts.fishSpot;
+    lampSpots.push(
+      [C.x + 4, C.z - 7], [C.x + 4, C.z + 7], [C.x + 11, C.z - 9], [C.x + 11, C.z + 9],
+      [fs.x + 2.3, fs.z - 3], [fs.x + 2.3, fs.z - 10], [LAKE.x - 12, LAKE.z - 18], [LAKE.x + 14, LAKE.z - 18],
+      [MEOWTOWN.x + 5.5, MEOWTOWN.z + 5.5], [MEOWTOWN.x - 5.5, MEOWTOWN.z - 5.5], [MEOWTOWN.x + 5.5, MEOWTOWN.z - 5.5], [MEOWTOWN.x - 5.5, MEOWTOWN.z + 5.5],
+      [HOUSE.x + 4.5, HOUSE.z + 7.2], [HOUSE.x - 4.5, HOUSE.z + 7.2], [HAMPTER_HOUSE.x + 3, HAMPTER_HOUSE.z + 6], [MATT_HOUSE.x + 3, MATT_HOUSE.z + 6],
+      [PARK_POT.x - 4, PARK_POT.z - 4], [TRAMP.x + 3, TRAMP.z + 3]
+    );
+  }
+  for (const [x, z] of lampSpots) clear.push([x, z, 1.2]);
   const free = (x, z, pad = 0) => clear.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r + pad);
   const trees = ['n_CommonTree_1', 'n_CommonTree_2', 'n_CommonTree_3', 'n_CommonTree_4', 'n_CommonTree_Autumn_1', 'n_PineTree_1', 'n_PineTree_2', 'n_PineTree_3', 'n_BirchTree_1', 'n_Willow_1', 'n_Willow_2'];
   function place(n, pad, fn) {
@@ -683,6 +700,12 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   // ---------- Glorp Park (arena + hedge maze) and the Outskirts ----------
   const park = buildPark({ B, RAPIER, world, scene, disposables, bounds: BOUNDS });
   special.park = park;
+  // Glorp Park and the road ends get lamps too
+  for (const sgn of [-1, 1]) for (const x of [92, 106, 120]) lampSpots.push([sgn * x, -57], [sgn * x, -47]);
+  lampSpots.push([ARENA.x + 3.6, -46], [ARENA.x + 3.6, -38], [ARENA.x - 3.6, -30], [ARENA.x - 4.5, ARENA.z - 18], [ARENA.x + 4.5, ARENA.z - 18], [ARENA.x, ARENA.z + 6]);
+  lampSpots.push([MAZE.x - 19, MAZE.z - 3], [MAZE.x - 19, MAZE.z + 3], [MAZE.x + 1.1, MAZE.z + 1.1]);
+  special.lamps = buildLamps({ scene, world, RAPIER, fixed, spots: lampSpots });
+  special.windows = B.windows;
   special.trees.push(...park.trees);
 
   B.finalize();

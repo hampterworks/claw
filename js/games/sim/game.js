@@ -173,7 +173,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     sky,
     sun: S.sun,
     camera,
-    lamps: S.districts.lamps,
+    claw: null, // set below, once Claw exists
+    lampSets: [S.districts.lamps, S.lamps],
+    windows: S.windows,
+    fireflyAt: [[4, 22, 16], [106, 12, 30], [-20, 30, 14]],
     snowAt: CASTLE,
     glowSpots: [
       { x: CASTLE.x + 15.2, y: 3.4, z: CASTLE.z - 2.3, color: '#9fd4ff', size: 2.5 },
@@ -206,6 +209,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   setRung(rung);
   const spawn = new THREE.Vector3(HOUSE.x + 2, 0.8, HOUSE.z + 2.8);
   const claw = createClaw({ RAPIER, world, scene, gltf: catGltf, faceTex: face, spawn });
+  env.setClaw(claw); // the night lantern follows Claw
   // Let everything settle before scoring starts, so nothing counts as "knocked" on load.
   for (let i = 0; i < 90; i++) world.step();
   for (const p of W.props) {

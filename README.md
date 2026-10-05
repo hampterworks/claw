@@ -70,7 +70,8 @@ J quest log, H controls card, P menu (P again closes it), T chat. Touch players 
 **Daily quests:** three a day (the same for everyone), coins for each and a streak bonus for all three. See the
 📅 chip or the quest log (J).
 
-**Day, night and weather:** a 24-minute day shared by everyone online (lamps glow at night, stars come out), rain
+**Day, night and weather:** a 24-minute day shared by everyone online (about 3.5 minutes of it is night: lamps,
+glowing windows, fireflies and a lantern that follows Claw), rain
 now and then, and it always snows at Winter's Castle.
 
 **Emotes:** dances and emotes from the wheel (G). Three Claws dancing together start a dance party.
