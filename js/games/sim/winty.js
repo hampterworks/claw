@@ -19,8 +19,8 @@ const PITCH = [
 ];
 const GIVE_UP = ['fine. ur loss', "whatever. I'll ask Matt", 'nobody appreciates small businesses'];
 const COLLECT = ['ROMNI SENT ME. PAY UP.', 'you owe the bank, glorp', 'I have a castle. it has a dungeon.', 'interest is compounding, babe', 'running only makes it worse', 'debt collection is my side hustle'];
-const FLEE = ['NOT THE DUCK', 'AAAAA DUCKY', 'Romni said you were cool!!', "I'm telling Clicky (he quit)", 'keep that bird AWAY from me', 'my castle has a NO DUCKS policy', 'ok ok no fent for you, sorry!!'];
-const CROWN = ['MY CROWN!!!', 'GIVE IT BACK', 'that is a FAMILY HEIRLOOM (I bought it)', 'thief!! THIEF!!', 'Romni will hear about this', 'I KNOW WHO SENT YOU. IT WAS THE DUCK.'];
+const FLEE = ['NOT MY BROTHER', 'AAAAA DUCKY', 'Romni said you were cool!!', "I'm telling MOM", 'keep my brother AWAY from me', 'my castle has a NO LITTLE BROTHERS policy', 'Ducky I said the menu thing was a JOKE', 'ok ok no fent for you, sorry!!'];
+const CROWN = ['MY CROWN!!!', 'GIVE IT BACK', 'that is a FAMILY HEIRLOOM (I bought it)', 'thief!! THIEF!!', 'Romni will hear about this', 'I KNOW WHO SENT YOU. IT WAS MY BROTHER.', "DUCKY YOU'RE GROUNDED"];
 const COLLECT_SPEED = 7.4;
 const CROWN_SPEED = 5.4; // a bit faster than walking: zoomies or jumps keep you ahead
 const CROWN_GIVE_UP = 22; // seconds of cardio before she gives up
@@ -78,7 +78,7 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
       if (st.mode !== 'collect') return;
       st.mode = 'home';
       st.cd = 20;
-      say(reason === 'ducky' ? '...is that DUCKY? never mind. NEVER MIND.' : '...fine. you paid. this time.', 4);
+      say(reason === 'ducky' ? '...is that my BROTHER? never mind. NEVER MIND.' : '...fine. you paid. this time.', 4);
     },
     // Ducky's quest: Claw stole her crown. She shows up nearby and chases until she catches you or gets tired.
     chaseCrown(claw, onCatch) {
@@ -96,7 +96,7 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
       if (st.mode !== 'crown') return;
       st.mode = 'home';
       st.cd = 20;
-      say('NOT THE DUCK. ANYONE BUT THE DUCK.', 4);
+      say("UGH. I'm telling Mom, Ducky.", 4);
     },
     setScared(on) {
       st.scared = !!on;

@@ -1555,7 +1555,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Clicky as Winter’s wizard (former). Ducky as Romni’s oldest business associate. Mega Matt and Mega Godzilla as themselves. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Clicky as Winter’s wizard (former). Ducky as Winty’s little brother and Romni’s oldest business associate. Mega Matt and Mega Godzilla as themselves. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets, Mini Characters), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');

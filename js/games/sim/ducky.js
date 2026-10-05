@@ -1,6 +1,7 @@
-// Ducky: Romni's oldest business associate and Ms Winter's nemesis (she once tried to put him on
-// the castle menu as duck à l'orange). Outrun Winty 3 times and he waddles into Ohio. His quest is
-// a prank on Winter: knock her castle sign crooked, egg her throne, steal her crown. Finish it and
+// Ducky: Winty's little brother and Romni's oldest business associate. Big sis got the castle, he
+// got "the duck genes", and she once put him on the castle menu as duck à l'orange (she says it was
+// a joke). Outrun Winty 3 times and he waddles into Ohio. His quest is a sibling prank on his
+// sister: knock her castle sign crooked, egg her throne, steal her crown. Finish it and
 // you unlock Ducky Mode: Ducky follows you as a bodyguard, Winty runs from you, and Romni stops
 // asking about your loan (they go way back).
 // The duck is built entirely in code, no model file.
@@ -14,8 +15,9 @@ export const ESCAPES_NEEDED = 3;
 
 const LINES = {
   1: [
-    'Winter tried to put me on her castle menu. Duck à l\'orange. ME. I am a businessman.',
+    'You outran my sister THREE times? Winty. Yes, my big sister. Somebody got the castle, somebody got the duck genes.',
     'First, a message. Bonk the WINTER\'S CASTLE sign by her gate. Make it crooked. Make it personal.',
+    'She put me on her castle menu once. Duck à l\'orange. "It was a JOKE, Ducky." It was laminated.',
     'Romni and I go way back. Way, WAY back. Do not ask about 2019.',
   ],
   2: [
@@ -25,12 +27,14 @@ const LINES = {
   ],
   3: [
     'Throne: egged. Morale: excellent. Now the big one.',
-    'Steal her crown off the throne and bring it to me. She will chase you. Run like Romni is collecting.',
+    'Steal her crown off the throne and bring it to me. Mom said we had to SHARE it. She never shared it.',
+    'She will chase you. Run like Romni is collecting.',
     'Zoomies, kid. Use the zoomies.',
   ],
   done: [
     'The crown fits. I always knew it would.',
-    'Winter sees me and runs. As she should.',
+    'My sister sees me and runs. Some things never change since we were ducklings. Well. Since I was.',
+    'Thanksgiving is going to be SO awkward this year. Worth it.',
     'Romni says your loan is "spiritually paid". That is how we do business.',
     'Quack. That is it. That is the line.',
   ],
@@ -306,8 +310,8 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
     sfx.win();
     sfx.quack();
     talk.flap = 1.5;
-    say('THE CROWN. Oh it fits. Winter is going to be SO mad. Here: you are family now.', 6500);
-    setTimeout(() => hud.banner('🦆 DUCKY MODE UNLOCKED', 'Ducky is your bodyguard. Winter runs from you. Romni says no rush on that loan.', { pog: true }), 2500);
+    say('THE CROWN. Oh it fits. My sister is going to be SO mad. Here: you are family now. Unlike some people.', 6500);
+    setTimeout(() => hud.banner('🦆 DUCKY MODE UNLOCKED', 'Ducky is your bodyguard. His big sister runs from you. Romni says no rush on that loan.', { pog: true }), 2500);
     setMode(true);
   }
   function dropCrown() {
@@ -347,7 +351,7 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
         place();
         npc.root.visible = true;
         sfx.quack();
-        setTimeout(() => hud.banner('🦆 A DUCK HAS ENTERED OHIO', 'Someone is impressed by how much you run from Winter. Find the yellow dot on the map.'), 2600);
+        setTimeout(() => hud.banner('🦆 A DUCK HAS ENTERED OHIO', 'Winty\'s little brother is impressed by how much you run from her. Find the yellow dot on the map.'), 2600);
       } else hud.popup(`ESCAPED WINTY ${st.escapes}/${ESCAPES_NEEDED}`, COLOR);
       save();
     },
@@ -455,7 +459,7 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
         });
         add('p', 'fine', 'Ducky Mode: Ducky follows you as your bodyguard, Winty runs away from you, and your Romni loan never comes due.');
       }
-      add('p', 'fine', 'Ducky has known Romni since before banks were invented. He will not say how long that is.');
+      add('p', 'fine', 'Ducky is Winty\'s little brother. He has also known Romni since before banks were invented, and will not say how long that is.');
       sfx.quack();
       talk.flap = 1;
       return root;
