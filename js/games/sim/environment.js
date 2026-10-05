@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { getAudioContext, isMuted } from '../../audio.js';
 import { noiseBuffer } from '../../catvoice.js';
+import { WATER_LIGHT } from './graphics.js';
 
 export const DAY_LEN = 24 * 60; // seconds
 const SLOT = 6 * 60; // weather changes every 6 minutes
@@ -112,7 +113,16 @@ function makeFall({ count, size, speed, color, snow }) {
   return obj;
 }
 
-export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lampSets = [], windows = [], fireflyAt = [], glowSpots = [], snowAt, quality = 'high' }) {
+export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lampSets = [], fireflyAt = [], glowSpots = [], snowAt, quality = 'high' }) {
+  // Signs, posters and character cut-outs are unlit (MeshBasic / Sprite), so at night they would
+  // glow like neon. Dim them with the light. Real neon has an over-bright colour (> 1): left alone.
+  const unlit = [];
+  scene.traverse((o) => {
+    const m = o.material;
+    if (!m || Array.isArray(m) || !(m.isMeshBasicMaterial || m.isSpriteMaterial) || !m.map) return;
+    if (m.blending === THREE.AdditiveBlending || Math.max(m.color.r, m.color.g, m.color.b) > 1.001) return;
+    if (!unlit.some((u) => u.m === m)) unlit.push({ m, base: m.color.clone() });
+  });
   const hemi = (() => {
     let h = null;
     scene.traverse((o) => o.isHemisphereLight && (h = o));
@@ -154,18 +164,6 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lam
     pm.computeBoundingSphere();
     scene.add(pm);
     pools.push(pm);
-  }
-  // warm glowing windows
-  const winMat = new THREE.MeshBasicMaterial({ color: '#ffc46b', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  if (windows.length) {
-    const wm = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.1, 0.95), winMat, windows.length);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const one = new THREE.Vector3(1, 1, 1);
-    windows.forEach((w, i) => wm.setMatrixAt(i, m.compose(new THREE.Vector3(w.x, w.y, w.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), w.rotY), one)));
-    wm.computeBoundingSphere();
-    scene.add(wm);
-    pools.push(wm);
   }
   // Claw's lantern: a soft warm light that follows you at night
   const lantern = new THREE.PointLight('#ffd9a0', 0, 11, 1.6);
@@ -375,7 +373,12 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lam
         s.visible = lampK > 0.01;
       }
       for (const b of bulbs) b.mat.color.copy(b.base).multiplyScalar(0.6 + lampK * 1.2);
-      winMat.opacity = lampK * 0.55;
+      const dim = 1 - 0.62 * THREE.MathUtils.smoothstep(st.night, 0.15, 0.85);
+      if (dim !== st.dim) {
+        st.dim = dim;
+        for (const u of unlit) u.m.color.copy(u.base).multiplyScalar(dim);
+        WATER_LIGHT.value = 0.3 + 0.7 * dim;
+      }
       if (claw) {
         const p = claw.position();
         lantern.position.set(p.x, p.y + 1.4, p.z);

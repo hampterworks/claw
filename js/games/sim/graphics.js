@@ -211,6 +211,8 @@ export function createGraphics(renderer, scene, camera) {
 
 // Stylized water: depth tint, moving ripples, sun glints, fresnel sky reflection, foam at the edge.
 // `round` uses radial UVs (circle/ellipse); otherwise the edge is the rectangle border.
+// how lit the water is (1 by day, darker at night; set by environment.js)
+export const WATER_LIGHT = { value: 1 };
 export function waterMaterial({ shallow = '#4fd0e8', deep = '#145a8a', round = true } = {}) {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -219,6 +221,7 @@ export function waterMaterial({ shallow = '#4fd0e8', deep = '#145a8a', round = t
       shallow: { value: new THREE.Color(shallow) },
       deep: { value: new THREE.Color(deep) },
       sunDir: { value: new THREE.Vector3(14, 26, 9).normalize() },
+      uLight: WATER_LIGHT,
     },
     defines: round ? { ROUND: 1 } : {},
     vertexShader: /* glsl */ `
@@ -235,6 +238,7 @@ export function waterMaterial({ shallow = '#4fd0e8', deep = '#145a8a', round = t
     fragmentShader: /* glsl */ `
       uniform float uTime;
       uniform vec3 shallow, deep, sunDir;
+      uniform float uLight;
       varying vec2 vUv;
       varying vec3 vWorld;
       void main() {
@@ -254,7 +258,7 @@ export function waterMaterial({ shallow = '#4fd0e8', deep = '#145a8a', round = t
         float spec = pow(max(dot(reflect(-normalize(sunDir), n), viewDir), 0.0), 60.0);
         col += vec3(1.0, 0.95, 0.8) * spec * 1.6;
         col += vec3(1.0) * smoothstep(0.9, 1.0, edge) * (0.55 + 0.25 * sin(uTime * 3.0 + vWorld.x));
-        gl_FragColor = vec4(col, 0.88);
+        gl_FragColor = vec4(col * uLight, 0.88);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,

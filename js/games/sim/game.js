@@ -175,7 +175,6 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     camera,
     claw: null, // set below, once Claw exists
     lampSets: [S.districts.lamps, S.lamps],
-    windows: S.windows,
     fireflyAt: [[4, 22, 16], [106, 12, 30], [-20, 30, 14]],
     snowAt: CASTLE,
     glowSpots: [
