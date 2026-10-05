@@ -16,6 +16,7 @@ const HS_HIDE = 25000;
 const HS_SEEK = 150000;
 const HS_TAG_RANGE = 6; // metres; a little slack for latency
 const DUEL_ACTS = ['ask', 'yes', 'no', 'mv', 'quit'];
+const EMOTE_IDS = ['chipi', 'spin', 'caramell', 'loaf', 'pog', 'wave', 'cry', 'scream']; // js/games/sim/emotes.js
 const DUEL_MOVES = ['bonk', 'guard', 'special'];
 // The Battle of Ohio (Clicky's kaiju): timings in ms, same song clock as the client
 const EV_LEAD = 2500; // so everyone starts together
@@ -241,6 +242,11 @@ export class Ohio extends DurableObject {
           seed: int(m.seed, 2147483647),
           why: ident(m.why),
         });
+        break;
+      }
+      case 'emote': {
+        const e = EMOTE_IDS.includes(m.e) || m.e === 'stop' ? m.e : null;
+        if (e) this.broadcast({ t: 'emote', id, e }, ws);
         break;
       }
       case 'hs':

@@ -175,6 +175,7 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, lamps, gl
   // rain sound: a filtered noise loop
   let rainAudio = null;
   function rainSound(level) {
+    if (!rainAudio && level <= 0.01) return; // (don't touch audio at all until it rains)
     const ac = getAudioContext();
     if (!ac) return;
     if (!rainAudio && level > 0.01) {

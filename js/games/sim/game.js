@@ -36,6 +36,7 @@ import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
+import { createEmotes } from './emotes.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -381,6 +382,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     runPanelClose();
     panelClose = onClose || null;
     overlayKind = kind;
+    emotes?.close();
     menuOpen = true;
     music.duck(true);
     controls.setEnabled(false);
@@ -850,6 +852,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     vash.update(dt, t);
     hampter.update(dt, t);
     clicky.update(dt, t, { props: W.props, mine, reset, online: !!net?.connected });
+    emotes.update(dt);
     kaiju.control(dt);
     romni.update(dt, t);
     castle.update(dt);
@@ -960,6 +963,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     net.on('ev', (m) => kaiju.onEv(m));
     net.on('welcome', (m) => kaiju.onWelcome(m));
   }
+  // emote wheel (G) and dances
+  var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen });
   const hs = createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, players, park: S.park, feed: (t, c) => mpUi?.feed(t, c), onFx: fx, closePanel: () => closeMenu() });
   if (net) {
     net.on('duel', (m) => battles.onDuel(m));
@@ -1345,6 +1350,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
           ['LICK', 'Grab / throw with your tongue, use machines and talk'],
           ['FLOP', 'Ragdoll'],
           ['Hold ZOOM', 'Zoomies (uses 3AM energy)'],
+          ['😀', 'Emote wheel: dances and emotes'],
           ['🏆 chip', 'Quest log'],
           ['☰', 'Menu: mutators, skins & pets, settings'],
           ['💬', 'Chat (online)'],
@@ -1357,6 +1363,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
           ['E / Right click', 'Lick: grab / throw, use machines, talk'],
           ['R', 'Flop (ragdoll)'],
           ['Shift', 'Zoomies (uses 3AM energy)'],
+          ['G', 'Emote wheel: dances and emotes (then 1-8)'],
           ['T / Enter', 'Chat (online)'],
           ['J', 'Quest log'],
           ['H', 'This controls card'],
@@ -1411,6 +1418,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     runPanelClose();
     menuOpen = true;
     overlayKind = 'menu';
+    emotes?.close();
     music.duck(true);
     controls.setEnabled(false);
     showOverlay(wrap, {
@@ -1510,7 +1518,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1580,6 +1588,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       vash.dispose();
       hampter.dispose();
       clicky.dispose();
+      emotes.dispose();
       kaiju.dispose();
       env.dispose();
       romni.dispose();

@@ -17,7 +17,7 @@ export function createHud(wrap, { onMenu, onQuests, onMusic, touch = false }) {
     <div class="sim-energy"><span></span><i>3AM ENERGY</i></div>
     <div class="sim-hint"></div>
     <div class="sim-say"><b></b><span></span></div>
-    ${touch ? '' : '<div class="sim-keys"><kbd>P</kbd> menu <kbd>J</kbd> quests <kbd>H</kbd> controls</div>'}
+    ${touch ? '' : '<div class="sim-keys"><kbd>P</kbd><span>menu</span><kbd>J</kbd><span>quests</span><kbd>G</kbd><span>emotes</span><kbd>H</kbd><span>controls</span></div>'}
     <div class="sim-invite"><p></p><div><button type="button" class="btn small primary yes"></button><button type="button" class="btn small no"></button></div></div>
   `;
   wrap.appendChild(el);

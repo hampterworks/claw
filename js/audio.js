@@ -178,6 +178,14 @@ export const sfx = {
     noise({ dur: 0.9, f: 260, f2: 40, vol: 0.6 });
     tone({ f: 70, f2: 24, dur: 0.8, vol: 0.35 });
   },
+  // one step of the dance beat (emotes): kick, hat, and a little cat-pop melody every bar
+  beat: (i) => {
+    if (i % 2 === 0) tone({ f: 130, f2: 45, dur: 0.14, vol: 0.22 });
+    else noise({ dur: 0.05, type: 'highpass', f: 6500, vol: 0.06 });
+    if (i % 4 === 2) noise({ dur: 0.12, type: 'bandpass', f: 1800, vol: 0.12 });
+    const mel = [72, 76, 79, 76, 74, 77, 81, 77];
+    if (i % 2 === 0) tone({ type: 'square', f: 440 * 2 ** ((mel[(i / 2) % 8] - 69) / 12), dur: 0.12, vol: 0.035 });
+  },
   // the crowd goes wild
   cheer: () => noise({ dur: 0.5, type: 'bandpass', f: 1500 + Math.random() * 800, f2: 900, q: 0.6, vol: 0.12 }),
 };

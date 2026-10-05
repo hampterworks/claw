@@ -125,6 +125,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
   pivot.add(body3);
   body3.add(cat.wrapper);
   cat.wrapper.position.y = -R;
+  const wrapBase = { y: cat.wrapper.position.y, s: cat.wrapper.scale.clone() };
   scene.add(pivot);
 
   // antennae
@@ -180,7 +181,69 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     speed: 0,
     zooming: false,
     rv: { x: 0, y: 0, z: 0 }, // remote puppets: velocity from the network
+    emote: null, // { id, t, dur } while dancing / emoting (emotes.js)
   };
+  function resetWrapper() {
+    const w = cat.wrapper;
+    w.position.set(0, wrapBase.y, 0);
+    w.scale.copy(wrapBase.s);
+    w.rotation.set(0, 0, 0);
+  }
+  // Emotes are procedural: the cat model only has Idle and Walking.
+  function poseEmote(e) {
+    const w = cat.wrapper;
+    const k = e.t;
+    resetWrapper();
+    switch (e.id) {
+      case 'chipi': {
+        const b = k * Math.PI * 2 * 1.15;
+        w.position.y += Math.abs(Math.sin(b)) * 0.16;
+        w.rotation.z = Math.sin(b) * 0.22;
+        w.rotation.y = Math.sin(b / 2) * 0.6;
+        break;
+      }
+      case 'spin':
+        w.rotation.y = k * 18;
+        w.scale.y *= 1 + Math.sin(k * 30) * 0.06;
+        break;
+      case 'caramell': {
+        const b = k * Math.PI * 2 * 1.4;
+        w.position.y += Math.max(0, Math.sin(b)) * 0.22;
+        w.position.x = Math.sin(b / 2) * 0.14;
+        w.rotation.z = -Math.sin(b / 2) * 0.15;
+        break;
+      }
+      case 'pog': {
+        const j = Math.min(1, k / 0.55);
+        w.position.y += Math.sin(j * Math.PI) * 0.45;
+        w.scale.multiplyScalar(1 + Math.max(0, 0.3 - Math.abs(k - 0.55)) * 0.8);
+        break;
+      }
+      case 'loaf': {
+        const j = Math.min(1, k * 4);
+        w.scale.y *= 1 - 0.32 * j;
+        w.scale.x *= 1 + 0.12 * j;
+        w.scale.z *= 1 + 0.1 * j;
+        break;
+      }
+      case 'wave':
+        w.rotation.z = Math.sin(k * 10) * 0.2;
+        w.position.y += Math.abs(Math.sin(k * 5)) * 0.05;
+        break;
+      case 'cry':
+        w.rotation.y = Math.sin(k * 28) * 0.08;
+        w.scale.y *= 1 + Math.sin(k * 14) * 0.04;
+        w.rotation.x = 0.25;
+        break;
+      case 'scream': {
+        const j = Math.min(1, k * 5);
+        w.scale.y *= 1 + 0.35 * j;
+        w.scale.x *= 1 - 0.1 * j;
+        w.rotation.y = Math.sin(k * 60) * 0.06 * j;
+        break;
+      }
+    }
+  }
   const ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
 
   function approach(v, target, maxDelta) {
@@ -249,6 +312,15 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     lungeNow() {
       st.lunge = 1;
     },
+    // dances loop until you move; emotes play once (dur seconds)
+    emote(id, dur = 0) {
+      st.emote = { id, t: 0, dur };
+    },
+    stopEmote() {
+      if (!st.emote) return;
+      st.emote = null;
+      resetWrapper();
+    },
     setFaceTexture(tex) {
       if (tex && face.material.map !== tex) {
         face.material.map = tex;
@@ -292,6 +364,8 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       if (st.grounded) st.jumps = 1;
 
       if (input.flop) setFlop(!st.flopping);
+      // moving (or jumping, bonking, flopping) ends a dance
+      if (st.emote && (Math.abs(input.moveX) + Math.abs(input.moveY) > 0.15 || input.jump || input.bonk || input.flop)) claw.stopEmote();
 
       const fx = -Math.sin(camYaw);
       const fz = -Math.cos(camYaw);
@@ -384,7 +458,11 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       st.lunge = Math.max(0, st.lunge - dt * 5);
       body3.position.z = Math.sin(st.lunge * Math.PI) * 0.35;
 
-      if (mut.oiia) {
+      if (st.emote && !st.flopping) {
+        st.emote.t += dt;
+        poseEmote(st.emote);
+        if (st.emote.dur && st.emote.t > st.emote.dur) claw.stopEmote();
+      } else if (mut.oiia) {
         st.oiia += dt * 22;
         cat.wrapper.rotation.y = st.oiia;
       } else {
