@@ -64,6 +64,17 @@ in `server/wrangler.jsonc`.
 **Local testing:** `cd server && npx wrangler dev` (runs the Worker + Durable Object locally), serve the
 site, and open `glorp/?mp=ws://localhost:8787/ws` in two browser windows. `?mp=off` forces single-player.
 
+**Controls:** WASD move, mouse look, Space jump (x2), F bonk, E lick, R flop, Shift zoomies, G emote wheel,
+J quest log, H controls card, P menu (P again closes it), T chat. Touch players get on-screen buttons.
+
+**Daily quests:** three a day (the same for everyone), coins for each and a streak bonus for all three. See the
+📅 chip or the quest log (J).
+
+**Day, night and weather:** a 24-minute day shared by everyone online (lamps glow at night, stars come out), rain
+now and then, and it always snows at Winter's Castle.
+
+**Emotes:** dances and emotes from the wheel (G). Three Claws dancing together start a dance party.
+
 **Clicky and the Battle of Ohio:** Clicky, Winter's grumpy castle wizard, wants out. Bring him a coffee, find his 4
 spell pages and bonk 3 summoning stones awake, and he quits by summoning a kaiju. Mega Matt drops from the sky to
 fight Mega Godzilla to an original battle theme (every hit lands on the beat). Everyone online is flung into the air

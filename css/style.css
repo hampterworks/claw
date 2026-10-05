@@ -2159,3 +2159,56 @@ body:has(.sim-wrap.kj-on) .mute {
   left: calc(var(--x) * 0.85 - 40px);
   top: calc(var(--y) * 0.85 - 35px);
 }
+
+/* ---------- daily quests ---------- */
+.sim-chip.daily.all {
+  background: #2e9e1a;
+}
+.daily-box {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.daily-head {
+  margin: 0 !important;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ff9a3c;
+}
+.daily-q {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: left;
+}
+.daily-q b {
+  color: var(--yellow);
+  font-size: 13px;
+}
+.daily-q i {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+.daily-q em {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+}
+.daily-q small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.daily-q.done {
+  opacity: 0.6;
+}
+.daily-box .fine {
+  font-size: 12px !important;
+  color: var(--muted);
+  margin: 0 !important;
+}

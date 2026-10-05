@@ -5,6 +5,7 @@
 // Every random roll comes from a shared seed, so both players' screens agree on what happened.
 import { PETS, petById, petIcon } from './pets.js';
 import { read, write } from '../../scores.js';
+import { trackDaily } from './daily.js';
 
 const RARITY_STATS = {
   common: { hp: 60, atk: 10 },
@@ -310,6 +311,7 @@ export function createBattles({ wallet, hud, sfx, ch, net, players, openPanel, o
         f.view.say([`${tr.name}: "${['gg', 'skill issue', 'rematch? (no)', 'ez'][Math.floor(Math.random() * 4)]}"`], tr.color);
         return;
       }
+      trackDaily('petwin');
       const first = progress.beat <= i;
       const prize = first ? tr.prize : Math.round(tr.prize / 2);
       wallet.add(prize);
@@ -382,6 +384,7 @@ export function createBattles({ wallet, hud, sfx, ch, net, players, openPanel, o
       resolve();
     };
     f.onEnd = (won, draw) => {
+      if (won) trackDaily('petwin');
       if (draw || !bet) return;
       if (won) {
         wallet.add(bet);

@@ -1,3 +1,4 @@
+import { trackDaily } from './daily.js';
 // Gone Fishin': a Stardew-style fishing minigame at the Lake Meowchigan dock.
 // Cast -> wait for a bite -> hook it on the "!" -> hold to keep the catch zone on the fish.
 import { read, write } from '../../scores.js';
@@ -225,6 +226,7 @@ export function createFishing({ wallet, ch, sfx, hud }) {
       saveBucket();
       ch.chaos(fish.pts, `CAUGHT ${fish.name.toUpperCase()}`, RARITY_COLORS[fish.rarity]);
       ch.progress('fishing');
+      trackDaily('fish');
       msg.textContent = `${fish.emoji} ${fish.name} (${fish.rarity})! Worth ${fish.coins} 🪙, in the bucket`;
       msg.style.color = RARITY_COLORS[fish.rarity];
       if (fish.rarity === 'legendary') {

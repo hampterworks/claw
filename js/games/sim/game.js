@@ -37,6 +37,7 @@ import { createKaiju } from './kaiju.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
 import { createEmotes } from './emotes.js';
+import { createDaily, trackDaily } from './daily.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -280,8 +281,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       pets.celebrate(3);
     }
   }
+  // daily quests (📅 chip, and the top of the quest log)
+  const daily = createDaily({ wrap, hud, sfx, wallet, onOpen: () => openQuests() });
+  ch.onPoints((pts) => trackDaily('points', pts));
+  // the casino gets a wallet that counts every game played (for daily quests)
+  const casinoWallet = Object.create(wallet);
+  casinoWallet.spend = (n) => {
+    const ok = wallet.spend(n);
+    if (ok) trackDaily('casino');
+    return ok;
+  };
   const casino = createCasino({
-    wallet,
+    wallet: casinoWallet,
     sfx,
     hud,
     ch,
@@ -403,7 +414,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     },
   };
   MACHINES.shrine = { prompt: '🙏 PAY RESPECTS', run: payRespects };
-  MACHINES.hampter = { prompt: '🐹 PET HAMPTER', run: () => hampter.squeak() };
+  MACHINES.hampter = { prompt: '🐹 PET HAMPTER', run: () => (hampter.squeak(), trackDaily('hampter')) };
   MACHINES.bank = { prompt: '💰 TALK TO ROMNI', title: 'BANK OF ROMNI', open: () => (romni.wave(), loans.panel()) };
   MACHINES.lever = { prompt: '🔓 OPEN THE CELL', run: pullLever };
   MACHINES.arena = { prompt: '⚔️ PET BATTLES', title: 'PET BATTLE ARENA', open: () => battles.arenaPanel() };
@@ -629,6 +640,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       return;
     }
     st.held = best;
+    trackDaily('lick');
     propSync?.hold(best, true);
     best.body.wakeUp();
     sfx.glorp();
@@ -706,6 +718,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         pr.knocked = true;
         ch.chaos(50, pick(KNOCK), '#ffe14d');
         ch.progress('knock');
+        trackDaily('knock');
+        if (pr.kind === 'mug') trackDaily('mug');
         if (pr.kind === 'mug') ch.progress('mugs');
         if (pr.kind === 'market') ch.progress('market');
       }
@@ -720,6 +734,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       sfx.boom();
       sfx.meow(700);
       bump('boiled');
+      trackDaily('boil');
       net?.send({ t: 'fx', text: 'got boiled 🍲' });
       ch.chaos(200, 'SELF-BOILED', '#ff9a3c');
       ch.complete('boil');
@@ -853,6 +868,14 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     hampter.update(dt, t);
     clicky.update(dt, t, { props: W.props, mine, reset, online: !!net?.connected });
     emotes.update(dt);
+    // timed daily quests
+    if (emotes.dancing) trackDaily('danceSec', dt);
+    if (claw.st.zooming) trackDaily('zoomSec', dt);
+    if (claw.st.flopping) trackDaily('flopSec', dt);
+    const castleD = dist2(p, CASTLE.x, CASTLE.z);
+    if (castleD < 40) trackDaily('snowSec', dt);
+    if (castleD < 16 && env.isNight) trackDaily('nightcastle');
+    daily.update(dt);
     kaiju.control(dt);
     romni.update(dt, t);
     castle.update(dt);
@@ -964,7 +987,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     net.on('welcome', (m) => kaiju.onWelcome(m));
   }
   // emote wheel (G) and dances
-  var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen });
+  var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen, onEmote: () => trackDaily('emote') });
   const hs = createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, players, park: S.park, feed: (t, c) => mpUi?.feed(t, c), onFx: fx, closePanel: () => closeMenu() });
   if (net) {
     net.on('duel', (m) => battles.onDuel(m));
@@ -1114,6 +1137,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         const v = claw.body.linvel();
         claw.body.setLinvel({ x: v.x, y: 29 * Math.sqrt(claw.st.scaleK), z: v.z }, true);
         sfx.boing();
+        if (st.trampT <= 3) trackDaily('tramp'); // one per bounce, not per frame on the mat
         st.trampT = 4;
         S.trampMat.scale.y = 0.2;
         ch.chaos(20, 'BOING', '#5ff2ff');
@@ -1316,6 +1340,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       }
       box.appendChild(ul);
     };
+    section('📅 Daily quests');
+    box.appendChild(daily.section());
     section("🧙 Clicky's quest (Winter's Castle)");
     list(clicky.steps());
     section(`🏆 Claw-lenges ${ch.count()}/${ch.CHALLENGES.length}`);
@@ -1518,7 +1544,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1589,6 +1615,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hampter.dispose();
       clicky.dispose();
       emotes.dispose();
+      daily.dispose();
       kaiju.dispose();
       env.dispose();
       romni.dispose();

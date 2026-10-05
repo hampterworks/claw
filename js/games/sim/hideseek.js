@@ -4,6 +4,7 @@
 // hiders become seekers. Anyone still hidden when the 2:30 runs out wins.
 // Offline (or any time): Hampter Hunt. Six hampters hide around the park. Find them all.
 import * as THREE from 'three';
+import { trackDaily } from './daily.js';
 import { HS_ZONE } from './park.js';
 import { makeHamster } from './hampter.js';
 
@@ -260,6 +261,7 @@ export function createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, p
         sfx.squeak?.();
         wallet.add(PRIZE.hunt);
         hud.popup(`HAMPTER ${hunt.found}/${hunt.hams.length} FOUND! +${PRIZE.hunt} 🪙`, '#ffb347');
+        trackDaily('huntfind');
       }
     }
     hud.setTimer(`🐹 HAMPTER HUNT · ${hunt.found}/${hunt.hams.length} · ${mmss(hunt.left)}`);
