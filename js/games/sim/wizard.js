@@ -327,6 +327,16 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
         if (st.stones.length >= 3) setTimeout(() => hud.banner('THE STONES ARE AWAKE', 'Go back to Clicky in Winter\'s Castle.'), 1200);
       }
     },
+    // for the quest log: [text, done, current]
+    steps() {
+      const s = stage();
+      return [
+        ['Bring Clicky a coffee mug from the Glorp Café (carry it with LICK)', ch.isDone('clicky1'), s === 1],
+        [`Find his 4 lost spell pages (${st.pages.length}/4, purple dots on the map)`, ch.isDone('clicky2'), s === 2],
+        [`Bonk the 3 summoning stones awake (${st.stones.length}/3)`, ch.isDone('clicky3'), s === 3],
+        ['Let Clicky hand in his notice (the Battle of Ohio)', ch.isDone('kaiju'), s === 4],
+      ];
+    },
     panel(online) {
       const root = document.createElement('div');
       root.className = 'casino clicky';

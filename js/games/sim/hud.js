@@ -1,5 +1,5 @@
 // DOM heads-up display layered over the 3D canvas.
-export function createHud(wrap, { onMenu, onMusic }) {
+export function createHud(wrap, { onMenu, onQuests, onMusic, touch = false }) {
   const el = document.createElement('div');
   el.className = 'sim-hud';
   el.innerHTML = `
@@ -17,6 +17,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
     <div class="sim-energy"><span></span><i>3AM ENERGY</i></div>
     <div class="sim-hint"></div>
     <div class="sim-say"><b></b><span></span></div>
+    ${touch ? '' : '<div class="sim-keys"><kbd>P</kbd> menu <kbd>J</kbd> quests <kbd>H</kbd> controls</div>'}
     <div class="sim-invite"><p></p><div><button type="button" class="btn small primary yes"></button><button type="button" class="btn small no"></button></div></div>
   `;
   wrap.appendChild(el);
@@ -29,7 +30,7 @@ export function createHud(wrap, { onMenu, onMusic }) {
   const energy = $('.sim-energy span');
   const hint = $('.sim-hint');
   $('.menu').addEventListener('click', onMenu);
-  trophies.addEventListener('click', onMenu);
+  trophies.addEventListener('click', onQuests || onMenu);
   const musicBtn = $('.music');
   musicBtn.addEventListener('click', (e) => {
     e.stopPropagation();

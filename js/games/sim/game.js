@@ -218,7 +218,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   let playing = false;
   const mut = { gravity: false, cursed: false, big: false, oiia: false, popcat: false, tiny: false, matt: false };
 
-  const hud = createHud(wrap, { onMenu: () => openMenu(), onMusic: () => setMusic(!music.enabled) });
+  const hud = createHud(wrap, { onMenu: () => openMenu(), onQuests: () => openQuests(), onMusic: () => setMusic(!music.enabled), touch });
   const ch = createChallenges(hud);
 
   // Glorp Coins, skins and the casino
@@ -353,10 +353,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     panelClose = null;
     f?.();
   }
-  function openPanel(title, content, onClose) {
+  let overlayKind = null; // what's on screen: 'menu' | 'quests' | 'controls' | 'panel'
+  function openPanel(title, content, onClose, kind = 'panel') {
     if (!playing) return;
     runPanelClose();
     panelClose = onClose || null;
+    overlayKind = kind;
     menuOpen = true;
     music.duck(true);
     controls.setEnabled(false);
@@ -1182,19 +1184,20 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         box.appendChild(p);
       }
     }
-    const h = document.createElement('h3');
-    h.textContent = `Claw-lenges ${ch.count()}/${ch.CHALLENGES.length}`;
-    box.appendChild(h);
-    const ul = document.createElement('ul');
-    for (const c of ch.CHALLENGES) {
-      const li = document.createElement('li');
-      const done = ch.isDone(c.id);
-      const prog = c.goal && !done ? ` (${ch.state.progress[c.id] || 0}/${c.goal})` : '';
-      li.textContent = `${done ? '✅' : '⬜'} ${c.name}${prog}`;
-      if (done) li.className = 'done';
-      ul.appendChild(li);
+    const quick = document.createElement('div');
+    quick.className = 'sim-mutators';
+    for (const [label, fn] of [[`📜 Quests ${ch.count()}/${ch.CHALLENGES.length}${touch ? '' : ' (J)'}`, openQuests], [`🎮 Controls${touch ? '' : ' (H)'}`, openControls]]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn small primary';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        sfx.click();
+        fn();
+      });
+      quick.appendChild(b);
     }
-    box.appendChild(ul);
+    box.appendChild(quick);
     const h2 = document.createElement('h3');
     h2.textContent = 'Mutators';
     box.appendChild(h2);
@@ -1261,19 +1264,129 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       setRow.appendChild(b);
     }
     box.appendChild(setRow);
-    const help = document.createElement('p');
-    help.className = 'sim-help';
-    help.textContent = touch
-      ? 'Stick: move · Drag: look · JUMP x2: glorp jump · BONK · LICK grabs/throws · FLOP ragdoll · hold ZOOM'
-      : 'WASD move · Mouse look (click to lock) · Space jump x2 · F / click bonk · E / right-click lick · R flop · Shift zoomies · M music · P menu';
-    box.appendChild(help);
     return box;
   }
+
+  // ---------- quest log (J) ----------
+  function questsContent() {
+    const box = document.createElement('div');
+    box.className = 'sim-menu sim-quests';
+    const section = (title) => {
+      const h = document.createElement('h3');
+      h.textContent = title;
+      box.appendChild(h);
+    };
+    const list = (rows) => {
+      const ul = document.createElement('ul');
+      for (const [text, done, now] of rows) {
+        const li = document.createElement('li');
+        li.textContent = `${done ? '✅' : now ? '👉' : '⬜'} ${text}`;
+        if (done) li.className = 'done';
+        if (now) li.className = 'now';
+        ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    };
+    section("🧙 Clicky's quest (Winter's Castle)");
+    list(clicky.steps());
+    section(`🏆 Claw-lenges ${ch.count()}/${ch.CHALLENGES.length}`);
+    const bar = document.createElement('div');
+    bar.className = 'sim-qbar';
+    bar.innerHTML = '<i></i>';
+    bar.firstChild.style.width = `${(ch.count() / ch.CHALLENGES.length) * 100}%`;
+    box.appendChild(bar);
+    const rows = ch.CHALLENGES.map((c) => {
+      const done = ch.isDone(c.id);
+      const prog = c.goal && !done ? ` (${ch.state.progress[c.id] || 0}/${c.goal})` : '';
+      return [`${c.name}${prog}`, done, false];
+    });
+    list([...rows.filter((r) => !r[1]), ...rows.filter((r) => r[1])]); // to-do first
+    return box;
+  }
+  function openQuests() {
+    if (!playing) return;
+    openPanel('QUEST LOG', questsContent(), null, 'quests');
+  }
+
+  // ---------- controls (H, and once on the first visit) ----------
+  function controlsContent() {
+    const box = document.createElement('div');
+    box.className = 'sim-controls';
+    const rows = touch
+      ? [
+          ['Left stick', 'Move'],
+          ['Drag the screen', 'Look around'],
+          ['JUMP', 'Jump (tap twice for a glorp jump)'],
+          ['BONK', 'Bonk things (and other Claws)'],
+          ['LICK', 'Grab / throw with your tongue, use machines and talk'],
+          ['FLOP', 'Ragdoll'],
+          ['Hold ZOOM', 'Zoomies (uses 3AM energy)'],
+          ['🏆 chip', 'Quest log'],
+          ['☰', 'Menu: mutators, skins & pets, settings'],
+          ['💬', 'Chat (online)'],
+        ]
+      : [
+          ['W A S D', 'Move'],
+          ['Mouse', 'Look (click the game to lock the mouse)'],
+          ['Space', 'Jump (twice for a glorp jump)'],
+          ['F / Left click', 'Bonk things (and other Claws)'],
+          ['E / Right click', 'Lick: grab / throw, use machines, talk'],
+          ['R', 'Flop (ragdoll)'],
+          ['Shift', 'Zoomies (uses 3AM energy)'],
+          ['T / Enter', 'Chat (online)'],
+          ['J', 'Quest log'],
+          ['H', 'This controls card'],
+          ['P / Tab', 'Menu (press again to close)'],
+          ['M', 'Music on / off'],
+          ['Y / N', 'Answer invites (Hide and Seek, pet battles)'],
+        ];
+    for (const [k, what] of rows) {
+      const row = document.createElement('div');
+      row.className = 'sim-ctl';
+      const keys = document.createElement('span');
+      keys.className = 'sim-keycaps';
+      for (const part of k.split(' / ')) {
+        const kb = document.createElement('kbd');
+        kb.textContent = part;
+        keys.appendChild(kb);
+      }
+      const d = document.createElement('span');
+      d.textContent = what;
+      row.append(keys, d);
+      box.appendChild(row);
+    }
+    return box;
+  }
+  function openControls() {
+    if (!playing) return;
+    openPanel('CONTROLS', controlsContent(), null, 'controls');
+  }
+
+  // P / Tab / Esc close whatever is open; J and H toggle their windows.
+  // (window + capture: runs before the game's own keys, so P doesn't instantly reopen the menu)
+  function onUiKey(e) {
+    if (!playing || e.repeat || (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) return;
+    const toggle = { KeyJ: ['quests', openQuests], KeyH: ['controls', openControls] }[e.code];
+    if (toggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (overlayKind === toggle[0]) closeMenu();
+      else toggle[1]();
+      return;
+    }
+    if (menuOpen && (e.code === 'KeyP' || e.code === 'Tab' || e.code === 'Escape')) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeMenu();
+    }
+  }
+  window.addEventListener('keydown', onUiKey, true);
 
   function openMenu() {
     if (!playing) return;
     runPanelClose();
     menuOpen = true;
+    overlayKind = 'menu';
     music.duck(true);
     controls.setEnabled(false);
     showOverlay(wrap, {
@@ -1348,6 +1461,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     runPanelClose();
     hideOverlay(wrap);
     menuOpen = false;
+    overlayKind = null;
     music.duck(false);
     controls.setEnabled(true);
     controls.requestLock();
@@ -1372,7 +1486,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1403,6 +1517,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     controls.setEnabled(true);
     controls.requestLock();
     hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off tables.' : 'Click to lock the mouse. Go knock stuff off tables.', 5000);
+    if (!read('simcontrolsSeen', false)) {
+      write('simcontrolsSeen', true);
+      setTimeout(() => !menuOpen && openControls(), 1200);
+    }
     if (!wallet.welcomed) {
       wallet.markWelcomed();
       setTimeout(() => hud.banner('MATT GAVE YOU 200 GLORP COINS', 'Spend them at the Glorp Casino downtown. Points earn more coins.', { pog: true }), 5500);
@@ -1430,6 +1548,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hud.destroy();
       window.removeEventListener('resize', resize);
       document.removeEventListener('pointerlockchange', onLockChange);
+      window.removeEventListener('keydown', onUiKey, true);
       document.removeEventListener('visibilitychange', onVisibility);
       claw.dispose();
       winty?.dispose();
