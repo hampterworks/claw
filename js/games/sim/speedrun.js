@@ -7,8 +7,8 @@ import { read, write, freezeSaves } from '../../scores.js';
 
 const P = 'claw.';
 // everything that is "progress" (settings like graphics, music and your name are never touched)
-const PROGRESS = ['sim', 'simwallet', 'simarena', 'simbucket', 'simclicky', 'simdaily', 'simfish', 'simloan', 'simtackle'];
-const QUESTS = ['sim', 'simclicky', 'simarena', 'simdaily'];
+const PROGRESS = ['sim', 'simwallet', 'simarena', 'simbucket', 'simclicky', 'simdaily', 'simfish', 'simloan', 'simtackle', 'simducky'];
+const QUESTS = ['sim', 'simclicky', 'simarena', 'simdaily', 'simducky'];
 
 const raw = {
   get: (k) => {

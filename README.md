@@ -85,6 +85,11 @@ spell pages and bonk 3 summoning stones awake, and he quits by summoning a kaiju
 fight Mega Godzilla to an original battle theme (every hit lands on the beat). Everyone online is flung into the air
 with the camera locked on the fight; BONK cheers for Matt, LICK for Godzilla, and the crowd decides who wins.
 
+**Ducky:** outrun Winty's sales pitch 3 times and Ducky, Romni's oldest business associate, waddles into Ohio.
+His prank on Winter: bonk her castle sign crooked, egg her throne, then steal her crown while she chases you. That
+unlocks Ducky Mode (also in the P menu): Ducky follows you as a bodyguard (other players see him too), Winty runs
+away from you, and your Romni loan never comes due, because Romni and Ducky go way back.
+
 **Loans:** borrow at the Bank of Romni (20% interest). Pay back within 5 minutes of play; 30 seconds after
 that Winty comes to collect, takes what you owe and locks you in the dungeon of Winter's Castle. Respawn (menu) to escape, or
 in multiplayer a friend pulls the lever outside your cell. The castle also hides a secret room behind a bookcase.

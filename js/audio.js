@@ -126,6 +126,13 @@ export const sfx = {
     const a = audio();
     if (a) mrrp(a, a.destination, a.currentTime, { pitch: 300 + Math.random() * 80 });
   },
+  // Ducky: a short nasal honk, twice
+  quack: () => {
+    for (const [d, f] of [[0, 1], [0.16, 0.92]]) {
+      tone({ type: 'sawtooth', f: 620 * f, f2: 360 * f, dur: 0.12, vol: 0.09, delay: d });
+      tone({ type: 'square', f: 310 * f, f2: 210 * f, dur: 0.13, vol: 0.05, delay: d });
+    }
+  },
   purr: () => {
     const a = audio();
     if (a) purr(a, a.destination, a.currentTime, { len: 1.2, vol: 0.3 });

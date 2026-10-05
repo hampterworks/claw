@@ -4,12 +4,13 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createClaw } from './claw.js';
 import { createPetCompanion } from './pets.js';
+import { createDuckyFollower } from './ducky.js';
 import { skinById } from './skins.js';
 import { labelTexture, createBubble } from './speech.js';
 import { sampleBuffer } from './net.js';
 
 const DELAY = 0.12; // render other players this far in the past, to interpolate smoothly
-export const FLAG = { grounded: 1, flopping: 2, zooming: 4, oiia: 8, cursed: 16, matt: 32, big: 64, tiny: 128 };
+export const FLAG = { grounded: 1, flopping: 2, zooming: 4, oiia: 8, cursed: 16, matt: 32, big: 64, tiny: 128, ducky: 256 };
 
 export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, faceTex, mattTex, onHit, onFeed }) {
   const remotes = new Map();
@@ -65,6 +66,7 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
     r.gone = true;
     r.puppet?.dispose();
     r.petCo?.dispose();
+    r.duck?.dispose();
     if (r.tag) {
       scene.remove(r.tag);
       r.tag.material.map.dispose();
@@ -178,6 +180,13 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
           r.flags = fl;
           r.mut = { oiia: !!(fl & FLAG.oiia), cursed: !!(fl & FLAG.cursed), matt: !!(fl & FLAG.matt) };
           if (mattBefore !== r.mut.matt) r.puppet.setFaceTexture((r.mut.matt || skinById(r.skin).mattFace) && mattTex ? mattTex : faceTex);
+          // Ducky Mode: their bodyguard waddles along
+          const duck = !!(fl & FLAG.ducky);
+          if (duck && !r.duck) r.duck = createDuckyFollower({ scene, world, RAPIER, target: r.puppet });
+          if (!duck && r.duck) {
+            r.duck.dispose();
+            r.duck = null;
+          }
         }
         r.puppet.setRemote(st);
       }
@@ -193,6 +202,10 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
         r.tag.position.set(p.x, p.y + 0.95 * k + (r.badge ? 0.35 : 0.25), p.z);
         r.tag.visible = !tagHidden(r.id);
         if (r.petCo?.object) r.petCo.object.visible = r.tag.visible; // a pet would give a hider away
+        if (r.duck) {
+          r.duck.update(dt, t);
+          r.duck.visible = r.tag.visible;
+        }
         r.bubble.update(dt, { x: p.x, y: p.y + 0.95 * k + 0.5, z: p.z });
       }
     },

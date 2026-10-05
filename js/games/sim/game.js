@@ -34,6 +34,7 @@ import { createBattles } from './battle.js';
 import { createHideSeek } from './hideseek.js';
 import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
+import { createDucky } from './ducky.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
 import { createEmotes } from './emotes.js';
@@ -309,7 +310,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       net?.send({ t: 'fx', text: 'hit it big at the Glorp Casino 🎰' });
     },
   });
-  const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch }) : null;
+  const winty = wintyTex ? createWinty({ scene, texture: wintyTex, hud, sfx, ch, onOutran: () => ducky?.escaped(), bounds: BOUNDS - 6 }) : null;
   // Lyonia (Vash), next to Matt, and his gold statue in the secret shrine
   // Bank of Romni, Winter's Castle, and what happens when you don't pay
   const romni = createRomni({ scene, world, RAPIER, hud, claw, at: S.districts.bank.romni });
@@ -331,6 +332,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       if (winty) winty.collect(claw, dragToDungeon);
       else dragToDungeon();
     },
+  });
+  // where Ducky hangs out (one is picked when he shows up): the lake shore, Meowtown square, beside the bank
+  const DUCKY_SPOTS = [
+    Object.assign(new THREE.Vector3(5, 0, 40), { ry: Math.PI }),
+    Object.assign(new THREE.Vector3(MEOWTOWN.x + 5, 0, MEOWTOWN.z), { ry: Math.PI / 2 }),
+    Object.assign(new THREE.Vector3(BANK.x + 8.7, 0, BANK.z + 5), { ry: 0 }),
+  ];
+  // Ducky: shows up after you outrun Winty 3 times; his prank quest unlocks Ducky Mode
+  var ducky = createDucky({ // var: Winty's onOutran is wired up before this line
+    scene, world, RAPIER, hud, sfx, ch, claw, winty, loans,
+    castle: S.districts.castle,
+    spots: DUCKY_SPOTS,
   });
   function pullLever() {
     castle.openCell();
@@ -429,9 +442,15 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     title: 'HIDE AND SEEK',
     open: () => hs.panel(),
   };
+  MACHINES.ducky = { prompt: '🦆 TALK TO DUCKY', title: 'DUCKY', open: () => ducky.panel() };
+  MACHINES.throne = {
+    prompt: () => ducky.thronePrompt(),
+    run: () => ducky.throneAction(),
+  };
   MACHINES.bookcase = { prompt: '📚 PULL THE SUSPICIOUS BOOK', run: () => (castle.pullBook(), sfx.boom(), hud.popup('...a secret room?!', '#ff7bf2')) };
   const playMachine = (m) => (MACHINES[m].run ? MACHINES[m].run() : openPanel(MACHINES[m].title, MACHINES[m].open()));
   let machine = null;
+  let machineLabel = null;
   function updateMachines() {
     const p = claw.position();
     let m = null;
@@ -448,16 +467,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const pk = S.park;
     if (!m && Math.hypot(p.x - pk.arenaDesk.x, p.z - pk.arenaDesk.z) < 2.2 && p.y < 2) m = 'arena';
     if (!m && Math.hypot(p.x - S.districts.clickyHome.x, p.z - S.districts.clickyHome.z) < 3.0 && p.y < 2.5) m = 'clicky';
+    if (!m) m = ducky.machine(p);
     if (!m && Math.hypot(p.x - pk.hsBoard.x, p.z - pk.hsBoard.z) < 2.2 && p.y < 2) m = 'hideseek';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
-    if (m === machine) return;
+    // (prompts can change while you stand there: eggs left, fish to sell)
+    const label = m ? (typeof MACHINES[m].prompt === 'function' ? MACHINES[m].prompt() : MACHINES[m].prompt) : null;
+    if (m === machine && label === machineLabel) return;
     machine = m;
+    machineLabel = label;
     const verb = touch ? 'TAP' : 'E';
-    if (m) {
-      const label = typeof MACHINES[m].prompt === 'function' ? MACHINES[m].prompt() : MACHINES[m].prompt;
-      hud.prompt(`${label} (${verb})`, () => playMachine(m));
-    } else hud.prompt(null);
+    if (m) hud.prompt(`${label} (${verb})`, () => playMachine(m));
+    else hud.prompt(null);
   }
   music.setEnabled(read('simmusic', true));
   hud.setMusic(music.enabled);
@@ -505,7 +526,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (mapT > 0) return;
     mapT = 0.12;
     const p = claw.position();
-    const pois = [...clicky.pois()];
+    const pois = [...clicky.pois(), ...ducky.pois()];
     for (const [id, spot] of Object.entries(QUEST_SPOTS)) if (spot && !ch.isDone(id)) pois.push({ x: spot.x, z: spot.z });
     hud.updateMap(p.x, p.z, claw.st.yaw, pois);
   }
@@ -599,6 +620,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       }
     }
     clicky.onBonk(p); // summoning stones
+    ducky.onBonk(p); // Winter's castle sign
     if (dist2(p, WINDMILL.x, WINDMILL.z) < 5 && p.y < 5) {
       S.town.windmill.spin = 14;
       sfx.boom();
@@ -887,7 +909,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     castle.update(dt);
     loans.update(dt);
     hs.update(dt, t);
-    if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(); // paid while she was on the way
+    if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(ducky.mode ? 'ducky' : null); // paid (or Ducky) while she was on the way
+    ducky.update(dt, t);
     respectCd -= dt;
 
     // OIIA mode soundtrack
@@ -1031,7 +1054,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       (c.zooming ? FLAG.zooming : 0) |
       (mut.oiia ? FLAG.oiia : 0) |
       (mut.cursed ? FLAG.cursed : 0) |
-      (mut.matt ? FLAG.matt : 0);
+      (mut.matt ? FLAG.matt : 0) |
+      (ducky.mode ? FLAG.ducky : 0);
     const R2 = (x) => Math.round(x * 100) / 100;
     const R3 = (x) => Math.round(x * 1000) / 1000;
     net.send({ t: 'p', d: [R2(p.x), R2(p.y), R2(p.z), R3(c.yaw), R2(v.x), R2(v.y), R2(v.z), R3(r.x), R3(r.y), R3(r.z), R3(r.w), R2(c.scaleK), flags] });
@@ -1281,6 +1305,21 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       });
       row.appendChild(b);
     }
+    {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const ok = ducky.stage === 'done';
+      b.className = 'btn small' + (ducky.mode ? ' primary' : '');
+      b.disabled = !ok;
+      b.textContent = ok ? `${ducky.mode ? '✔ ' : ''}🦆 Ducky Mode` : "🔒 Ducky Mode (Ducky's quest)";
+      b.title = 'Ducky is your bodyguard: Winty runs from you and your Romni loan never comes due';
+      b.addEventListener('click', () => {
+        ducky.setMode(!ducky.mode);
+        sfx.quack();
+        openMenu();
+      });
+      row.appendChild(b);
+    }
     box.appendChild(row);
     const h3 = document.createElement('h3');
     h3.textContent = 'Graphics';
@@ -1349,6 +1388,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     };
     section('📅 Daily quests');
     box.appendChild(daily.section());
+    if (ducky.escapes > 0) {
+      section(ducky.here ? "🦆 Ducky's quest (prank Winter)" : '🦆 ???');
+      list(ducky.steps());
+    }
     section("🧙 Clicky's quest (Winter's Castle)");
     list(clicky.steps());
     section(`🏆 Claw-lenges ${ch.count()}/${ch.CHALLENGES.length}`);
@@ -1512,7 +1555,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     box.appendChild(ul);
     add('h3', 'Starring');
-    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Clicky as Winter’s wizard (former). Mega Matt and Mega Godzilla as themselves. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
+    add('p', 'Claw (deathclaw1551) as himself, a seasoning. Matt as the Mayor of Ohio and the face of pog. Ms Winter (Winty) as the unlicensed Ohio pharmacist and part-time debt collector. Romni as a totally legit banker. Clicky as Winter’s wizard (former). Ducky as Romni’s oldest business associate. Mega Matt and Mega Godzilla as themselves. Lyonia (Vash) as himself, fun-sized. Maxwell, Popcat, OIIA Cat, Banana Cat, Huh Cat, Grumpy Cat, Smudge, Nyan Cat and the Baby Glorps.');
     add('h3', 'Made with');
     add('p', '3D models: Quaternius (cat, nature) and Kenney (furniture, Fantasy Town, Minigolf, Cube Pets, Mini Characters), all CC0. Engine: three.js + Rapier physics. Music: "Glorp Groove", an original chiptune with real fake meows.');
     add('p', 'No real cats were harmed. Claw must still be boiled.', 'credits-sub');
@@ -1552,7 +1595,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1622,6 +1665,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       vash.dispose();
       hampter.dispose();
       clicky.dispose();
+      ducky.dispose();
       emotes.dispose();
       sr.dispose();
       daily.dispose();

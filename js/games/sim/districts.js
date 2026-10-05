@@ -698,7 +698,7 @@ export function buildDistricts(ctx) {
     // gate: raised portcullis, banners, name
     for (let k = -1.6; k <= 1.6; k += 0.4) solidBox(C.x + HW + 0.65, 4.2, C.z + k, 0.08, 0.6, 0.08, dark, { collide: false });
     solidBox(C.x + HW + 0.65, 4.45, C.z, 0.1, 0.1, 4, dark, { collide: false });
-    sign(["WINTER'S CASTLE"], C.x + HW + 0.62, 5.5, C.z, Math.PI / 2, 5.5, 0.9, { size: 50, color: '#dff4ff', bg: '#24456e', border: '#9fd4ff' });
+    const gateSign = sign(["WINTER'S CASTLE"], C.x + HW + 0.62, 5.5, C.z, Math.PI / 2, 5.5, 0.9, { size: 50, color: '#dff4ff', bg: '#24456e', border: '#9fd4ff' });
     for (const dz of [-3.2, 3.2]) {
       const banner = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 3), new THREE.MeshStandardMaterial({ color: '#2d6bd1', side: THREE.DoubleSide }));
       banner.position.set(C.x + HW + 0.62, 3.6, C.z + dz);
@@ -848,6 +848,9 @@ export function buildDistricts(ctx) {
       center: C.clone(),
       bookcase: new THREE.Vector3(C.x - 7.75, 0, C.z - 7.0), // slides +z to open
       secret: new THREE.Vector3(C.x - 10.4, 0, C.z - 7),
+      gateSign, // Ducky's quest knocks it crooked
+      crown: crownTop, // ...and steals this
+      throne: new THREE.Vector3(C.x - 5, 0, C.z - 9.8),
     };
 
     // the dungeon: x -12.8..-2, z 0.2..10.8, roofed, two cells along the west wall

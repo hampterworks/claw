@@ -8,7 +8,7 @@ All models are CC0 (public domain). Credit isn't required, but these folks are g
 - **Meowtown** (walls, fountain, stalls, lanterns, carts, windmill rotor, fences, trees): *Fantasy Town Kit 2.0* by [Kenney](https://kenney.nl), CC0.
 - **Pets** (all 24 casino pets): *Cube Pets* by [Kenney](https://kenney.nl), CC0. Icons in `assets/sim-pets.webp` are the kit's previews.
 - **Lyonia (Vash)** and his gold shrine statue: *Mini Characters* by [Kenney](https://kenney.nl), CC0 (recoloured, plus procedural ears, tail and heart eyes in `js/games/sim/vash.js`).
-- **Clicky the Wizard** and **Mega Matt**: *Mini Characters* by [Kenney](https://kenney.nl), CC0 (`character-male-e` and `character-male-c`, plus a procedural hat, beard, robe and staff in `js/games/sim/wizard.js`, and Matt's face, crown and cape in `js/games/sim/kaiju.js`). Mega Godzilla is built entirely in code (`kaiju.js`).
+- **Clicky the Wizard** and **Mega Matt**: *Mini Characters* by [Kenney](https://kenney.nl), CC0 (`character-male-e` and `character-male-c`, plus a procedural hat, beard, robe and staff in `js/games/sim/wizard.js`, and Matt's face, crown and cape in `js/games/sim/kaiju.js`). Mega Godzilla is built entirely in code (`kaiju.js`). So is Ducky (`ducky.js`).
 - **Glorp Mini Golf** (course tiles, flag, castles, ball): *Minigolf Kit* by [Kenney](https://kenney.nl), CC0.
 
 ## How these files were made

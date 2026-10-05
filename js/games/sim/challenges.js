@@ -41,6 +41,9 @@ export const CHALLENGES = [
   { id: 'clicky2', name: "Find Clicky's 4 lost spell pages", goal: 4 },
   { id: 'clicky3', name: 'Wake the 3 summoning stones for Clicky', goal: 3 },
   { id: 'kaiju', name: 'Survive the Battle of Ohio' },
+  { id: 'ducky1', name: "Ducky's prank: bonk the WINTER'S CASTLE sign crooked" },
+  { id: 'ducky2', name: "Egg Winter's throne for Ducky", goal: 3 },
+  { id: 'ducky3', name: "Steal Winter's crown and bring it to Ducky" },
 ];
 
 export const MUTATORS = [

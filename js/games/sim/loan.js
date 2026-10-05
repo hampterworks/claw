@@ -21,10 +21,12 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
   let saveT = 0;
   let collecting = false;
   let warned = false;
+  let frozen = false; // Ducky Mode: Romni and Ducky go way back, so the clock stops
   const save = () => write('simloan', st);
 
   function chip() {
     if (!st.owed) return hud.setLoan(null);
+    if (frozen) return hud.setLoan(`🦆 OWE ${st.owed} 🪙 · ROMNI SAYS NO RUSH`, 'ok');
     if (collecting) return hud.setLoan(`🏃 WINTY IS COLLECTING ${st.owed} 🪙`, 'collect');
     if (st.t < DUE) return hud.setLoan(`💸 OWE ${st.owed} 🪙 · ${mmss(DUE - st.t)}`, st.t > DUE - 60 ? 'soon' : 'ok');
     return hud.setLoan(`⚠️ OVERDUE ${st.owed} 🪙 · WINTY IN ${mmss(COLLECT - st.t)}`, 'late');
@@ -37,6 +39,14 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
     },
     get collecting() {
       return collecting;
+    },
+    get frozen() {
+      return frozen;
+    },
+    setFrozen(on) {
+      frozen = !!on;
+      if (frozen) collecting = false;
+      chip();
     },
     borrow(amount) {
       if (st.owed) return false;
@@ -71,7 +81,7 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
     },
     // call while playing (not paused)
     update(dt) {
-      if (!st.owed) return;
+      if (!st.owed || frozen) return;
       const before = st.t;
       st.t += dt;
       if (before < DUE && st.t >= DUE) {
@@ -106,8 +116,13 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
         coins.textContent = `🪙 ${wallet.coins} Glorp Coins`;
         row.innerHTML = '';
         if (st.owed) {
-          status.textContent = st.t < DUE ? `You owe ${st.owed} 🪙 · due in ${mmss(DUE - st.t)}` : `OVERDUE: ${st.owed} 🪙 · Winty in ${mmss(Math.max(0, COLLECT - st.t))}`;
-          status.style.color = st.t < DUE ? '#ffe14d' : '#ff4f6d';
+          if (frozen) {
+            status.textContent = `You owe ${st.owed} 🪙 · no rush`;
+            status.style.color = '#ffd23f';
+          } else {
+            status.textContent = st.t < DUE ? `You owe ${st.owed} 🪙 · due in ${mmss(DUE - st.t)}` : `OVERDUE: ${st.owed} 🪙 · Winty in ${mmss(Math.max(0, COLLECT - st.t))}`;
+            status.style.color = st.t < DUE ? '#ffe14d' : '#ff4f6d';
+          }
           const pay = el('button', 'btn primary spin', `REPAY ${st.owed} 🪙`);
           pay.type = 'button';
           pay.disabled = wallet.coins < st.owed;
@@ -120,6 +135,7 @@ export function createLoans({ wallet, hud, sfx, onCollect }) {
             }
           });
           row.appendChild(pay);
+          if (frozen) row.appendChild(el('p', 'fine', '"Any friend of Ducky\'s... pay whenever. We go way back." (Ducky Mode: this loan never comes due.)'));
           if (wallet.coins < st.owed) row.appendChild(el('p', 'fine', `You need ${st.owed - wallet.coins} more 🪙. Go knock stuff over, fish, or gamble (bad idea).`));
         } else {
           status.textContent = 'How much do you need?';
