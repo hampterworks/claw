@@ -48,10 +48,10 @@ export function buildPark({ B, RAPIER, world, scene, disposables, bounds }) {
 
   // ---------- roads: the main road now runs all the way across, plus a lane to the arena ----------
   for (const s of [-1, 1]) {
-    solidBox(s * 108.5, 0.015, -52, 47, 0.03, 8, '#3b3f4a', { shadow: false, collide: false });
+    solidBox(s * 108.5, 0.015, -52, 47, 0.03, 8, '#3b3f4a', { tex: 'asphalt', shadow: false, collide: false });
     solidBox(s * 108.5, 0.04, -52, 47, 0.02, 0.25, '#ffe14d', { shadow: false, collide: false });
   }
-  solidBox(ARENA.x, 0.015, -38.5, 5, 0.03, 19, '#3b3f4a', { shadow: false, collide: false });
+  solidBox(ARENA.x, 0.015, -38.5, 5, 0.03, 19, '#3b3f4a', { tex: 'asphalt', shadow: false, collide: false });
 
   // ---------- Pet Battle Arena (a little colosseum, entrance faces the road at -z) ----------
   {
@@ -77,14 +77,14 @@ export function buildPark({ B, RAPIER, world, scene, disposables, bounds }) {
       for (const [r, h, color] of tiers) {
         const wide = (2 * Math.PI * r) / N + 0.12;
         const depth = r > 16 ? 0.6 : 1.25;
-        solidBox(A.x + dx * r, h / 2, A.z + dz * r, wide, h, depth, i % 2 ? color : '#d6c299', { rotY: a });
+        solidBox(A.x + dx * r, h / 2, A.z + dz * r, wide, h, depth, i % 2 ? color : '#d6c299', { tex: 'stone', rotY: a });
       }
     }
     // gate arch + sign
     const gz = A.z - 15.2;
-    solidBox(A.x - 2.6, 2.4, gz, 1.0, 4.8, 3.4, '#a08a62');
-    solidBox(A.x + 2.6, 2.4, gz, 1.0, 4.8, 3.4, '#a08a62');
-    solidBox(A.x, 5.2, gz, 6.4, 0.9, 3.4, '#8a7450');
+    solidBox(A.x - 2.6, 2.4, gz, 1.0, 4.8, 3.4, '#a08a62', { tex: 'stone' });
+    solidBox(A.x + 2.6, 2.4, gz, 1.0, 4.8, 3.4, '#a08a62', { tex: 'stone' });
+    solidBox(A.x, 5.2, gz, 6.4, 0.9, 3.4, '#8a7450', { tex: 'stone' });
     sign(['PET BATTLE ARENA'], A.x, 5.2, gz - 1.72, Math.PI, 6.0, 0.7, { size: 52, color: '#ffe14d', bg: '#3a1d5c', border: '#ffe14d' });
     // centre stage: two pet pedestals facing each other
     cyl(4.2, 0.4, '#8a7450', A.x, 0.2, A.z, true, 32);
@@ -106,7 +106,7 @@ export function buildPark({ B, RAPIER, world, scene, disposables, bounds }) {
       scene.add(flag);
     }
     // the announcer's desk just inside the gate (the interaction spot)
-    solidBox(A.x - 4.2, 0.55, A.z - 10.4, 2.6, 1.1, 0.9, '#6b4226');
+    solidBox(A.x - 4.2, 0.55, A.z - 10.4, 2.6, 1.1, 0.9, '#6b4226', { tex: 'wood' });
     sign(['⚔️ SIGN UP HERE'], A.x - 4.2, 1.45, A.z - 10.9, Math.PI, 2.4, 0.5, { size: 40, color: '#ffe14d', bg: '#3a1d5c', border: '#ffe14d' });
     const host = new THREE.Sprite(new THREE.SpriteMaterial({ map: memeSpriteTexture('smudge') }));
     host.center.set(0.5, 0);
@@ -154,7 +154,7 @@ export function buildPark({ B, RAPIER, world, scene, disposables, bounds }) {
     }
     const hedge = (x, z, sx, sz) => {
       const g = 0.62 + rand() * 0.1;
-      solidBox(x, HEDGE_H / 2, z, sx, HEDGE_H, sz, new THREE.Color().setHSL(0.31, 0.5, g * 0.42));
+      solidBox(x, HEDGE_H / 2, z, sx, HEDGE_H, sz, new THREE.Color().setHSL(0.31, 0.5, g * 0.42), { tex: 'hedge' });
     };
     const T = 0.7;
     // interior walls, merged into runs
@@ -215,8 +215,8 @@ export function buildPark({ B, RAPIER, world, scene, disposables, bounds }) {
     // the noticeboard by the west gate (Hide and Seek starts here)
     const bx = x0 - 3.2;
     const bz = z0 + (gate + 0.5) * CELL;
-    for (const s of [-1, 1]) solidBox(bx, 1.1, bz + s * 1.3, 0.18, 2.2, 0.18, '#6b4226');
-    solidBox(bx, 1.75, bz, 0.12, 1.3, 2.9, '#8d5e3b');
+    for (const s of [-1, 1]) solidBox(bx, 1.1, bz + s * 1.3, 0.18, 2.2, 0.18, '#6b4226', { tex: 'wood' });
+    solidBox(bx, 1.75, bz, 0.12, 1.3, 2.9, '#8d5e3b', { tex: 'wood' });
     sign(['HIDE & SEEK', 'START HERE'], bx - 0.07, 1.75, bz, -Math.PI / 2, 2.6, 1.1, { size: 46, color: '#7CFF4F', bg: '#12041f', border: '#7CFF4F', colors: ['#7CFF4F', '#ffe14d'] });
     sign(['THE HEDGE MAZE'], x0 - 0.36, HEDGE_H + 0.35, z0 + (gate + 0.5) * CELL, -Math.PI / 2, 3.4, 0.6, { size: 44, color: '#ffe14d', bg: '#2f5d2a', border: '#ffe14d' });
     out.hsBoard = new THREE.Vector3(bx - 1.0, 0, bz);

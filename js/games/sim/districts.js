@@ -75,10 +75,10 @@ export function buildDistricts(ctx) {
   }
 
   // ---------- Glorpville: road + lamps ----------
-  solidBox(0, 0.015, -52, 170, 0.03, 8, '#3b3f4a', { shadow: false, collide: false });
+  solidBox(0, 0.015, -52, 170, 0.03, 8, '#3b3f4a', { tex: 'asphalt', shadow: false, collide: false });
   // centre line sits 2 cm above the asphalt (same height = z-fighting flicker)
   solidBox(0, 0.04, -52, 170, 0.02, 0.25, '#ffe14d', { shadow: false, collide: false });
-  solidBox(12, 0.015, -42, 6, 0.03, 12, '#3b3f4a', { shadow: false, collide: false });
+  solidBox(12, 0.015, -42, 6, 0.03, 12, '#3b3f4a', { tex: 'asphalt', shadow: false, collide: false });
   {
     const N = 24;
     const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.12, 4.2, 6), new THREE.MeshStandardMaterial({ color: '#2b2f3a' }), N);
@@ -145,16 +145,16 @@ export function buildDistricts(ctx) {
     const W = 8.8;
     const D = 6.6;
     B.room(T.x, T.z, 4, 3, { doors: ['s1'], windows: ['s3', 'n1', 'n2', 'w1'], floor: '#bfc6d6' });
-    solidBox(T.x, 2.9, T.z, W, 0.2, D, '#d9dde6');
+    solidBox(T.x, 2.9, T.z, W, 0.2, D, '#d9dde6', { tex: 'plaster' });
     B.room(T.x, T.z, 4, 3, { y: 3, floor: null, doors: ['e0'], windows: ['s1', 's2', 'n1', 'n2', 'w1'] });
-    solidBox(T.x, 5.9, T.z, W, 0.2, D, '#d9dde6');
+    solidBox(T.x, 5.9, T.z, W, 0.2, D, '#d9dde6', { tex: 'plaster' });
     B.room(T.x, T.z, 4, 3, { y: 6, floor: null, doors: ['s3'], windows: ['s1', 'n1', 'n2', 'w1', 'e1'] });
-    solidBox(T.x, 8.9, T.z, W + 0.3, 0.2, D + 0.3, '#9aa3b5');
+    solidBox(T.x, 8.9, T.z, W + 0.3, 0.2, D + 0.3, '#9aa3b5', { tex: 'plaster' });
     // roof parapet (gap on the south for the diving board, east for the stairs)
-    solidBox(T.x - 2.5, 9.25, T.z + D / 2, 3.8, 0.5, 0.2, '#9aa3b5');
-    solidBox(T.x + 3.0, 9.25, T.z + D / 2, 2.8, 0.5, 0.2, '#9aa3b5');
-    solidBox(T.x, 9.25, T.z - D / 2, W, 0.5, 0.2, '#9aa3b5');
-    solidBox(T.x - W / 2, 9.25, T.z, 0.2, 0.5, D, '#9aa3b5');
+    solidBox(T.x - 2.5, 9.25, T.z + D / 2, 3.8, 0.5, 0.2, '#9aa3b5', { tex: 'plaster' });
+    solidBox(T.x + 3.0, 9.25, T.z + D / 2, 2.8, 0.5, 0.2, '#9aa3b5', { tex: 'plaster' });
+    solidBox(T.x, 9.25, T.z - D / 2, W, 0.5, 0.2, '#9aa3b5', { tex: 'plaster' });
+    solidBox(T.x - W / 2, 9.25, T.z, 0.2, 0.5, D, '#9aa3b5', { tex: 'plaster' });
     // floors' furniture
     prop('k_loungeSofa', T.x - 2.5, 0.06, T.z - 2.4, 0, { density: 0.8 });
     prop('k_pottedPlant', T.x + 3.8, 0.06, T.z - 2.6, 0, { density: 0.4 });
@@ -190,10 +190,10 @@ export function buildDistricts(ctx) {
     // pool
     const P = POOL;
     const rim = '#f2f2f2';
-    solidBox(P.x, 0.45, P.z - POOL_D / 2, POOL_W + 0.6, 0.9, 0.3, rim);
-    solidBox(P.x, 0.45, P.z + POOL_D / 2, POOL_W + 0.6, 0.9, 0.3, rim);
-    solidBox(P.x - POOL_W / 2, 0.45, P.z, 0.3, 0.9, POOL_D, rim);
-    solidBox(P.x + POOL_W / 2, 0.45, P.z, 0.3, 0.9, POOL_D, rim);
+    solidBox(P.x, 0.45, P.z - POOL_D / 2, POOL_W + 0.6, 0.9, 0.3, rim, { tex: 'stone' });
+    solidBox(P.x, 0.45, P.z + POOL_D / 2, POOL_W + 0.6, 0.9, 0.3, rim, { tex: 'stone' });
+    solidBox(P.x - POOL_W / 2, 0.45, P.z, 0.3, 0.9, POOL_D, rim, { tex: 'stone' });
+    solidBox(P.x + POOL_W / 2, 0.45, P.z, 0.3, 0.9, POOL_D, rim, { tex: 'stone' });
     const water = new THREE.Mesh(new THREE.PlaneGeometry(POOL_W, POOL_D), waterMaterial({ shallow: '#6ee7ff', deep: '#1a8fd6', round: false }));
     water.rotation.x = -Math.PI / 2;
     water.position.set(P.x, POOL_Y, P.z);
@@ -231,7 +231,7 @@ export function buildDistricts(ctx) {
       });
     }
     // Matt's very tall shelf, with Vash's sword on top (he can't reach it)
-    solidBox(M.x - 2.85, 1.3, M.z + 2.3, 0.5, 2.6, 1.3, '#6b4226');
+    solidBox(M.x - 2.85, 1.3, M.z + 2.3, 0.5, 2.6, 1.3, '#6b4226', { tex: 'wood' });
     for (const y of [0.5, 1.15, 1.8]) deco('k_books', M.x - 2.55, y, M.z + 2.3, Math.PI / 2, 1, false);
     const swordG = new THREE.Group();
     const swordM = vashSword();
@@ -244,9 +244,9 @@ export function buildDistricts(ctx) {
   }
 
   // ---------- shops (closed) ----------
-  solidBox(-46, 2.5, -65, 11, 5, 8, '#e8e2d0');
+  solidBox(-46, 2.5, -65, 11, 5, 8, '#e8e2d0', { tex: 'brick' });
   sign(['OHIO MART'], -46, 4.2, -60.95, 0, 6, 1.2, { color: '#ff4f6d' });
-  solidBox(-66, 2, -64, 8, 4, 7, '#f4f4f4');
+  solidBox(-66, 2, -64, 8, 4, 7, '#f4f4f4', { tex: 'plaster' });
   sign(['VET (NOPE)'], -66, 3.3, -60.45, 0, 5, 1.1, { color: '#ff4f6d', bg: '#fff', border: '#ff4f6d' });
   clear.push([-46, -65, 8], [-66, -64, 6], [68, -65, 8]);
 
@@ -282,8 +282,8 @@ export function buildDistricts(ctx) {
     }
     // hideout hut
     const wood = '#a8743f';
-    solidBox(Hx - 3.3, 0.55, Hz + 1.9, 1.3, 1.0, 1.0, wood);
-    solidBox(Hx - 3.3, 1.12, Hz + 1.9, 1.5, 0.14, 1.2, '#7a4f2a');
+    solidBox(Hx - 3.3, 0.55, Hz + 1.9, 1.3, 1.0, 1.0, wood, { tex: 'wood' });
+    solidBox(Hx - 3.3, 1.12, Hz + 1.9, 1.5, 0.14, 1.2, '#7a4f2a', { tex: 'wood' });
     const arch = new THREE.Mesh(new THREE.CircleGeometry(0.32, 16, 0, Math.PI), new THREE.MeshBasicMaterial({ color: '#2a1a10' }));
     arch.position.set(Hx - 2.64, 0.06, Hz + 1.9);
     arch.rotation.y = Math.PI / 2;
@@ -337,7 +337,7 @@ export function buildDistricts(ctx) {
   // ---------- Glorp Casino (Matt owns it) ----------
   {
     const K = CASINO;
-    solidBox(K.x, 3, K.z, 11, 6, 8, '#2a0b4a');
+    solidBox(K.x, 3, K.z, 11, 6, 8, '#2a0b4a', { tex: 'brick' });
     solidBox(K.x, 6.15, K.z, 11.6, 0.3, 8.6, '#ffd23f');
     const front = K.z - 4.02;
     // neon sign, over-bright so it blooms
@@ -504,8 +504,8 @@ export function buildDistricts(ctx) {
   {
     const S = SHRINE; // faces +x
     const stone = '#8a8f99';
-    solidBox(S.x, 0.06, S.z, 6, 0.12, 6, stone, { shadow: false });
-    for (let i = 0; i < 4; i++) solidBox(S.x + 3.8 + i * 1.3, 0.03, S.z + Math.sin(i) * 0.3, 0.9, 0.06, 0.9, '#9aa0a8', { shadow: false, collide: false });
+    solidBox(S.x, 0.06, S.z, 6, 0.12, 6, stone, { tex: 'stone', shadow: false });
+    for (let i = 0; i < 4; i++) solidBox(S.x + 3.8 + i * 1.3, 0.03, S.z + Math.sin(i) * 0.3, 0.9, 0.06, 0.9, '#9aa0a8', { tex: 'stone', shadow: false, collide: false });
     // torii gate
     const pillar = '#2a1a3d';
     for (const dz of [-1.3, 1.3]) {
@@ -595,15 +595,15 @@ export function buildDistricts(ctx) {
     const D = 10;
     const H = 5;
     const front = K.z - D / 2;
-    solidBox(K.x, 0.17, K.z, W + 1, 0.34, D + 1, '#d8d0c0'); // plinth
-    solidBox(K.x, 0.085, front - 1.1, 8, 0.17, 1.2, '#d8d0c0', { shadow: false }); // step
-    const wall = (x, z, w, d, h = H) => solidBox(x, 0.34 + h / 2, z, w, h, d, marble);
+    solidBox(K.x, 0.17, K.z, W + 1, 0.34, D + 1, '#d8d0c0', { tex: 'marble' }); // plinth
+    solidBox(K.x, 0.085, front - 1.1, 8, 0.17, 1.2, '#d8d0c0', { tex: 'marble', shadow: false }); // step
+    const wall = (x, z, w, d, h = H) => solidBox(x, 0.34 + h / 2, z, w, h, d, marble, { tex: 'marble' });
     wall(K.x, K.z + D / 2, W, 0.4); // back
     wall(K.x - W / 2, K.z, 0.4, D); // sides
     wall(K.x + W / 2, K.z, 0.4, D);
     wall(K.x - 3.65, front, 4.7, 0.4); // front, with a 2.6 m door
     wall(K.x + 3.65, front, 4.7, 0.4);
-    solidBox(K.x, 0.34 + 3.9, front, 2.6, 2.2, 0.4, marble);
+    solidBox(K.x, 0.34 + 3.9, front, 2.6, 2.2, 0.4, marble, { tex: 'marble' });
     // portico: columns, beam and pediment
     for (const dx of [-4.5, -2.7, -0.9, 0.9, 2.7, 4.5]) {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, H, 14), new THREE.MeshStandardMaterial({ color: '#fbf7ee', roughness: 0.6 }));
@@ -612,7 +612,7 @@ export function buildDistricts(ctx) {
       scene.add(c);
       world.createCollider(RAPIER.ColliderDesc.cylinder(H / 2, 0.32), fixed(K.x + dx, 0.34 + H / 2, front - 1.4));
     }
-    solidBox(K.x, 0.34 + H + 0.3, front - 0.8, W + 0.6, 0.6, 2.2, '#e6dfcf');
+    solidBox(K.x, 0.34 + H + 0.3, front - 0.8, W + 0.6, 0.6, 2.2, '#e6dfcf', { tex: 'marble' });
     const ped = new THREE.Shape();
     ped.moveTo(-(W + 0.6) / 2, 0);
     ped.lineTo((W + 0.6) / 2, 0);
@@ -625,7 +625,7 @@ export function buildDistricts(ctx) {
     sign(['BANK OF ROMNI'], K.x, 0.34 + H + 0.3, front - 1.93, Math.PI, 7.5, 0.55, { size: 46, color: '#c9a227', bg: '#e6dfcf', border: '#e6dfcf' });
     sign(['$  LOANS  $'], K.x, 0.34 + H + 1.05, front - 1.6 - 0.01, Math.PI, 2.6, 0.55, { size: 52, color: '#2f7d2a', bg: '#e6dfcf', border: '#c9a227' });
     // counter, vault, gold, rules poster
-    solidBox(K.x, 0.34 + 0.55, K.z + 1.2, 7, 1.1, 0.8, '#6b4226');
+    solidBox(K.x, 0.34 + 0.55, K.z + 1.2, 7, 1.1, 0.8, '#6b4226', { tex: 'wood' });
     solidBox(K.x, 0.34 + 1.14, K.z + 1.2, 7.2, 0.08, 1.0, '#f4f1ea', { collide: false });
     const gold = new THREE.MeshStandardMaterial({ color: '#ffcc33', metalness: 0.35, roughness: 0.35, emissive: '#3a2600' }); // no env map here, so keep it readable as gold
     const vault = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 28), gold);
@@ -663,20 +663,20 @@ export function buildDistricts(ctx) {
     const WH = 6.5;
     const T = 1.2;
     // curtain walls, gate on the east wall (z -2..2)
-    solidBox(C.x - HW, WH / 2, C.z, T, WH, HD * 2, ice);
-    solidBox(C.x, WH / 2, C.z - HD, HW * 2, WH, T, ice);
-    solidBox(C.x, WH / 2, C.z + HD, HW * 2, WH, T, ice);
-    solidBox(C.x + HW, WH / 2, C.z - 7, T, WH, HD - 2, ice);
-    solidBox(C.x + HW, WH / 2, C.z + 7, T, WH, HD - 2, ice);
-    solidBox(C.x + HW, 4.5 + (WH - 4.5) / 2, C.z, T, WH - 4.5, 4, ice);
+    solidBox(C.x - HW, WH / 2, C.z, T, WH, HD * 2, ice, { tex: 'ice' });
+    solidBox(C.x, WH / 2, C.z - HD, HW * 2, WH, T, ice, { tex: 'ice' });
+    solidBox(C.x, WH / 2, C.z + HD, HW * 2, WH, T, ice, { tex: 'ice' });
+    solidBox(C.x + HW, WH / 2, C.z - 7, T, WH, HD - 2, ice, { tex: 'ice' });
+    solidBox(C.x + HW, WH / 2, C.z + 7, T, WH, HD - 2, ice, { tex: 'ice' });
+    solidBox(C.x + HW, 4.5 + (WH - 4.5) / 2, C.z, T, WH - 4.5, 4, ice, { tex: 'ice' });
     // battlements
     for (let i = -HW; i <= HW; i += 1.6) {
-      solidBox(C.x + i, WH + 0.35, C.z - HD, 0.8, 0.7, T, stone, { collide: false });
-      solidBox(C.x + i, WH + 0.35, C.z + HD, 0.8, 0.7, T, stone, { collide: false });
+      solidBox(C.x + i, WH + 0.35, C.z - HD, 0.8, 0.7, T, stone, { tex: 'stone', collide: false });
+      solidBox(C.x + i, WH + 0.35, C.z + HD, 0.8, 0.7, T, stone, { tex: 'stone', collide: false });
     }
     for (let i = -HD; i <= HD; i += 1.6) {
-      solidBox(C.x - HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { collide: false });
-      if (Math.abs(i) > 2.2) solidBox(C.x + HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { collide: false });
+      solidBox(C.x - HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { tex: 'stone', collide: false });
+      if (Math.abs(i) > 2.2) solidBox(C.x + HW, WH + 0.35, C.z + i, T, 0.7, 0.8, stone, { tex: 'stone', collide: false });
     }
     // towers with icy roofs and snow caps
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -717,7 +717,7 @@ export function buildDistricts(ctx) {
 
     // throne hall: x -8..-2, z -10.8..0 (door on its east wall at z -5)
     const HH = 5.5;
-    const wall = (x0, x1, z0, z1, h = HH, col = stone) => solidBox(C.x + (x0 + x1) / 2, h / 2, C.z + (z0 + z1) / 2, Math.max(0.4, x1 - x0), h, Math.max(0.4, z1 - z0), col);
+    const wall = (x0, x1, z0, z1, h = HH, col = stone) => solidBox(C.x + (x0 + x1) / 2, h / 2, C.z + (z0 + z1) / 2, Math.max(0.4, x1 - x0), h, Math.max(0.4, z1 - z0), col, { tex: 'stone' });
     wall(-12.8, -2, -0.2, 0.2); // south side of the hall (shared with the dungeon)
     // inner walls flush with the rooms, so signs and frames hang on something
     wall(-13.0, -12.6, -10.8, -0.2);
@@ -726,7 +726,7 @@ export function buildDistricts(ctx) {
     wall(-2.2, -1.8, -3.8, -0.2);
     wall(-8.2, -7.8, -10.8, -7.9); // west wall, bookcase gap z -7.9..-6.1
     wall(-8.2, -7.8, -6.1, 0);
-    solidBox(C.x - 2, HH - 0.6, C.z - 5, 0.4, 1.2, 2.4, stone); // lintel
+    solidBox(C.x - 2, HH - 0.6, C.z - 5, 0.4, 1.2, 2.4, stone, { tex: 'stone' }); // lintel
     solidBox(C.x - 5, 0.03, C.z - 5.4, 1.6, 0.06, 9.6, '#a3132b', { collide: false, shadow: false }); // red carpet
     const throneMat = new THREE.MeshStandardMaterial({ color: '#2d6bd1', roughness: 0.5 });
     const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 1.2), throneMat);
@@ -755,7 +755,7 @@ export function buildDistricts(ctx) {
     sign(['BUSINESS PLAN', '1. sell fent', '2. ???', '3. castle'], C.x - 12.55, 1.9, C.z - 7.4, Math.PI / 2, 2.0, 1.5, { size: 34, color: '#1a1420', bg: '#ffffff', border: '#9aa0a8', colors: ['#c0182f', '#1a1420', '#1a1420', '#2f7d2a'] });
     sign(['NO REFUNDS', 'NO SNITCHES'], C.x - 10.6, 1.4, C.z - 3.25, Math.PI, 1.8, 0.7, { size: 40, color: '#ffe14d', bg: '#1a1420', border: '#ffe14d' });
     // the table of business
-    solidBox(C.x - 10.4, 0.45, C.z - 8.6, 2.6, 0.9, 1.2, '#4a3426');
+    solidBox(C.x - 10.4, 0.45, C.z - 8.6, 2.6, 0.9, 1.2, '#4a3426', { tex: 'wood' });
     const white = new THREE.MeshStandardMaterial({ color: '#fbfbfb', roughness: 0.9 });
     for (let i = 0; i < 10; i++) {
       const bag = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), white);
@@ -834,7 +834,7 @@ export function buildDistricts(ctx) {
     {
       const cx = C.x + 8.5;
       const cz = C.z + 7.6;
-      solidBox(cx, 0.35, cz - 1.4, 2.4, 0.7, 0.9, '#4a2f6b'); // desk
+      solidBox(cx, 0.35, cz - 1.4, 2.4, 0.7, 0.9, '#4a2f6b', { tex: 'wood' }); // desk
       solidBox(cx, 0.73, cz - 1.4, 2.6, 0.06, 1.05, '#2a1a3d', { collide: false });
       sign(['WIZARD SERVICES', 'est. 1726 · no breaks'], cx, 0.38, cz - 1.86, Math.PI, 2.2, 0.55, { size: 40, color: '#ffe14d', bg: '#2a1450', border: '#b48cff', colors: ['#ffe14d', '#b48cff'] });
       const back = C.z + HD - T / 2 - 0.02;
@@ -855,8 +855,8 @@ export function buildDistricts(ctx) {
     wall(-12.8, -2, 10.6, 11.0, DH, dark);
     wall(-2.2, -1.8, 0.2, 5.1, DH, dark); // east wall, door gap z 5.1..6.9
     wall(-2.2, -1.8, 6.9, 10.8, DH, dark);
-    solidBox(C.x - 2, DH - 0.5, C.z + 6, 0.4, 1, 1.8, dark);
-    solidBox(C.x - 7.4, DH + 0.15, C.z + 5.5, 11.2, 0.3, 11, dark); // roof
+    solidBox(C.x - 2, DH - 0.5, C.z + 6, 0.4, 1, 1.8, dark, { tex: 'stone' });
+    solidBox(C.x - 7.4, DH + 0.15, C.z + 5.5, 11.2, 0.3, 11, dark, { tex: 'stone' }); // roof
     solidBox(C.x - 7.4, 0.03, C.z + 5.5, 10.8, 0.06, 10.6, '#4a4f5c', { collide: false, shadow: false });
     sign(['DUNGEON', '(for people who', "don't pay)"], C.x - 1.62, 2.5, C.z + 8.6, Math.PI / 2, 2.0, 1.1, { size: 40, color: '#ff4f6d', bg: '#1a1420', border: '#ff4f6d', colors: ['#ff4f6d', '#dff4ff', '#dff4ff'] });
     // cells: x -12.8..-9.5; cell A z 0.6..5.4 (the jail, door at z 2.2..4.0), cell B z 6..10.6
@@ -873,7 +873,7 @@ export function buildDistricts(ctx) {
     bars(4.0, 5.8);
     bars(5.8, 10.8);
     wall(-12.8, -9.5, 5.6, 6.0, DH, dark); // between the cells
-    solidBox(C.x - 11.15, 0.25, C.z + 1.0, 2.6, 0.5, 0.8, '#6b4a2a'); // a sad bench
+    solidBox(C.x - 11.15, 0.25, C.z + 1.0, 2.6, 0.5, 0.8, '#6b4a2a', { tex: 'wood' }); // a sad bench
     out.castle.cell = new THREE.Vector3(C.x - 11.0, 0.6, C.z + 3.1);
     out.castle.cellDoor = { x: C.x - 9.5, z0: C.z + 2.2, z1: C.z + 4.0, h: DH };
     out.castle.lever = new THREE.Vector3(C.x - 7.6, 0, C.z + 2.0);
@@ -1010,17 +1010,17 @@ export function buildDistricts(ctx) {
     water.position.set(L.x, WATER_Y, L.z);
     scene.add(water);
     // island with a palm
-    solidBox(L.x + 10, 0.3, L.z + 4, 6, 0.6, 5, '#ecd9a5', { shadow: false });
+    solidBox(L.x + 10, 0.3, L.z + 4, 6, 0.6, 5, '#ecd9a5', { tex: 'dirt', shadow: false });
     // visual palm + trunk-only collider (a full bounding box would swallow the whole island)
     deco('n_PalmTree_2', L.x + 10, 0.6, L.z + 4, 1.2, 0.8);
     world.createCollider(RAPIER.ColliderDesc.cylinder(1.6, 0.3), fixed(L.x + 10, 0.6 + 1.6, L.z + 4));
     for (let i = 0; i < 6; i++) deco('n_Lilypad', L.x - 14 + rand() * 24, WATER_Y + 0.02, L.z + rand() * 12 - 6, rand() * 6, 0.9, false);
     // dock
     const dx = L.x - 10;
-    solidBox(dx, 0.7, L.z - 9, 2.6, 0.2, 13, '#8b5a2b');
+    solidBox(dx, 0.7, L.z - 9, 2.6, 0.2, 13, '#8b5a2b', { tex: 'wood' });
     for (let k = 0; k < 4; k++) {
-      solidBox(dx - 1.2, 0.35, L.z - 14 + k * 3.6, 0.25, 0.7, 0.25, '#5d3a1a', { collide: false });
-      solidBox(dx + 1.2, 0.35, L.z - 14 + k * 3.6, 0.25, 0.7, 0.25, '#5d3a1a', { collide: false });
+      solidBox(dx - 1.2, 0.35, L.z - 14 + k * 3.6, 0.25, 0.7, 0.25, '#5d3a1a', { tex: 'wood', collide: false });
+      solidBox(dx + 1.2, 0.35, L.z - 14 + k * 3.6, 0.25, 0.7, 0.25, '#5d3a1a', { tex: 'wood', collide: false });
     }
     out.dockRect = { x0: dx - 1.3, x1: dx + 1.3, z0: L.z - 15.5, z1: L.z - 2.5 };
     out.fishSpot = new THREE.Vector3(dx + 0.6, 0.8, L.z - 4.2);

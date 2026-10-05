@@ -6,6 +6,7 @@
 // - dynamic props share their model's geometry and one material.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { applyDetail } from './detail.js';
 
 const CHUNK = 64;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -17,8 +18,8 @@ export function createBuilder({ RAPIER, world, scene, models }) {
   const batches = new Map();
   const yawQ = (y) => new THREE.Quaternion().setFromAxisAngle(UP, y);
 
-  const furnitureMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
-  const natureMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
+  const furnitureMat = applyDetail(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 }), 'grain', { ao: 0.3 });
+  const natureMat = applyDetail(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), 'grain', { ao: 0.4, aoHeight: 1.4 });
   const RECOLOR = { Wood: '#8d5e3b' };
 
   function template(name) {
@@ -129,20 +130,27 @@ export function createBuilder({ RAPIER, world, scene, models }) {
   // Plain coloured boxes (floors, platforms, roofs, ramps...) + matching static colliders.
   // All of them become a few InstancedMeshes (per chunk, per shadow flag) with per-instance colour.
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-  const boxMat = new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true });
+  // one material per surface kind (o.tex: 'brick', 'stone', 'hedge'... see detail.js); default: fine grain
+  const boxMats = new Map();
+  const boxMat = (tex = 'grain') => {
+    let m = boxMats.get(tex);
+    if (!m) boxMats.set(tex, (m = applyDetail(new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), tex)));
+    return m;
+  };
   const boxBatches = new Map();
   function solidBox(x, y, z, sx, sy, sz, color, o = {}) {
     const shadow = o.shadow !== false;
-    const key = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}|${shadow ? 1 : 0}`;
+    const tex = o.tex || 'grain';
+    const key = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}|${shadow ? 1 : 0}|${tex}`;
     let b = boxBatches.get(key);
-    if (!b) boxBatches.set(key, (b = { shadow, items: [] }));
+    if (!b) boxBatches.set(key, (b = { shadow, tex, items: [] }));
     const q = o.rotQ ? o.rotQ.clone() : yawQ(o.rotY || 0);
     b.items.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz)), c: new THREE.Color(color) });
     if (o.collide !== false) staticBox(x, y, z, sx / 2, sy / 2, sz / 2, o.rotY || 0, o.rotQ || null);
   }
   function finalizeBoxes() {
     for (const b of boxBatches.values()) {
-      const mesh = new THREE.InstancedMesh(boxGeo, boxMat, b.items.length);
+      const mesh = new THREE.InstancedMesh(boxGeo, boxMat(b.tex), b.items.length);
       b.items.forEach((it, i) => {
         mesh.setMatrixAt(i, it.m);
         mesh.setColorAt(i, it.c);

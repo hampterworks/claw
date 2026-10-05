@@ -4,6 +4,7 @@
 // reference to is left alone. Movement is detected by stepping every world animation and
 // comparing before/after, so a newly added animation can't get frozen by accident.
 import * as THREE from 'three';
+import { applyDetail } from './detail.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const CHUNK = 64;
@@ -103,6 +104,7 @@ export function mergeStaticMeshes(scene, W, extra = []) {
     const mat = src.clone();
     mat.color.set('#ffffff');
     mat.vertexColors = true;
+    if (mat.isMeshStandardMaterial) applyDetail(mat, 'grain', { ao: 0.3 });
     const mesh = new THREE.Mesh(merged, mat);
     mesh.castShadow = list[0].castShadow;
     mesh.receiveShadow = list[0].receiveShadow;

@@ -1,6 +1,7 @@
 // Visual polish: gradient sky with a sun, filmic tone mapping, bloom,
 // color grade + vignette, FXAA, rim light on Claw, wind on foliage, swirly soup.
 import * as THREE from 'three';
+import { setDetailQuality } from './detail.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -180,6 +181,7 @@ export function createGraphics(renderer, scene, camera) {
     },
     setQuality(q) {
       quality = q;
+      setDetailQuality(q);
       renderer.shadowMap.enabled = q === 'high';
       scene.traverse((o) => {
         if (o.isDirectionalLight) o.castShadow = q === 'high';

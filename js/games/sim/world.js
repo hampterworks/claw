@@ -8,6 +8,7 @@ import { createBuilder } from './builder.js';
 import { buildDistricts } from './districts.js';
 import { buildTown } from './town.js';
 import { buildPark } from './park.js';
+import { applyDetail } from './detail.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
 export const PARK_POT = new THREE.Vector3(16, 0, 12);
@@ -16,7 +17,14 @@ export const STATUE = new THREE.Vector3(23, 0, 0);
 export const TOWER = new THREE.Vector3(-26, 0, 22);
 export const STUDIO = new THREE.Vector3(0, 0, -27);
 export const CORN = new THREE.Vector3(25, 0, -24);
-export const BOUNDS = 132; // Ohio got bigger (Glorp Park + the Outskirts woods)
+export const BOUNDS = 132;
+// dirt paths (x, z waypoints): home -> park -> lake, home -> downtown, park -> castle, park -> Glorp Park
+const PATHS = [
+  [[-6, -2], [0, 8], [8, 15], [5, 30], [2, 47]],
+  [[-8, -12], [-14, -24], [-16, -45]],
+  [[8, 15], [-8, 27], [-24, 37], [-33, 46]],
+  [[10, 16], [30, 20], [44, 36], [66, 41], [87, 36]],
+]; // Ohio got bigger (Glorp Park + the Outskirts woods)
 
 const POT_R = 2.3;
 const POT_H = 1.45;
@@ -66,7 +74,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
       colors.push(c.r, c.g, c.b);
     }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
+    const ground = new THREE.Mesh(geo, applyDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), 'grass', { ao: 0 }));
     ground.receiveShadow = true;
     scene.add(ground);
     staticBox(0, -0.5, 0, 230, 0.5, 230);
@@ -586,6 +594,34 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
     [HOUSE.x, HOUSE.z, 9.5], [PARK_POT.x, PARK_POT.z, 6], [TRAMP.x, TRAMP.z, 4], [STATUE.x, STATUE.z, 3.5],
     [TOWER.x, TOWER.z, 4.5], [STUDIO.x, STUDIO.z + 2, 8], [CORN.x, CORN.z, 8], [-28, -12, 3.5], [4, 4, 3], [18, 21, 3], [-6, 14, 3], [0, 0, 6],
   ];
+  // dirt paths between the main spots (trees keep off them)
+  for (const pts of PATHS) {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'catmullrom', 0.4);
+    const n = Math.ceil(curve.getLength() / 0.8);
+    const pos = [];
+    const idx = [];
+    const tan = new THREE.Vector3();
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      const p = curve.getPointAt(u);
+      curve.getTangentAt(u, tan);
+      const w = 1.15 + Math.sin(u * 37 + pts.length) * 0.18;
+      pos.push(p.x - tan.z * w, 0.014, p.z + tan.x * w, p.x + tan.z * w, 0.014, p.z - tan.x * w);
+      if (i < n) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+      if (i % 3 === 0) clear.push([p.x, p.z, 1.6]);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    if (geo.attributes.normal.getY(0) < 0) geo.index.array.reverse(); // face up
+    geo.computeVertexNormals();
+    const mat = applyDetail(new THREE.MeshStandardMaterial({ color: '#b08d5f', roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), 'dirt', { ao: 0 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    disposables.push(geo, mat);
+  }
   const free = (x, z, pad = 0) => clear.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r + pad);
   const trees = ['n_CommonTree_1', 'n_CommonTree_2', 'n_CommonTree_3', 'n_CommonTree_4', 'n_CommonTree_Autumn_1', 'n_PineTree_1', 'n_PineTree_2', 'n_PineTree_3', 'n_BirchTree_1', 'n_Willow_1', 'n_Willow_2'];
   function place(n, pad, fn) {

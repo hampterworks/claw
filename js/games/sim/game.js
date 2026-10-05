@@ -34,6 +34,7 @@ import { createBattles } from './battle.js';
 import { createHideSeek } from './hideseek.js';
 import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
+import { refreshDetailTextures } from './detail.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -1379,6 +1380,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   try {
     await renderer.compileAsync(scene, camera);
     gfx.render(0);
+    refreshDetailTextures();
   } catch (e) {
     console.warn('shader warm-up skipped', e);
   }
