@@ -38,6 +38,7 @@ import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
 import { createEmotes } from './emotes.js';
 import { createDaily, trackDaily } from './daily.js';
+import { createSpeedrun, resetProgress } from './speedrun.js';
 import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
@@ -247,6 +248,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
 
   const hud = createHud(wrap, { onMenu: () => openMenu(), onQuests: () => openQuests(), onMusic: () => setMusic(!music.enabled), touch });
   const ch = createChallenges(hud);
+  // speedrun timer + splits (only while a run is on), and the reset buttons
+  const sr = createSpeedrun({ wrap, hud, sfx, ch, total: ch.CHALLENGES.length });
 
   // Glorp Coins, skins and the casino
   const wallet = createWallet(hud);
@@ -1185,6 +1188,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     S.trampMat.scale.y += (1 - S.trampMat.scale.y) * Math.min(1, dt * 8);
     W.update(dt, t);
+    sr.update(dt, playing && !menuOpen);
     kaiju.update(dt);
     env.update(dt, t);
     sky.position.copy(camera.position);
@@ -1464,6 +1468,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
           },
         },
         { label: 'Skins & Pets', onClick: () => openPanel('SKINS & PETS', casino.wardrobe()) },
+        { label: sr.running ? '🏁 Speedrun' : '🏁 Speedrun / Reset', onClick: () => openPanel('SPEEDRUN & RESET', sr.panel({ onReset: resetProgress })) },
         { label: 'Credits', onClick: openCredits },
         { label: '← Back to Arcade', onClick: exitToArcade },
       ],
@@ -1547,7 +1552,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { claw, W, ch, mut, cam, gfx, music, wallet, winty, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1618,6 +1623,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hampter.dispose();
       clicky.dispose();
       emotes.dispose();
+      sr.dispose();
       daily.dispose();
       kaiju.dispose();
       env.dispose();

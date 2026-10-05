@@ -74,6 +74,10 @@ J quest log, H controls card, P menu (P again closes it), T chat. Touch players 
 glowing windows, fireflies and a lantern that follows Claw), rain
 now and then, and it always snows at Winter's Castle.
 
+**Speedrun and reset:** menu → 🏁 Speedrun / Reset. A run puts your save aside, starts fresh with an in-game timer
+(paused in menus) and splits for every Claw-lenge; Any% ends at the Battle of Ohio, 100% at all of them, with personal
+bests. Ending the run restores your save. Reset quests (keeps coins, skins and pets) or everything to replay.
+
 **Emotes:** dances and emotes from the wheel (G). Three Claws dancing together start a dance party.
 
 **Clicky and the Battle of Ohio:** Clicky, Winter's grumpy castle wizard, wants out. Bring him a coffee, find his 4

@@ -2212,3 +2212,57 @@ body:has(.sim-wrap.kj-on) .mute {
   color: var(--muted);
   margin: 0 !important;
 }
+
+/* ---------- speedrun ---------- */
+.sr-timer {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  pointer-events: none;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: rgba(18, 4, 31, 0.8);
+  border: 2px solid var(--yellow);
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--yellow);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sr-timer[hidden] {
+  display: none;
+}
+.sim-wrap.touch .sr-timer {
+  top: 110px;
+  font-size: 17px;
+}
+.speedrun .btn {
+  display: block;
+  margin: 6px auto;
+}
+.speedrun .btn.danger {
+  background: var(--red);
+  color: #fff;
+}
+.sr-pb {
+  font-weight: 700;
+  color: var(--cyan);
+}
+.sr-splits {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  max-height: 160px;
+  overflow: auto;
+  font-variant-numeric: tabular-nums;
+}
+/* during a run the race / hunt timer sits under the run timer */
+.sim-wrap.sr-on .sim-timer {
+  top: 98px;
+}
+.sim-wrap.touch.sr-on .sim-timer {
+  top: 146px;
+}

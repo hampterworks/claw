@@ -11,7 +11,14 @@ export function read(key, fallback) {
   }
 }
 
+// After a reset / speedrun swap the page reloads; stop late saves from undoing it.
+let frozen = false;
+export function freezeSaves() {
+  frozen = true;
+}
+
 export function write(key, value) {
+  if (frozen) return;
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value));
   } catch {
