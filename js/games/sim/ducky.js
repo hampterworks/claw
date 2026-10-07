@@ -8,12 +8,15 @@
 import * as THREE from 'three';
 import { markerTexture } from './textures.js';
 import { read, write } from '../../scores.js';
+import { isHalloween } from '../../season.js';
 
 const NAME = 'DUCKY';
 const COLOR = '#ffd23f';
 export const ESCAPES_NEEDED = 3;
+const SPOOKY = isHalloween(); // October text: A Hiss in the Hallway
+const oct = (normal, spooky) => (SPOOKY ? spooky : normal);
 
-const LINES = {
+const LINES = oct({
   1: [
     'You outran my sister THREE times? Winty. Yes, my big sister. Somebody got the castle, somebody got the duck genes.',
     'First, a message. Bonk the WINTER\'S CASTLE sign by her gate. Make it crooked. Make it personal.',
@@ -38,8 +41,33 @@ const LINES = {
     'Romni says your loan is "spiritually paid". That is how we do business.',
     'Quack. That is it. That is the line.',
   ],
-};
-const SCARE = ['QUACK', 'QUACK QUACK', '*aggressive quacking*', 'QUAAACK'];
+}, {
+  1: [
+    'You outran my sister THREE times? Winty. Yes, my big sister. She got the haunted castle, I got the duck genes.',
+    'First, a trick. Bonk the WINTER\'S CASTLE sign by her gate. Make it crooked. Make it spooky.',
+    'She put me on her Halloween party menu once. Duck à l\'orange. "It was a JOKE, Ducky." It was laminated.',
+    'Romni and I go way back. Way, WAY back. Do not ask about Halloween 2019.',
+  ],
+  2: [
+    'Crooked. Haunting. I could cry, but ducks are waterproof.',
+    'I slipped 3 trick-or-treat eggs in your fur. They are not MY eggs. Do not ask.',
+    'Throw them at her throne. All three. Classic Halloween. Then come back for the finale.',
+  ],
+  3: [
+    'Throne: egged. Morale: spooky. Now the big one.',
+    'Steal her crown off the throne and bring it to me. It completes my costume. Mom said we had to SHARE it.',
+    'She will chase you. Run like the zombies are collecting.',
+    'Zoomies, kid. Spooky zoomies.',
+  ],
+  done: [
+    'The crown fits. Costume complete.',
+    'My sister sees me and runs screaming. Some things never change since we were ducklings. Well. Since I was.',
+    'Trick-or-treating with her is going to be SO awkward this year. Worth it.',
+    'Romni says your loan is "spiritually paid". Very spooky. That is how we do business.',
+    'Boo. Quack. That is it. That is the line.',
+  ],
+});
+const SCARE = oct(['QUACK', 'QUACK QUACK', '*aggressive quacking*', 'QUAAACK'], ['BOO-QUACK', "QUACK-O'-LANTERN", '*haunted quacking*', 'QUAAAAAGH']);
 
 // ---------- the model ----------
 export function buildDucky({ crown = false } = {}) {
@@ -310,15 +338,15 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
     sfx.win();
     sfx.quack();
     talk.flap = 1.5;
-    say('THE CROWN. Oh it fits. My sister is going to be SO mad. Here: you are family now. Unlike some people.', 6500);
-    setTimeout(() => hud.banner('🦆 DUCKY MODE UNLOCKED', 'Ducky is your bodyguard. His big sister runs from you. Romni says no rush on that loan.', { pog: true }), 2500);
+    say(oct('THE CROWN. Oh it fits. My sister is going to be SO mad. Here: you are family now. Unlike some people.', 'THE CROWN. Oh it fits. Costume complete. My sister is going to be SO mad. You are family now. Unlike some people.'), 6500);
+    setTimeout(() => hud.banner('🦆 DUCKY MODE UNLOCKED', oct('Ducky is your bodyguard. His big sister runs from you. Romni says no rush on that loan.', 'Ducky is your spooky bodyguard. His big sister runs screaming. Romni says no rush on that loan.'), { pog: true }), 2500);
     setMode(true);
   }
   function dropCrown() {
     if (!carrying) return;
     carrying = false;
     paintCrown();
-    hud.banner('WINTY TOOK HER CROWN BACK', 'It is back on her throne. Steal it again, and use your zoomies this time.');
+    hud.banner('WINTY TOOK HER CROWN BACK', oct('It is back on her throne. Steal it again, and use your zoomies this time.', 'It is back on her throne. Steal it again, and use your spooky zoomies this time.'));
     sfx.fail();
   }
 
@@ -351,8 +379,8 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
         place();
         npc.root.visible = true;
         sfx.quack();
-        setTimeout(() => hud.banner('🦆 A DUCK HAS ENTERED OHIO', 'Winty\'s little brother is impressed by how much you run from her. Find the yellow dot on the map.'), 2600);
-      } else hud.popup(`ESCAPED WINTY ${st.escapes}/${ESCAPES_NEEDED}`, COLOR);
+        setTimeout(() => hud.banner(oct('🦆 A DUCK HAS ENTERED OHIO', '🦆 A SPOOKY DUCK HAS ENTERED OHIO'), oct('Winty\'s little brother is impressed by how much you run from her. Find the yellow dot on the map.', 'Winty\'s little brother loves how much you run from her. Find the yellow dot on the map. Boo.')), 2600);
+      } else hud.popup(oct(`ESCAPED WINTY ${st.escapes}/${ESCAPES_NEEDED}`, `ESCAPED WINTY ${st.escapes}/${ESCAPES_NEEDED} 👻`), COLOR);
       save();
     },
     // bonk the castle sign (step 1)
@@ -364,8 +392,8 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
       signSwing = 1;
       sfx.boom();
       sfx.quack();
-      hud.popup('THE SIGN IS CROOKED NOW', COLOR);
-      setTimeout(() => say('*distant proud quacking* Now egg her throne. The eggs are already in your fur. Do not ask how.'), 1400);
+      hud.popup(oct('THE SIGN IS CROOKED NOW', 'THE SIGN IS CROOKED (AND HAUNTED) NOW'), COLOR);
+      setTimeout(() => say(oct('*distant proud quacking* Now egg her throne. The eggs are already in your fur. Do not ask how.', '*distant spooky quacking* Now egg her throne. The eggs are already in your fur. Do not ask how.')), 1400);
     },
     // which interaction Claw is standing at
     machine(p) {
@@ -375,7 +403,8 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
       return null;
     },
     thronePrompt() {
-      return stage() === 2 ? `🥚 THROW AN EGG AT THE THRONE · ${Math.max(0, 3 - eggsThrown() - flying.length)} LEFT` : '👑 STEAL THE CROWN';
+      const left = Math.max(0, 3 - eggsThrown() - flying.length);
+      return stage() === 2 ? oct(`🥚 THROW AN EGG AT THE THRONE · ${left} LEFT`, `🥚 TRICK: EGG THE THRONE · ${left} LEFT`) : oct('👑 STEAL THE CROWN', '👑 STEAL THE CROWN (TRICK!)');
     },
     throneAction() {
       const s = stage();
@@ -394,20 +423,20 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
         carrying = true;
         paintCrown();
         sfx.ding();
-        hud.banner('👑 YOU STOLE THE CROWN', 'Winty is coming. Get it to Ducky (yellow dot). Zoomies help.');
+        hud.banner('👑 YOU STOLE THE CROWN', oct('Winty is coming. Get it to Ducky (yellow dot). Zoomies help.', 'Winty is coming, and she is SPOOKED. Get it to Ducky (yellow dot). Zoomies help.'));
         winty?.chaseCrown(claw, dropCrown);
       }
     },
     // for the quest log: [text, done, current]
     steps() {
       const s = stage();
-      if (!here()) return [[`Outrun Winty's sales pitch in the park (${st.escapes}/${ESCAPES_NEEDED})`, false, true]];
+      if (!here()) return [[oct(`Outrun Winty's sales pitch in the park (${st.escapes}/${ESCAPES_NEEDED})`, `Outrun Winty's cursed candy pitch in the park (${st.escapes}/${ESCAPES_NEEDED})`), false, true]];
       return [
-        [`Outrun Winty's sales pitch in the park (${ESCAPES_NEEDED}/${ESCAPES_NEEDED})`, true, false],
-        ['Talk to Ducky (yellow dot on the map)', st.met, !st.met],
-        ["Bonk the WINTER'S CASTLE sign by her gate", ch.isDone('ducky1'), st.met && s === 1],
-        [`Egg Winter's throne (${eggsThrown()}/3)`, ch.isDone('ducky2'), s === 2],
-        ["Steal Winter's crown and bring it to Ducky (she will chase you)", ch.isDone('ducky3'), s === 3],
+        [oct(`Outrun Winty's sales pitch in the park (${ESCAPES_NEEDED}/${ESCAPES_NEEDED})`, `Outrun Winty's cursed candy pitch in the park (${ESCAPES_NEEDED}/${ESCAPES_NEEDED})`), true, false],
+        [oct('Talk to Ducky (yellow dot on the map)', 'Talk to Ducky (yellow dot on the map). He has candy.'), st.met, !st.met],
+        [oct("Bonk the WINTER'S CASTLE sign by her gate", "Trick: bonk the WINTER'S CASTLE sign by her gate"), ch.isDone('ducky1'), st.met && s === 1],
+        [oct(`Egg Winter's throne (${eggsThrown()}/3)`, `Trick: egg Winter's throne (${eggsThrown()}/3)`), ch.isDone('ducky2'), s === 2],
+        [oct("Steal Winter's crown and bring it to Ducky (she will chase you)", "Steal Winter's crown for Ducky's costume (she will chase you)"), ch.isDone('ducky3'), s === 3],
       ];
     },
     pois() {
@@ -436,9 +465,9 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
       const s = stage();
       const ul = add('ul', 'clicky-steps');
       const rows = [
-        ['🪧', "Bonk the WINTER'S CASTLE sign by her gate", ch.isDone('ducky1')],
-        ['🥚', `Egg her throne (${eggsThrown()}/3)`, ch.isDone('ducky2')],
-        ['👑', 'Steal her crown and bring it to me', ch.isDone('ducky3')],
+        ['🪧', oct("Bonk the WINTER'S CASTLE sign by her gate", "Trick: bonk the WINTER'S CASTLE sign by her gate"), ch.isDone('ducky1')],
+        ['🥚', oct(`Egg her throne (${eggsThrown()}/3)`, `Trick: egg her throne (${eggsThrown()}/3)`), ch.isDone('ducky2')],
+        ['👑', oct('Steal her crown and bring it to me', 'Steal her crown and bring it to me. It is my costume.'), ch.isDone('ducky3')],
       ];
       rows.forEach(([icon, text, done], i) => {
         const li = document.createElement('li');
@@ -457,9 +486,9 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
           b.textContent = st.on ? '🦆 DUCKY MODE: ON (turn off)' : '🦆 DUCKY MODE: OFF (turn on)';
           b.classList.toggle('primary', !st.on);
         });
-        add('p', 'fine', 'Ducky Mode: Ducky follows you as your bodyguard, Winty runs away from you, and your Romni loan never comes due.');
+        add('p', 'fine', oct('Ducky Mode: Ducky follows you as your bodyguard, Winty runs away from you, and your Romni loan never comes due.', 'Ducky Mode: Ducky haunts your steps as your bodyguard, Winty runs screaming from you, and your Romni loan never comes due.'));
       }
-      add('p', 'fine', 'Ducky is Winty\'s little brother. He has also known Romni since before banks were invented, and will not say how long that is.');
+      add('p', 'fine', oct('Ducky is Winty\'s little brother. He has also known Romni since before banks were invented, and will not say how long that is.', 'Ducky is Winty\'s little brother. He has known Romni since before banks were invented. Some say since before Halloween.'));
       sfx.quack();
       talk.flap = 1;
       return root;
@@ -511,8 +540,8 @@ export function createDucky({ scene, world, RAPIER, hud, sfx, ch, claw, castle, 
           sfx.pop?.();
           ch.progress('ducky2');
           paintSplats();
-          hud.popup(eggsThrown() >= 3 ? 'THRONE: FULLY EGGED' : `SPLAT ${eggsThrown()}/3`, COLOR);
-          if (eggsThrown() >= 3) setTimeout(() => say('*quacks in admiration* Now grab her crown off the throne. Then RUN to me.'), 1200);
+          hud.popup(eggsThrown() >= 3 ? oct('THRONE: FULLY EGGED', 'THRONE: FULLY TRICKED') : oct(`SPLAT ${eggsThrown()}/3`, `SPOOKY SPLAT ${eggsThrown()}/3`), COLOR);
+          if (eggsThrown() >= 3) setTimeout(() => say(oct('*quacks in admiration* Now grab her crown off the throne. Then RUN to me.', '*quacks in spooky admiration* Now grab her crown off the throne. Then RUN to me.')), 1200);
         }
       }
       // the stolen crown rides on Claw's head
