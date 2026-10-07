@@ -8,8 +8,16 @@ import * as flappy from './games/flappy.js';
 import * as whack from './games/whack.js';
 import * as aura from './games/aura.js';
 import * as tower from './games/tower.js';
+import { isHalloween } from './season.js';
 
 const GAMES = { boil, flappy, whack, aura, tower };
+
+// Spooktober: swap in the Halloween palette and copy
+if (isHalloween()) {
+  document.body.classList.add('spooky');
+  for (const el of document.querySelectorAll('[data-spooky]')) el.textContent = el.dataset.spooky;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#0c0612');
+}
 
 const $ = (sel) => document.querySelector(sel);
 const hub = $('#hub');

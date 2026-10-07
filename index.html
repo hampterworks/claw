@@ -27,9 +27,10 @@
           "./js/games/flappy.js": "./js/games/flappy.js?v=9b597a6d",
           "./js/games/tower.js": "./js/games/tower.js?v=23134c48",
           "./js/games/whack.js": "./js/games/whack.js?v=836bba41",
-          "./js/main.js": "./js/main.js?v=182e8b05",
+          "./js/main.js": "./js/main.js?v=c28e9de3",
           "./js/props.js": "./js/props.js?v=2b63f378",
-          "./js/scores.js": "./js/scores.js?v=374c39a3"
+          "./js/scores.js": "./js/scores.js?v=374c39a3",
+          "./js/season.js": "./js/season.js?v=09d78e7a"
         }
       }
     </script>
@@ -37,11 +38,16 @@
   <body>
     <button id="mute" class="mute" type="button" aria-label="Toggle sound">🔊</button>
 
+    <div class="spooky-deco" aria-hidden="true">
+      <span class="web"></span>
+      <span class="bat b1">🦇</span><span class="bat b2">🦇</span><span class="bat b3">🦇</span><span class="bat b4">🦇</span>
+    </div>
+
     <main id="hub">
       <header class="hero">
         <img src="assets/claw-leaf.webp" class="hero-sticker left" alt="" />
         <div class="hero-text">
-          <p class="kicker">a deathclaw1551 production</p>
+          <p class="kicker" data-spooky="a deathclaw1551 spooktober production">a deathclaw1551 production</p>
           <h1 class="title"><span>WE WILL</span> <span>BOIL</span> <span>THE CLAW</span></h1>
           <p class="counter">
             Claw has been boiled <b id="boil-count">0</b> times and dunked <b id="dunk-count">0</b> times on this device.
@@ -54,18 +60,18 @@
         <a class="card featured" href="#boil">
           <img src="assets/claw-stand.webp" alt="" class="card-art tall" />
           <div class="card-body">
-            <span class="tag">MAIN EVENT</span>
+            <span class="tag" data-spooky="CAULDRON EVENT">MAIN EVENT</span>
             <h2>Boil the Claw</h2>
-            <p>Keep the pot simmering, stop Claw from escaping, season with meme cats. 3 pots. 1 Claw. 0 mercy.</p>
+            <p data-spooky="The witches need soup. Keep the cauldron bubbling, stop Claw escaping, season with meme cats. 3 cauldrons. 1 Claw. 0 mercy.">Keep the pot simmering, stop Claw from escaping, season with meme cats. 3 pots. 1 Claw. 0 mercy.</p>
             <span class="best" data-best="boil"></span>
           </div>
         </a>
         <a class="card featured sim-card" href="glorp/">
           <img src="assets/sim-dance.webp" alt="" class="card-art tall" />
           <div class="card-body">
-            <span class="tag">NEW · 3D</span>
+            <span class="tag" data-spooky="SPOOKTOBER · 3D">NEW · 3D</span>
             <h2>Claw Simulator</h2>
-            <p>Goat Simulator, but you're Claw. Knock stuff off tables, boil yourself, gamble at Matt's casino, fish, collect pets and find Vash's secret shrine.</p>
+            <p data-spooky="Ohio is haunted. Play Zombie Tag across the whole map, trick-or-treat, collect spooky pets and skins, and visit the graveyard by Winter's Castle.">Goat Simulator, but you're Claw. Knock stuff off tables, boil yourself, gamble at Matt's casino, fish, collect pets and find Vash's secret shrine.</p>
             <span class="best">Open world · keyboard, mouse or touch</span>
           </div>
         </a>
@@ -73,7 +79,7 @@
           <img src="assets/claw-alien.webp" alt="" class="card-art" />
           <div class="card-body">
             <h2>Flappy Glorp</h2>
-            <p>Alien Claw vs towers of spinning Maxwells. Don't fall in the soup.</p>
+            <p data-spooky="Alien Claw flaps through a haunted night. Don't fall in the witch's soup.">Alien Claw vs towers of spinning Maxwells. Don't fall in the soup.</p>
             <span class="best" data-best="flappy"></span>
           </div>
         </a>
@@ -81,7 +87,7 @@
           <img src="assets/sim-hampter-1.webp" alt="" class="card-art" />
           <div class="card-body">
             <h2>Hampter Tower</h2>
-            <p>Stack wobbly hampters to space. One bad drop and they all go flying (screaming).</p>
+            <p data-spooky="Stack wobbly hampters to the moon. One bad drop and they all go flying (screaming, in costume).">Stack wobbly hampters to space. One bad drop and they all go flying (screaming).</p>
             <span class="best" data-best="tower"></span>
           </div>
         </a>
@@ -89,7 +95,7 @@
           <img src="assets/claw-leaf.webp" alt="" class="card-art" />
           <div class="card-body">
             <h2>Dunk-a-Claw</h2>
-            <p>Whack-a-mole but it's pots. Dunk Claw. Spare Banana Cat.</p>
+            <p data-spooky="Whack-a-mole but it's cauldrons. Dunk Claw. Spare Banana Cat (he's dressed as a ghost).">Whack-a-mole but it's pots. Dunk Claw. Spare Banana Cat.</p>
             <span class="best" data-best="whack"></span>
           </div>
         </a>
@@ -97,7 +103,7 @@
           <span class="card-art icon" id="aura-icon"></span>
           <div class="card-body">
             <h2>Aura Farmer</h2>
-            <p>Click Claw for aura. Hire Popcat, OIIA Cat and Maxwell to farm it for you.</p>
+            <p data-spooky="Click Claw for spooky aura. Hire Popcat, OIIA Cat and Maxwell to haunt it for you.">Click Claw for aura. Hire Popcat, OIIA Cat and Maxwell to farm it for you.</p>
             <span class="best" data-best="aura"></span>
           </div>
         </a>
@@ -106,7 +112,7 @@
       <canvas id="council" aria-hidden="true"></canvas>
 
       <footer>
-        No real cats were harmed. Claw consented (probably). Made for deathclaw1551 with glorp.
+        <span data-spooky="No real cats were harmed. Claw consented (probably). Happy Spooktober from glorp.">No real cats were harmed. Claw consented (probably). Made for deathclaw1551 with glorp.</span>
       </footer>
     </main>
 
@@ -119,6 +125,6 @@
       <div id="stage-body"></div>
     </section>
 
-    <script type="module" src="js/main.js?v=182e8b05"></script>
+    <script type="module" src="js/main.js?v=c28e9de3"></script>
   </body>
 </html>

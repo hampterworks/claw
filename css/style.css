@@ -261,6 +261,90 @@ footer {
   margin-top: 12px;
 }
 
+/* ---------- Spooktober (body.spooky, October only) ---------- */
+.spooky-deco {
+  display: none;
+}
+body.spooky {
+  --bg: #0c0612;
+  --bg2: #1d0e24;
+  --green: #8dff5a;
+  --green-dark: #2f7a1a;
+  --yellow: #ff8a1f;
+  --pink: #b36bff;
+  --cyan: #ffb347;
+  --muted: #c4a8d8;
+  background-image: radial-gradient(circle at 82% 8%, rgba(255, 244, 214, 0.9) 0 42px, rgba(255, 220, 150, 0.25) 46px, transparent 120px),
+    radial-gradient(circle at 15% 15%, rgba(255, 138, 31, 0.22), transparent 42%),
+    radial-gradient(circle at 80% 40%, rgba(120, 40, 200, 0.32), transparent 48%),
+    radial-gradient(circle at 50% 100%, rgba(141, 255, 90, 0.14), transparent 52%);
+}
+body.spooky .spooky-deco {
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2; /* bats fly over the cards; clicks pass through */
+  overflow: hidden;
+}
+body.spooky #hub {
+  position: relative;
+  z-index: 1;
+}
+body.spooky .web {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: clamp(110px, 22vw, 200px);
+  aspect-ratio: 1;
+  opacity: 0.55;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23e9dcff' stroke-width='0.8'%3E%3Cpath d='M0 0L100 30M0 0L80 80M0 0L30 100M0 0L100 0M0 0L0 100'/%3E%3Cpath d='M18 0Q14 9 22 7Q20 18 9 14Q9 20 0 18M36 0Q28 18 44 13Q40 36 18 28Q18 40 0 36M56 0Q42 27 66 20Q60 54 28 42Q26 60 0 56M78 0Q57 36 88 26Q80 72 38 56Q34 80 0 78'/%3E%3C/svg%3E") no-repeat top left / contain;
+}
+body.spooky .bat {
+  position: absolute;
+  font-size: clamp(22px, 4vw, 36px);
+  filter: brightness(1.6) drop-shadow(0 0 6px rgba(179, 107, 255, 0.8));
+  animation: bat-fly 14s linear infinite;
+}
+body.spooky .bat.b1 { top: 12%; animation-delay: 0s; }
+body.spooky .bat.b2 { top: 30%; animation-delay: -4s; animation-duration: 18s; font-size: clamp(16px, 3vw, 26px); }
+body.spooky .bat.b3 { top: 6%; animation-delay: -9s; animation-duration: 11s; }
+body.spooky .bat.b4 { top: 55%; animation-delay: -6s; animation-duration: 22s; font-size: clamp(14px, 2.5vw, 22px); }
+@keyframes bat-fly {
+  0% { transform: translate(-10vw, 0) scaleX(-1); }
+  25% { transform: translate(25vw, -24px) scaleX(-1); }
+  50% { transform: translate(55vw, 18px) scaleX(-1); }
+  75% { transform: translate(85vw, -14px) scaleX(-1); }
+  100% { transform: translate(115vw, 6px) scaleX(-1); }
+}
+body.spooky .title::before,
+body.spooky .title::after {
+  content: '🎃';
+  display: inline-block;
+  font-size: 0.55em;
+  vertical-align: middle;
+  margin: 0 0.15em;
+  animation: wobble 1.6s ease-in-out infinite;
+}
+body.spooky .title::after {
+  animation-delay: -0.8s;
+}
+body.spooky .title {
+  text-shadow: 3px 3px 0 #111, -2px -2px 0 #111, 2px -2px 0 #111, -2px 2px 0 #111, 0 0 30px rgba(255, 138, 31, 0.55);
+}
+body.spooky .card {
+  box-shadow: 0 6px 0 var(--green-dark), 0 0 24px rgba(255, 138, 31, 0.12);
+}
+body.spooky .card.featured {
+  box-shadow: 0 6px 0 #8a3f00, 0 0 34px rgba(255, 138, 31, 0.3);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.spooky .bat {
+    animation: none;
+    left: 70%;
+  }
+}
+
 /* ---------- stage ---------- */
 #stage {
   min-height: 100vh;
