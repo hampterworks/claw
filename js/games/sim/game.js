@@ -245,7 +245,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   W.syncAll();
 
-  const music = createMusic();
+  // October: "A Hiss in the Hallway" (made with Gemini); loop points are on the beat (120 bpm, 48 bars)
+  const music = createMusic({ track: spooky ? { url: 'assets/music/hiss-in-the-hallway.mp3', loopStart: 15.04, loopEnd: 111.0203, gain: 0.95 } : null });
   function setMusic(on) {
     music.setEnabled(on);
     write('simmusic', on);

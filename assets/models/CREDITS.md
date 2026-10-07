@@ -43,3 +43,9 @@ use (gltf-transform `prune` + `dedup`, texture embedded). Not quantized (skinned
 Built with a one-off gltf-transform script: each pack's colour atlas baked into vertex colours, one named root node
 per model, character clips renamed `<model>|<clip>` (idle, walk, sprint, die, emote-yes, attack-melee-right), then
 `dedup`, `weld`, `prune`, normals and colours quantized, meshopt. Positions are not quantized (node animations).
+
+## Music
+
+- **A Hiss in the Hallway** (`assets/music/hiss-in-the-hallway.mp3`, the October theme) was made for this game with
+  Google Gemini. It was trimmed to a seamless loop: the intro plays once, then bars 8-56 (15.04 s to 111.02 s, 120 bpm)
+  repeat, with a 40 ms crossfade baked in at the seam.

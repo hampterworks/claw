@@ -48,7 +48,9 @@ function pulseWave(ac, duty) {
   return ac.createPeriodicWave(real, imag);
 }
 
-export function createMusic({ context } = {}) {
+// track: an optional recorded song { url, loopStart, loopEnd, gain } that replaces the synth (the
+// intro plays once, then [loopStart, loopEnd) loops). If it fails to load, the synth plays instead.
+export function createMusic({ context, track } = {}) {
   let ac = null;
   let master = null;
   let waves = null;
@@ -58,6 +60,9 @@ export function createMusic({ context } = {}) {
   let playing = false;
   let enabled = true;
   let ducked = false;
+  let song = null; // { buffer } once the track has decoded, false if it failed
+  let src = null;
+  let played = false;
 
   function level() {
     if (!enabled || (!context && isMuted())) return 0;
@@ -175,18 +180,52 @@ export function createMusic({ context } = {}) {
 
   const offMute = context ? () => {} : onMuteChange(applyLevel);
 
-  return {
+  async function startTrack() {
+    if (!song) {
+      try {
+        const res = await fetch(track.url);
+        if (!res.ok) throw new Error(res.status);
+        song = { buffer: await ac.decodeAudioData(await res.arrayBuffer()) };
+      } catch (e) {
+        console.warn('music track failed, using the synth', e);
+        song = false;
+        if (playing) {
+          playing = false;
+          api.start();
+        }
+        return;
+      }
+    }
+    if (!playing || src) return;
+    src = ac.createBufferSource();
+    src.buffer = song.buffer;
+    src.loop = true;
+    src.loopStart = track.loopStart;
+    src.loopEnd = track.loopEnd;
+    const g = ac.createGain();
+    g.gain.value = track.gain ?? 1;
+    src.connect(g).connect(master);
+    src.start(ac.currentTime + 0.05, played ? track.loopStart : 0); // the intro only plays the first time
+    played = true;
+  }
+
+  const api = {
     start() {
       if (playing || !setup()) return;
       playing = true;
-      nextTime = ac.currentTime + 0.08;
       applyLevel();
+      if (track && song !== false) return startTrack();
+      nextTime = ac.currentTime + 0.08;
       tick();
       timer = setInterval(tick, 25);
     },
     stop() {
       playing = false;
       clearInterval(timer);
+      if (src) {
+        src.stop(ac.currentTime + 0.3);
+        src = null;
+      }
       if (master) master.gain.setTargetAtTime(0, ac.currentTime, 0.05);
     },
     // Schedule the whole song at once (used to render it with an OfflineAudioContext).
@@ -222,4 +261,5 @@ export function createMusic({ context } = {}) {
       }
     },
   };
+  return api;
 }
