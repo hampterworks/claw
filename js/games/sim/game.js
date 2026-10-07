@@ -250,6 +250,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   const spawn = new THREE.Vector3(HOUSE.x + 2, 0.8, HOUSE.z + 2.8);
   const claw = createClaw({ RAPIER, world, scene, gltf: catGltf, faceTex: face, spawn });
   env.setClaw(claw); // the night lantern follows Claw
+  if (spooky) env.setTime(0.925); // Spooktober: it's always night (moon at its highest)
   // Let everything settle before scoring starts, so nothing counts as "knocked" on load.
   for (let i = 0; i < 90; i++) world.step();
   for (const p of W.props) {
