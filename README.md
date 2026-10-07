@@ -88,6 +88,14 @@ with the camera locked on the fight; BONK cheers for Matt, LICK for Godzilla, an
 **Bikini Claw:** a free skin everyone owns (Skins & Pets): a polka-dot pink bikini painted onto Claw so it moves with
 every animation, heart sunglasses and a hibiscus by the ear.
 
+**A Hiss in the Hallway (Spooktober, October only):** the arcade and the sim go Halloween from Oct 1 to Oct 31
+(`?halloween` / `?halloween=0` to force it). A graveyard north of Winter's Castle, jack-o'-lanterns everywhere, a
+purple night sky and a new theme song. **Zombie Tag** (board at the graveyard gate): online, a random patient zero bonks
+everyone into zombies across the whole map; solo, survive a zombie horde for 3 minutes. Five **Spooky Claw-lenges**
+(trick-or-treat, smash jack-o'-lanterns, the graveyard ghost, Zombie Tag, the Pumpkin King's crown), the Gravekeeper's
+**Spooky Crate** with 12 Halloween skins and 5 spooky pets (yours to keep after October), and every quest line in
+October dress.
+
 **Sound:** the P menu has volume sliders for master, music, sound effects and rain (saved between visits); the 🔊
 button is still the quick mute.
 
