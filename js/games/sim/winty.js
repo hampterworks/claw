@@ -2,10 +2,13 @@
 // Talk to her and she follows Claw for a while, pitching. Outrun her to
 // complete "Just say no". She's a billboard sprite that glides along the ground.
 import * as THREE from 'three';
+import { isHalloween } from '../../season.js';
 
 export const WINTY_HOME = new THREE.Vector3(-1, 0, 13);
+const SPOOKY = isHalloween(); // October text: A Hiss in the Hallway
+const oct = (normal, spooky) => (SPOOKY ? spooky : normal);
 
-const PITCH = [
+const PITCH = oct([
   'psst... hey. wanna buy some fent?',
   "first one's free 😉",
   "it's fent-astic, trust",
@@ -16,11 +19,26 @@ const PITCH = [
   "it's basically catnip (it is not)",
   'family discount!!',
   'WAIT. bulk pricing',
-];
-const GIVE_UP = ['fine. ur loss', "whatever. I'll ask Matt", 'nobody appreciates small businesses'];
-const COLLECT = ['ROMNI SENT ME. PAY UP.', 'you owe the bank, glorp', 'I have a castle. it has a dungeon.', 'interest is compounding, babe', 'running only makes it worse', 'debt collection is my side hustle'];
-const FLEE = ['NOT MY BROTHER', 'AAAAA DUCKY', 'Romni said you were cool!!', "I'm telling MOM", 'keep my brother AWAY from me', 'my castle has a NO LITTLE BROTHERS policy', 'Ducky I said the menu thing was a JOKE', 'ok ok no fent for you, sorry!!'];
-const CROWN = ['MY CROWN!!!', 'GIVE IT BACK', 'that is a FAMILY HEIRLOOM (I bought it)', 'thief!! THIEF!!', 'Romni will hear about this', 'I KNOW WHO SENT YOU. IT WAS MY BROTHER.', "DUCKY YOU'RE GROUNDED"];
+], [
+  'psst... hey. wanna buy some fun-size fent?',
+  "first one's a treat 😉",
+  "it's fent-astically spooky, trust",
+  'I accept Glorp Coins and candy corn',
+  'Matt already bought a whole bucket',
+  "bro come back, it's Halloween",
+  'claw ur costume is so boring',
+  "it's basically candy (it is not)",
+  'trick-or-treat discount!!',
+  'WAIT. bulk pricing. by the pillowcase',
+]);
+const GIVE_UP = oct(['fine. ur loss', "whatever. I'll ask Matt", 'nobody appreciates small businesses'],
+  ['fine. no treats for u', "whatever. I'll trick Matt instead", 'nobody appreciates small haunted businesses']);
+const COLLECT = oct(['ROMNI SENT ME. PAY UP.', 'you owe the bank, glorp', 'I have a castle. it has a dungeon.', 'interest is compounding, babe', 'running only makes it worse', 'debt collection is my side hustle'],
+  ['ROMNI SENT ME. TRICK OR PAY.', 'you owe the bank, ghoul', 'I have a haunted castle. it has a dungeon.', 'interest is haunting you, babe', 'running only makes it spookier', 'debt collection is my Halloween costume']);
+const FLEE = oct(['NOT MY BROTHER', 'AAAAA DUCKY', 'Romni said you were cool!!', "I'm telling MOM", 'keep my brother AWAY from me', 'my castle has a NO LITTLE BROTHERS policy', 'Ducky I said the menu thing was a JOKE', 'ok ok no fent for you, sorry!!'],
+  ['NOT MY BROTHER (SCARY)', 'AAAAA SPOOKY DUCKY', 'Romni said you were a treat!!', "I'm telling MOM. and the ghosts", 'keep my brother AWAY from my candy', 'my castle party has a NO LITTLE BROTHERS policy', 'Ducky I said the party menu thing was a JOKE', 'ok ok no fent for you, have a candy, sorry!!']);
+const CROWN = oct(['MY CROWN!!!', 'GIVE IT BACK', 'that is a FAMILY HEIRLOOM (I bought it)', 'thief!! THIEF!!', 'Romni will hear about this', 'I KNOW WHO SENT YOU. IT WAS MY BROTHER.', "DUCKY YOU'RE GROUNDED"],
+  ['MY CROWN!!! MY COSTUME!!!', 'GIVE IT BACK, GHOUL', 'that is a FAMILY HEIRLOOM (I bought it at the costume shop)', 'trickster!! THIEF!!', 'Romni will haunt you about this', 'I KNOW WHO SENT YOU. IT WAS MY BROTHER. IN A COSTUME.', "DUCKY YOU'RE GROUNDED TILL NOVEMBER"]);
 const COLLECT_SPEED = 7.4;
 const CROWN_SPEED = 5.4; // a bit faster than walking: zoomies or jumps keep you ahead
 const CROWN_GIVE_UP = 22; // seconds of cardio before she gives up
@@ -78,7 +96,7 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
       if (st.mode !== 'collect') return;
       st.mode = 'home';
       st.cd = 20;
-      say(reason === 'ducky' ? '...is that my BROTHER? never mind. NEVER MIND.' : '...fine. you paid. this time.', 4);
+      say(reason === 'ducky' ? oct('...is that my BROTHER? never mind. NEVER MIND.', '...is that my BROTHER? in a costume? NEVER MIND.') : oct('...fine. you paid. this time.', '...fine. you paid. treat yourself.'), 4);
     },
     // Ducky's quest: Claw stole her crown. She shows up nearby and chases until she catches you or gets tired.
     chaseCrown(claw, onCatch) {
@@ -96,7 +114,7 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
       if (st.mode !== 'crown') return;
       st.mode = 'home';
       st.cd = 20;
-      say("UGH. I'm telling Mom, Ducky.", 4);
+      say(oct("UGH. I'm telling Mom, Ducky.", "UGH. I'm telling Mom, Ducky. Happy Halloween."), 4);
     },
     setScared(on) {
       st.scared = !!on;
@@ -151,12 +169,12 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
         if (dist < 1.3 && Math.abs(p.y - pos.y) < 2.5) {
           st.mode = 'home';
           st.cd = 20;
-          say('MINE. back on the throne it goes.', 3.5);
+          say(oct('MINE. back on the throne it goes.', 'MINE. back on the spooky throne it goes.'), 3.5);
           st.onCatch?.();
         } else if (st.t > CROWN_GIVE_UP) {
           st.mode = 'home';
           st.cd = 20;
-          say("ugh. cardio. keep it, I'll buy another one", 4);
+          say(oct("ugh. cardio. keep it, I'll buy another one", "ugh. cardio. keep it, I'll buy another costume"), 4);
         }
         return;
       }
@@ -207,7 +225,7 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
         }
         if (dist < 1.5 && st.caughtCd <= 0) {
           st.caughtCd = 3;
-          hud.popup('SHE SLIPPED A FLYER IN YOUR FUR', '#ffe14d');
+          hud.popup(oct('SHE SLIPPED A FLYER IN YOUR FUR', 'SHE SLIPPED A CURSED FLYER IN YOUR FUR'), '#ffe14d');
           // a little shove away, Claw is not interested
           const v = claw.body.linvel();
           claw.body.setLinvel({ x: v.x + (p.x - pos.x) * 4, y: 4, z: v.z + (p.z - pos.z) * 4 }, true);
@@ -216,9 +234,9 @@ export function createWinty({ scene, texture, hud, sfx, ch, onOutran, bounds = 1
           // outran her
           st.mode = 'home';
           st.cd = 25;
-          say('WAIT. come back!!', 3);
+          say(oct('WAIT. come back!!', 'WAIT. come back!! I have candy!!'), 3);
           sfx.ding();
-          if (!ch.isDone('winty')) ch.chaos(250, 'JUST SAID NO', '#7CFF4F');
+          if (!ch.isDone('winty')) ch.chaos(250, oct('JUST SAID NO', 'JUST SAID BOO'), '#7CFF4F');
           ch.complete('winty');
           onOutran?.();
         } else if (st.t > CHASE_TIME) {

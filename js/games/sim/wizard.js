@@ -5,11 +5,14 @@
 import * as THREE from 'three';
 import { markerTexture } from './textures.js';
 import { read, write } from '../../scores.js';
+import { isHalloween } from '../../season.js';
 
 const NAME = 'CLICKY';
 const COLOR = '#b48cff';
+const SPOOKY = isHalloween(); // October text: A Hiss in the Hallway
+const oct = (normal, spooky) => (SPOOKY ? spooky : normal);
 
-const LINES = {
+const LINES = oct({
   1: [
     "Three hundred years I've worked for Winter. Not one coffee break. Not ONE.",
     'Bring me a coffee mug from the Glorp Café. Any mug. I am begging, and wizards do not beg.',
@@ -35,7 +38,33 @@ const LINES = {
     "Matt sent me a fruit basket. It's a basket of one banana. Still the best pay I've had.",
     'Clicky Wizarding LLC. Now accepting clients. Rates: one (1) coffee.',
   ],
-};
+}, {
+  1: [
+    "Three hundred Halloweens I've worked for Winter. Not one coffee break. Not ONE.",
+    'Bring me a coffee mug from the Glorp Café. Any mug, any brew. I am begging, and wizards do not beg.',
+    'Winter pays me in "candy". It is all candy corn. Nobody wants candy corn.',
+  ],
+  2: [
+    'Ahh. Pumpkin spice. I can feel my spell slots again.',
+    'Winter used my spellbook as party decor. Four pages blew all over Ohio. Bring them back.',
+    'One page haunts the bank, one is in the hedge maze, one is up the Cat Tree, and one got abducted by the UFO. Spooky.',
+  ],
+  3: [
+    'My spellbook! Now for my resignation letter. Written in blood. Okay, ketchup.',
+    'Raise the three summoning stones from the dead. Bonk them: one in the Pet Arena, one by the lake, one by the radio tower.',
+    "It's Halloween. Monsters are expected. I'm just summoning a really, really big one.",
+  ],
+  4: [
+    'Everything is ready. Talk to me and I will hand in my notice. Spookily.',
+    "Winter thinks I'm carving pumpkins. I'm not. I'm counting how many kaiju I can summon. One.",
+  ],
+  done: [
+    'I quit and I feel AMAZING. Free as a ghost. Want me to do it again? I can quit all night.',
+    "Winter put up a 'Help Wanted' sign. It's haunted. Unrelated.",
+    "Matt sent me a candy bucket. It's a bucket of one candy corn. Still the best pay I've had.",
+    'Clicky Wizarding LLC. Now booking curses. Rates: one (1) pumpkin spice latte.',
+  ],
+});
 
 function starTexture() {
   const c = document.createElement('canvas');
@@ -287,7 +316,7 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
       if (Math.hypot(t.x - home.x, t.z - home.z) < 2.6 && t.y < 3) {
         ch.complete('clicky1');
         snap(16);
-        say('COFFEE. Oh, sweet bean water. I can feel my mana again. Okay, next problem: my spellbook.');
+        say(oct('COFFEE. Oh, sweet bean water. I can feel my mana again. Okay, next problem: my spellbook.', 'COFFEE. Oh, sweet spooky bean water. I can feel my mana again. Okay, next problem: my spellbook.'));
         sfx.purr?.();
         if (online) reset(pr);
         return;
@@ -322,19 +351,19 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
         paintStones();
         sfx.boom();
         sfx.ding();
-        hud.popup(`SUMMONING STONE ${st.stones.length}/3 AWAKE`, COLOR);
+        hud.popup(oct(`SUMMONING STONE ${st.stones.length}/3 AWAKE`, `SUMMONING STONE ${st.stones.length}/3 RISEN`), COLOR);
         ch.progress('clicky3');
-        if (st.stones.length >= 3) setTimeout(() => hud.banner('THE STONES ARE AWAKE', 'Go back to Clicky in Winter\'s Castle.'), 1200);
+        if (st.stones.length >= 3) setTimeout(() => hud.banner(oct('THE STONES ARE AWAKE', 'THE STONES HAVE RISEN'), oct('Go back to Clicky in Winter\'s Castle.', 'Go back to Clicky in Winter\'s Castle. If you dare.')), 1200);
       }
     },
     // for the quest log: [text, done, current]
     steps() {
       const s = stage();
       return [
-        ['Bring Clicky a coffee mug from the Glorp Café (carry it with LICK)', ch.isDone('clicky1'), s === 1],
-        [`Find his 4 lost spell pages (${st.pages.length}/4, purple dots on the map)`, ch.isDone('clicky2'), s === 2],
-        [`Bonk the 3 summoning stones awake (${st.stones.length}/3)`, ch.isDone('clicky3'), s === 3],
-        ['Let Clicky hand in his notice (the Battle of Ohio)', ch.isDone('kaiju'), s === 4],
+        [oct('Bring Clicky a coffee mug from the Glorp Café (carry it with LICK)', "Bring Clicky his witch's brew: a Glorp Café mug (carry it with LICK)"), ch.isDone('clicky1'), s === 1],
+        [oct(`Find his 4 lost spell pages (${st.pages.length}/4, purple dots on the map)`, `Find his 4 cursed spell pages (${st.pages.length}/4, purple dots on the map)`), ch.isDone('clicky2'), s === 2],
+        [oct(`Bonk the 3 summoning stones awake (${st.stones.length}/3)`, `Bonk the 3 summoning stones back from the dead (${st.stones.length}/3)`), ch.isDone('clicky3'), s === 3],
+        [oct('Let Clicky hand in his notice (the Battle of Ohio)', 'Let Clicky quit and raise a monster (the Battle of Ohio)'), ch.isDone('kaiju'), s === 4],
       ];
     },
     panel(online) {
@@ -349,10 +378,10 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
       };
       const s = stage();
       const steps = [
-        ['☕', "Bring Clicky a coffee mug from the Glorp Café (carry it with LICK)", ch.isDone('clicky1')],
-        ['📜', `Find his 4 lost spell pages (${st.pages.length}/4)`, ch.isDone('clicky2')],
-        ['🗿', `Bonk the 3 summoning stones awake (${st.stones.length}/3)`, ch.isDone('clicky3')],
-        ['👹', 'Let Clicky hand in his notice', ch.isDone('kaiju')],
+        ['☕', oct("Bring Clicky a coffee mug from the Glorp Café (carry it with LICK)", "Bring Clicky his witch's brew: a Glorp Café mug (carry it with LICK)"), ch.isDone('clicky1')],
+        ['📜', oct(`Find his 4 lost spell pages (${st.pages.length}/4)`, `Find his 4 cursed spell pages (${st.pages.length}/4)`), ch.isDone('clicky2')],
+        ['🗿', oct(`Bonk the 3 summoning stones awake (${st.stones.length}/3)`, `Bonk the 3 summoning stones back from the dead (${st.stones.length}/3)`), ch.isDone('clicky3')],
+        ['👹', oct('Let Clicky hand in his notice', 'Let Clicky quit and raise a monster'), ch.isDone('kaiju')],
       ];
       const ul = add('ul', 'clicky-steps');
       steps.forEach(([icon, text, done], i) => {
@@ -364,9 +393,9 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
       const quote = add('p', 'slot-result', `"${(LINES[s] || LINES.done)[0]}"`);
       quote.style.color = COLOR;
       if (s === 4 || s === 'done') {
-        const b = add('button', 'btn primary spin', s === 4 ? '👹 HAND IN MY NOTICE (SUMMON THE KAIJU)' : '👹 QUIT AGAIN (SUMMON THE KAIJU)');
+        const b = add('button', 'btn primary spin', s === 4 ? oct('👹 HAND IN MY NOTICE (SUMMON THE KAIJU)', '👹 HAND IN MY NOTICE (RAISE THE KAIJU)') : oct('👹 QUIT AGAIN (SUMMON THE KAIJU)', '👹 QUIT AGAIN (RAISE THE KAIJU)'));
         b.type = 'button';
-        const msg = add('p', 'fine', online ? 'Everyone online gets flung into the air for this one.' : 'Hold on to something. Actually, you will not be able to.');
+        const msg = add('p', 'fine', online ? oct('Everyone online gets flung into the air for this one.', 'Everyone online gets flung into the night sky for this one.') : oct('Hold on to something. Actually, you will not be able to.', 'Hold on to your candy. Actually, you will not be able to.'));
         b.addEventListener('click', () => {
           const err = onSummon();
           if (err) {
@@ -377,7 +406,7 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
           snap(30);
         });
       }
-      add('p', 'fine', 'Clicky has worked for Ms Winter since 1726. Benefits: none. Dental: frozen.');
+      add('p', 'fine', oct('Clicky has worked for Ms Winter since 1726. Benefits: none. Dental: frozen.', 'Clicky has worked for Ms Winter since 1726. Benefits: none. Dental: candy corn.'));
       return root;
     },
     update(dt, t, { props, mine, reset, online }) {
@@ -403,7 +432,7 @@ export function createClicky({ scene, world, RAPIER, gltf, hud, sfx, ch, claw, h
           st.pages.push(pg.i);
           save();
           sfx.ding();
-          hud.popup(`SPELL PAGE ${st.pages.length}/4`, COLOR);
+          hud.popup(oct(`SPELL PAGE ${st.pages.length}/4`, `CURSED SPELL PAGE ${st.pages.length}/4`), COLOR);
           ch.progress('clicky2');
         }
       }
