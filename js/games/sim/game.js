@@ -47,6 +47,17 @@ import { showOverlay, hideOverlay } from '../../engine.js';
 import { sfx, isMuted, getVolume, setVolume, audioBus } from '../../audio.js';
 import { bump, read, write, stat } from '../../scores.js';
 
+// October welcome banner: one of these, once per page load
+const SPOOKY_GREETINGS = [
+  "Happy Spooktober! Something is hissing in the hallway. It's you.",
+  "Welcome back to Ohio. It's haunted now. It was always a bit haunted.",
+  'Trick or treat! Claw chose trick. Claw always chooses trick.',
+  'The pumpkins are carved, the ghosts are out, and the tables are still standing. Fix that.',
+  'Boo! Sorry. Welcome to A Hiss in the Hallway.',
+  'Matt dressed up as Matt again this year. Nobody has the heart to tell him.',
+];
+let hissed = false;
+
 const CLAW_ROASTS = [
   'Claw is 85% soup by volume.',
   "Claw was not consulted about any of this. Claw's opinion was not needed.",
@@ -344,7 +355,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     castle.jail(claw);
     sfx.boom();
     sfx.fail();
-    hud.banner('WINTY DRAGGED YOU TO HER DUNGEON', `She took ${took} 🪙. Respawn from the menu to escape, or get a friend to pull the lever outside your cell.`);
+    if (spooky) hud.banner('WINTY DRAGGED YOU TO HER HAUNTED DUNGEON', `She took ${took} 🪙 as a treat. Respawn from the menu to escape, or get a friend to pull the lever outside your cell.`);
+    else hud.banner('WINTY DRAGGED YOU TO HER DUNGEON', `She took ${took} 🪙. Respawn from the menu to escape, or get a friend to pull the lever outside your cell.`);
     net?.send({ t: 'fx', text: "got dragged to Winty's dungeon ⛓️" });
   }
   const loans = createLoans({
@@ -352,7 +364,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     hud,
     sfx,
     onCollect: () => {
-      hud.banner('WINTY IS COMING', 'Romni called in your debt. Pay up at the bank, or run.');
+      if (spooky) hud.banner('WINTY IS COMING. BOO.', 'Romni called in your debt. Pay up at the bank, or run like a ghost is behind you.');
+      else hud.banner('WINTY IS COMING', 'Romni called in your debt. Pay up at the bank, or run.');
       if (winty) winty.collect(claw, dragToDungeon);
       else dragToDungeon();
     },
@@ -373,7 +386,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     castle.openCell();
     sfx.click();
     sfx.boom();
-    hud.popup('CELL DOOR OPENED', '#7CFF4F');
+    hud.popup(spooky ? 'CELL DOOR CREAKED OPEN' : 'CELL DOOR OPENED', '#7CFF4F');
     net?.send({ t: 'unlock' });
   }
   const hampter = createHampter({ scene, world, RAPIER, hud, sfx, claw, home: S.districts.hampterHome, wheelAt: S.districts.hampterWheel });
@@ -408,13 +421,16 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     sfx.ding();
     sfx.purr?.();
     if (!ch.isDone('shrine')) {
-      hud.banner('THE SHRINE ACCEPTS YOUR OFFERING', 'Secret skin unlocked: VASH MODE');
+      hud.banner(spooky ? 'THE HAUNTED SHRINE ACCEPTS YOUR OFFERING' : 'THE SHRINE ACCEPTS YOUR OFFERING', 'Secret skin unlocked: VASH MODE');
       ch.chaos(400, '🙏 RESPECTS PAID', '#b48cff');
       ch.complete('shrine');
       wallet.own('vash');
       equipSkin('vash');
     } else {
-      hud.popup(pick(['🙏 respects paid', '🙏 Vash is pleased', '🙏 +1 fun-size blessing', '🙏 the shrine purrs']), '#b48cff');
+      const lines = spooky
+        ? ['🙏 spooky respects paid', '🙏 Vash is pleased (and spooked)', '🙏 +1 fun-size blessing (treat!)', '🙏 the shrine purrs. ominously.']
+        : ['🙏 respects paid', '🙏 Vash is pleased', '🙏 +1 fun-size blessing', '🙏 the shrine purrs'];
+      hud.popup(pick(lines), '#b48cff');
     }
   }
   const fishing = createFishing({ wallet, ch, sfx, hud });
@@ -995,7 +1011,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       castle.openCell();
       const who = players.remotes.get(m.id)?.name || 'Someone';
       mpUi.feed(`${who} opened the dungeon cell 🔓`, '#7CFF4F');
-      if (castle.inCell(claw.position())) hud.banner('YOU ARE FREE', `${who} opened your cell. RUN.`);
+      if (castle.inCell(claw.position())) hud.banner('YOU ARE FREE', spooky ? `${who} opened your cell. RUN. Spookily.` : `${who} opened your cell. RUN.`);
     });
     ch.onComplete((id) => {
       const c = ch.CHALLENGES.find((x) => x.id === id);
@@ -1701,14 +1717,27 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     music.start();
     controls.setEnabled(true);
     controls.requestLock();
-    hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off tables.' : 'Click to lock the mouse. Go knock stuff off tables.', 5000);
+    if (spooky) hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off haunted tables.' : 'Click to lock the mouse. Go knock stuff off haunted tables.', 5000);
+    else hud.hint(touch ? 'Left stick to move, drag to look. Go knock stuff off tables.' : 'Click to lock the mouse. Go knock stuff off tables.', 5000);
     if (!read('simcontrolsSeen', false)) {
       write('simcontrolsSeen', true);
       setTimeout(() => !menuOpen && openControls(), 1200);
     }
+    // October: a welcome banner once per page load, after Matt's coins banner (first run) and the controls card
+    if (spooky && !hissed) {
+      hissed = true;
+      const line = pick(SPOOKY_GREETINGS);
+      const hiss = () => {
+        if (!alive) return;
+        if (menuOpen) setTimeout(hiss, 1000);
+        else hud.banner('🎃 A HISS IN THE HALLWAY', line);
+      };
+      setTimeout(hiss, wallet.welcomed ? 2500 : 9500);
+    }
     if (!wallet.welcomed) {
       wallet.markWelcomed();
-      setTimeout(() => hud.banner('MATT GAVE YOU 200 GLORP COINS', 'Spend them at the Glorp Casino downtown. Points earn more coins.', { pog: true }), 5500);
+      if (spooky) setTimeout(() => hud.banner('MATT GAVE YOU 200 GLORP COINS (TREAT!)', 'Spend them at the Glorp Casino downtown. Points earn more coins. No tricks.', { pog: true }), 5500);
+      else setTimeout(() => hud.banner('MATT GAVE YOU 200 GLORP COINS', 'Spend them at the Glorp Casino downtown. Points earn more coins.', { pog: true }), 5500);
     }
   };
 
