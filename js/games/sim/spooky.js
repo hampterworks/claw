@@ -52,7 +52,13 @@ export function buildSpooky({ scene, world, RAPIER, gltf, free, lampSpots = [], 
     if (!templates.has(name)) {
       const node = gltf.scene.getObjectByName(name);
       if (!node) throw new Error(`halloween.glb has no ${name}`);
-      templates.set(name, bakeTemplate(node));
+      const t = bakeTemplate(node);
+      // Kenney's iron fence comes out teal from the atlas: make it wrought iron
+      if (name.startsWith('h_iron_fence')) {
+        const c = t.geo.getAttribute('color');
+        for (let i = 0; i < c.count; i++) c.setXYZ(i, c.getX(i) * 0.25 + 0.04, c.getY(i) * 0.12 + 0.045, c.getZ(i) * 0.25 + 0.06);
+      }
+      templates.set(name, t);
     }
     return templates.get(name);
   };

@@ -37,6 +37,7 @@ import { createKaiju } from './kaiju.js';
 import { createDucky } from './ducky.js';
 import { buildSpooky, SPOOKY_LOOKS } from './spooky.js';
 import { createZombieTag } from './zombie.js';
+import { createSpookyQuests } from './spookyquests.js';
 import { isHalloween } from '../../season.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
@@ -113,10 +114,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   // the Hampter Works gallery (small, loaded alongside)
   // Clicky the wizard and Mega Matt (Kenney Mini Characters)
   const spooky = isHalloween(); // Spooktober: A Hiss in the Hallway (October only)
+  // halloween.glb: the October world, or all year for a player whose pet is a spooky one
+  const spookyPet = !!petById(read('simwallet', null)?.pet)?.spooky;
   const [clickyGltf, megaMattGltf, spookyGltf] = await Promise.all([
     loader.loadAsync('assets/models/wizard.glb'),
     loader.loadAsync('assets/models/megamatt.glb'),
-    spooky ? loader.loadAsync('assets/models/halloween.glb') : null,
+    spooky || spookyPet ? loader.loadAsync('assets/models/halloween.glb') : null,
   ]);
   const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
   const winterArt = await Promise.all([1, 2, 3, 4].map((i) => loadTexture(`assets/sim-winter-${i}.webp`)));
@@ -174,7 +177,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (o.isMesh) [].concat(o.material).forEach((m) => windy.has(m.name) && applyWind(m, m.name === 'plant' ? 0.05 : 0.02));
   });
   // October: the graveyard, jack-o'-lanterns, dead trees (baked into a few meshes of their own)
-  const SP = spookyGltf
+  // jack-o'-lantern porches (trick-or-treat stops): Claw's house, the café, Matt's, Hampter's, the towers, the castle gate
+  const PORCHES = [[HOUSE.x, HOUSE.z + 5.5, 0, 2.9], [-21.1, -60.7], [MATT_HOUSE.x, MATT_HOUSE.z + 3.3], [HAMPTER_HOUSE.x - 1.1, HAMPTER_HOUSE.z + 3.3], [TOWERS.x - 1.1, TOWERS.z + 3.3], [CASTLE.x + 15.2, CASTLE.z, Math.PI / 2, 2.9]];
+  const SP = spooky
     ? buildSpooky({
         scene,
         world,
@@ -182,7 +187,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         gltf: spookyGltf,
         free: S.free,
         lampSpots: [...S.lamps.positions, ...S.districts.lamps.positions],
-        porches: [[HOUSE.x, HOUSE.z + 5.5, 0, 2.9], [-21.1, -60.7], [MATT_HOUSE.x, MATT_HOUSE.z + 3.3], [HAMPTER_HOUSE.x - 1.1, HAMPTER_HOUSE.z + 3.3], [TOWERS.x - 1.1, TOWERS.z + 3.3]],
+        porches: PORCHES,
         parks: [{ x: 106, z: 12, rad: 44, n: 14 }, { x: -80, z: 46, rad: 14, n: 6 }, { x: -48, z: 6, rad: 10, n: 4 }],
       })
     : null;
@@ -300,7 +305,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   claw.setSkin(skinById(wallet.equipped));
   // the pet that follows Claw around
-  const pets = createPetCompanion({ gltf: petsGltf, scene, world, RAPIER, claw });
+  const pets = createPetCompanion({ gltf: petsGltf, spookyGltf, scene, world, RAPIER, claw });
   pets.set(wallet.pet);
   function equipPet(id) {
     wallet.equipPet(id);
@@ -466,6 +471,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     title: 'HIDE AND SEEK',
     open: () => hs.panel(),
   };
+  MACHINES.spookycrate = { prompt: '🎃 SPOOKY CRATE (GRAVEKEEPER)', title: 'SPOOKY CRATES', open: () => casino.spookyCrate() };
   MACHINES.zombie = { prompt: '🧟 ZOMBIE TAG', title: 'ZOMBIE TAG', open: () => zb.panel() };
   MACHINES.ducky = { prompt: '🦆 TALK TO DUCKY', title: 'DUCKY', open: () => ducky.panel() };
   MACHINES.throne = {
@@ -494,6 +500,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (!m && Math.hypot(p.x - S.districts.clickyHome.x, p.z - S.districts.clickyHome.z) < 3.0 && p.y < 2.5) m = 'clicky';
     if (!m) m = ducky.machine(p);
     if (!m && zb && Math.hypot(p.x - zb.board.x, p.z - zb.board.z) < 2.4 && p.y < 2.5) m = 'zombie';
+    if (!m && sq && Math.hypot(p.x - sq.keeperAt.x, p.z - sq.keeperAt.z) < 2.4 && p.y < 2.5) m = 'spookycrate';
     if (!m && Math.hypot(p.x - pk.hsBoard.x, p.z - pk.hsBoard.z) < 2.2 && p.y < 2) m = 'hideseek';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
@@ -552,7 +559,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (mapT > 0) return;
     mapT = 0.12;
     const p = claw.position();
-    const pois = [...clicky.pois(), ...ducky.pois()];
+    const pois = [...clicky.pois(), ...ducky.pois(), ...(sq?.pois() || [])];
     for (const [id, spot] of Object.entries(QUEST_SPOTS)) if (spot && !ch.isDone(id)) pois.push({ x: spot.x, z: spot.z });
     hud.updateMap(p.x, p.z, claw.st.yaw, pois);
   }
@@ -648,6 +655,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     }
     clicky.onBonk(p); // summoning stones
     ducky.onBonk(p); // Winter's castle sign
+    sq?.onBonk(p); // smashing jack-o'-lanterns
     if (dist2(p, WINDMILL.x, WINDMILL.z) < 5 && p.y < 5) {
       S.town.windmill.spin = 14;
       sfx.boom();
@@ -937,6 +945,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     loans.update(dt);
     hs.update(dt, t);
     zb?.update(dt, t);
+    sq?.update(dt, t);
     if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(ducky.mode ? 'ducky' : null); // paid (or Ducky) while she was on the way
     ducky.update(dt, t);
     respectCd -= dt;
@@ -967,6 +976,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       onToggle: () => setOnline(!online),
     });
     players = createPlayers({
+      spookyGltf,
       RAPIER,
       world,
       scene,
@@ -1045,6 +1055,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   // emote wheel (G) and dances
   var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen, onEmote: () => trackDaily('emote') });
+  // Spooky Claw-lenges + the Gravekeeper's Spooky Crate (October)
+  const sq = SP
+    ? createSpookyQuests({
+        scene, wallet, hud, sfx, claw, env,
+        gltf: spookyGltf,
+        porches: PORCHES,
+        jacks: SP.jacks,
+        graveyard: SP.graveyard,
+        crownAt: new THREE.Vector3(CAT_TREE.x, S.districts.treeTop + 2.4, CAT_TREE.z),
+        onFx: fx,
+      })
+    : null;
   // Zombie Tag (October: the board stands at the graveyard gate)
   var zb = SP // var: equipSkin above may run first
     ? createZombieTag({
@@ -1053,6 +1075,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         board: SP.board,
         feed: (t, c) => mpUi?.feed(t, c),
         onFx: fx,
+        onResult: () => sq?.onZombie(),
         setLook: (skin) => claw.setSkin(skin || skinById(wallet.equipped)),
         closePanel: () => closeMenu(),
       })
@@ -1464,6 +1487,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     };
     section('📅 Daily quests');
     box.appendChild(daily.section());
+    if (sq) {
+      section('🎃 Spooky Claw-lenges (October)');
+      list(sq.steps());
+    }
     if (ducky.escapes > 0) {
       section(ducky.here ? "🦆 Ducky's quest (prank Winter)" : '🦆 ???');
       list(ducky.steps());
@@ -1671,7 +1698,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { audio: { getVolume, setVolume, audioBus }, claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, zb, SP, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { audio: { getVolume, setVolume, audioBus }, claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, zb, SP, sq, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1751,6 +1778,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       castle.dispose();
       hs.dispose();
       zb?.dispose();
+      sq?.dispose();
       battles.leaveFight();
       W.dispose();
       gfx.dispose();

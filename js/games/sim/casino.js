@@ -11,9 +11,12 @@ export const PET_CRATE_PRICE = 400;
 const PET_DUPE_REFUND = 150;
 const WHEEL_PRICE = 175;
 
+export const SPOOKY_CRATE_PRICE = 350;
+const SPOOKY_DUPE_REFUND = 120;
+
 export function rollPet() {
   const r = rollRarity();
-  const pool = PETS.filter((p) => p.rarity === r);
+  const pool = PETS.filter((p) => p.rarity === r && !p.spooky);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -339,11 +342,39 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
       refund: PET_DUPE_REFUND,
       roll: rollPet,
       card: petCard,
-      items: PETS,
+      items: PETS.filter((p) => !p.spooky),
       give: (pet) => grantPet(pet),
       equip: onPet,
       blurb: `${PET_CRATE_PRICE} 🪙 per Pet Crate. Duplicates refund ${PET_DUPE_REFUND} 🪙.`,
       fine: 'Pets follow Claw everywhere and boost the coins you earn. Matt says pets are "an investment".',
+    });
+
+  // ---------- the Gravekeeper's Spooky Crate (October): Halloween skins and pets ----------
+  const spookyItems = () => [...SKINS.filter((x) => x.spooky).map((x) => ({ ...x, kind: 'skin' })), ...PETS.filter((p) => p.spooky).map((p) => ({ ...p, kind: 'pet' }))];
+  function rollSpooky() {
+    const all = spookyItems();
+    const r = rollRarity();
+    const pool = all.filter((x) => x.rarity === r);
+    const from = pool.length ? pool : all;
+    return from[Math.floor(Math.random() * from.length)];
+  }
+  const spookyCrate = () =>
+    lootCrate({
+      cls: 'cat-crate spooky-crate',
+      price: SPOOKY_CRATE_PRICE,
+      refund: SPOOKY_DUPE_REFUND,
+      roll: rollSpooky,
+      card: (x, owned) => (x.kind === 'pet' ? petCard(x, owned) : skinCard(x, owned)),
+      items: spookyItems(),
+      give: (x) => {
+        if (x.kind === 'pet') return grantPet(x, SPOOKY_DUPE_REFUND);
+        const isNew = wallet.own(x.id);
+        if (!isNew) wallet.add(SPOOKY_DUPE_REFUND);
+        return isNew;
+      },
+      equip: (id) => (spookyItems().find((x) => x.id === id)?.kind === 'pet' ? onPet(id) : onEquip(id)),
+      blurb: `${SPOOKY_CRATE_PRICE} 🪙 per Spooky Crate: Halloween skins and pets. Duplicates refund ${SPOOKY_DUPE_REFUND} 🪙.`,
+      fine: 'Dug up fresh by the Gravekeeper. Only sold in October. Whatever you win stays yours forever.',
     });
 
   // ---------- Wheel of Glorp ----------
@@ -717,7 +748,7 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
     let racing = false;
     function newCard() {
       track.innerHTML = '';
-      const pool = PETS.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+      const pool = PETS.filter((p) => !p.spooky).sort(() => Math.random() - 0.5).slice(0, 4);
       const odds = DERBY_ODDS.slice().sort(() => Math.random() - 0.5);
       runners = pool.map((pet, i) => {
         const lane = el('button', 'derby-lane');
@@ -888,5 +919,5 @@ export function createCasino({ wallet, sfx, hud, ch, onEquip, onPet, onBigWin = 
     return root;
   }
 
-  return { slots, crate, petCrate, wheel, plinko, derby, wardrobe, skinById, petById };
+  return { slots, crate, petCrate, spookyCrate, wheel, plinko, derby, wardrobe, skinById, petById };
 }
