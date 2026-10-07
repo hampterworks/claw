@@ -19,14 +19,16 @@ const POOL = [
   { id: 'dance', kind: 'danceSec', goal: [25, 40], sec: true, reward: 120, text: (n) => `Dance for ${n} seconds`, spooky: (n) => `Dance the Monster Mash for ${n} seconds` },
   { id: 'tramp', kind: 'tramp', goal: [3, 5], reward: 110, text: (n) => `Bounce on the trampoline ${n} times`, spooky: (n) => `Bounce on the trampoline ${n} times like a bat` },
   { id: 'hunt', kind: 'huntfind', goal: [3, 6], reward: 160, text: (n) => `Find ${n} hiding hampters (Hampter Hunt)`, spooky: (n) => `Find ${n} spooky hiding hampters (Hampter Hunt)` },
-  { id: 'night', kind: 'nightcastle', goal: [1, 1], reward: 150, text: () => "Visit Winter's Castle at night", spooky: () => "Visit Winter's Castle at the witching hour (night)" },
+  { id: 'night', kind: 'nightcastle', goal: [1, 1], reward: 150, text: () => "Visit Winter's Castle at night", spooky: () => "Visit Winter's Castle at the witching hour (night)",
+    // October is always night, so this one becomes a graveyard vigil instead
+    october: { kind: 'graveSec', goal: [30, 30], sec: true, text: (n) => `Spend ${n} seconds in the graveyard` } },
   { id: 'snow', kind: 'snowSec', goal: [20, 30], sec: true, reward: 100, text: (n) => `Catch snowflakes at Winter's Castle for ${n} seconds`, spooky: (n) => `Catch ghostly snowflakes at Winter's Castle for ${n} seconds` },
   { id: 'zoom', kind: 'zoomSec', goal: [15, 25], sec: true, reward: 100, text: (n) => `Do zoomies for ${n} seconds`, spooky: (n) => `Do haunted zoomies for ${n} seconds` },
   { id: 'flop', kind: 'flopSec', goal: [10, 20], sec: true, reward: 100, text: (n) => `Flop around for ${n} seconds`, spooky: (n) => `Play dead: flop around for ${n} seconds` },
   { id: 'points', kind: 'points', goal: [1500, 3000], reward: 130, text: (n) => `Score ${n.toLocaleString()} Glorp Points`, spooky: (n) => `Score ${n.toLocaleString()} spooky Glorp Points` },
   { id: 'lick', kind: 'lick', goal: [5, 10], reward: 100, text: (n) => `Lick ${n} things`, spooky: (n) => `Trick or lick: lick ${n} things` },
 ];
-if (SPOOKY) for (const q of POOL) q.text = q.spooky;
+if (SPOOKY) for (const q of POOL) Object.assign(q, { text: q.spooky }, q.october);
 const STREAK_MAX = 7;
 
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -77,6 +79,11 @@ export function createDaily({ wrap, hud, sfx, wallet, onOpen, today = dayKey }) 
   }
   const save = () => write('simdaily', st);
   roll();
+  // a quest whose goal range changed (October's graveyard vigil) keeps today's progress but gets a fair goal
+  for (const q of st.list) {
+    const d = POOL.find((p) => p.id === q.id);
+    if (d && !q.done) q.goal = Math.min(d.goal[1], Math.max(d.goal[0], q.goal));
+  }
 
   const chip = document.createElement('button');
   chip.type = 'button';

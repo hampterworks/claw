@@ -955,6 +955,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     const castleD = dist2(p, CASTLE.x, CASTLE.z);
     if (castleD < 40) trackDaily('snowSec', dt);
     if (castleD < 16 && env.isNight) trackDaily('nightcastle');
+    if (SP && Math.abs(p.x - SP.graveyard.x) < 10 && Math.abs(p.z - SP.graveyard.z) < 7) trackDaily('graveSec', dt); // October's graveyard vigil
     daily.update(dt);
     kaiju.control(dt);
     romni.update(dt, t);

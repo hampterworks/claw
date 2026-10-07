@@ -1,5 +1,5 @@
 // Spooky Claw-lenges (October): their own list, so the 41 Claw-lenges and the 100% speedrun don't change.
-// Trick-or-treat at the jack-o'-lantern porches, smash jack-o'-lanterns, find the graveyard ghost at night,
+// Trick-or-treat at the jack-o'-lantern porches, smash jack-o'-lanterns, catch the roaming ghost,
 // survive Zombie Tag, and claim the Pumpkin King's crown on top of the Cat Tree. Each one pays coins, and
 // most give a Halloween skin or pet. Progress is saved, so it carries over to next October.
 // Also: the Gravekeeper at the graveyard, who sells Spooky Crates.
@@ -10,7 +10,7 @@ import { markerTexture } from './textures.js';
 export const SPOOKY_CHALLENGES = [
   { id: 'spook_trick', name: 'Trick-or-treat at all 6 jack-o\'-lantern porches', goal: 6, coins: 150, skin: 'candycorn' },
   { id: 'spook_smash', name: 'Smash 10 jack-o\'-lanterns (BONK them)', goal: 10, coins: 150, skin: 'pumpkin' },
-  { id: 'spook_ghost', name: 'Find the ghost haunting the graveyard (only at night)', coins: 200, pet: 'ghost' },
+  { id: 'spook_ghost', name: 'Catch the roaming ghost (it moves every minute: listen for the boo)', coins: 200, pet: 'ghost' },
   { id: 'spook_zombie', name: 'Survive Zombie Tag (online, or the solo horde)', coins: 200, skin: 'zombie' },
   { id: 'spook_crown', name: "Claim the Pumpkin King's crown on top of the Cat Tree", coins: 250, skin: 'jackoclaw' },
 ];
@@ -48,10 +48,22 @@ export function createSpookyQuests({ scene, wallet, hud, sfx, claw, env, gltf, p
     const n = gltf.scene.getObjectByName(name);
     return n ? n.clone(true) : new THREE.Group();
   };
-  // the graveyard ghost (only out at night), with its idle float animation
+  // the roaming ghost: haunts one of six spots around Ohio and moves on every minute
   const ghost = clone('h_character_ghost');
   ghost.scale.setScalar(1.6);
-  const ghostAt = new THREE.Vector3(graveyard.x - 2.5, 0, graveyard.z + 4.6);
+  const HAUNTS = [
+    new THREE.Vector3(graveyard.x - 2.5, 0, graveyard.z + 4.6), // the graveyard
+    new THREE.Vector3(-2.5, 0, 44.3), // the lake shore
+    new THREE.Vector3(-42, 0, 39), // Winter's Castle courtyard
+    new THREE.Vector3(25, 0, -24), // in the corn
+    new THREE.Vector3(-63, 0, -30), // Meowtown square
+    new THREE.Vector3(98, 0, 6), // Glorp Park
+  ];
+  const HAUNT_FOR = 60;
+  let haunt = Math.floor(Math.random() * HAUNTS.length);
+  let hauntT = HAUNT_FOR;
+  let hintT = 8;
+  const ghostAt = HAUNTS[haunt].clone();
   ghost.position.copy(ghostAt);
   ghost.traverse((o) => {
     if (!o.isMesh) return;
@@ -147,7 +159,6 @@ export function createSpookyQuests({ scene, wallet, hud, sfx, claw, env, gltf, p
     pois() {
       const out = [];
       if (!done('spook_trick')) porches.forEach(([x, z], i) => !st.porches.includes(i) && out.push({ x, z, color: COLOR }));
-      if (!done('spook_ghost') && env.isNight) out.push({ x: ghostAt.x, z: ghostAt.z, color: '#9fd4ff' });
       return out;
     },
     update(dt, t) {
@@ -163,10 +174,26 @@ export function createSpookyQuests({ scene, wallet, hud, sfx, claw, env, gltf, p
           progress('spook_trick', st.porches.length);
         });
       }
-      // the ghost: out at night, bobbing over the graves, BOO when you get close
+      // the ghost: out at night, drifting between haunts, BOO when you get close
       const night = env.isNight;
       ghost.visible = night && !done('spook_ghost');
       if (ghost.visible) {
+        hauntT -= dt;
+        if (hauntT <= 0) {
+          hauntT = HAUNT_FOR;
+          haunt = (haunt + 1 + Math.floor(Math.random() * (HAUNTS.length - 1))) % HAUNTS.length;
+          ghostAt.copy(HAUNTS[haunt]);
+          ghost.position.x = ghostAt.x;
+          ghost.position.z = ghostAt.z;
+        }
+        // now and then a far-off boo tells you roughly where it is
+        hintT -= dt;
+        if (hintT <= 0) {
+          hintT = 25;
+          const a = Math.atan2(ghostAt.x - p.x, -(ghostAt.z - p.z)); // 0 = north (-z)
+          const dir = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][(Math.round(a / (Math.PI / 4)) + 8) % 8];
+          hud.popup(`👻 *booooo* (${dir}, ~${Math.round(Math.hypot(ghostAt.x - p.x, ghostAt.z - p.z))} m)`, '#9fd4ff');
+        }
         ghost.position.y = 0.4 + Math.sin(t * 1.5) * 0.25;
         ghost.rotation.y = Math.atan2(p.x - ghostAt.x, p.z - ghostAt.z);
         ghostMixer.update(dt);
