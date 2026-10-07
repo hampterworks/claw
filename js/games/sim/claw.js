@@ -17,6 +17,31 @@ const rimWhite = new THREE.Color('#ffffff');
 // where the bikini sits along the body (fractions of tail-to-nose length)
 // top/bottom: [u from, u to, v from, v to] (u: tail 0 -> nose 1, v: feet 0 -> ears 1)
 const OUTFIT = { top: [0.44, 0.57, 0.24, 0.56], bottom: [0.1, 0.25, 0.24, 0.56], shades: [-0.036, 0.098], flower: [0.07, 0.03, -0.02] };
+const inBox = (p, b) => p.u > b[0] && p.u < b[1] && p.v > b[2] && p.v < b[3];
+const frac = (x) => x - Math.floor(x);
+
+// Skin paint patterns: pick a paint colour (0, 1, ...) for a triangle from where it sits in the bind
+// pose (u: tail 0 -> nose 1, v: feet 0 -> ears 1, w: side -1 -> 1, h: stable random 0..1), -1 = bare skin.
+const PAINTS = {
+  bikini: (p) => (inBox(p, OUTFIT.top) || inBox(p, OUTFIT.bottom) ? (p.h < 0.22 ? 1 : 0) : -1),
+  // (the cat: legs below v 0.35, torso u 0.15 -> 0.75, head beyond u 0.78, tail below u 0.1)
+  bands: (p) => (p.v > 0.6 ? 0 : p.v > 0.34 ? 1 : 2),
+  pumpkin: (p) => (p.u < 0.1 && p.v > 0.55 ? 1 : frac(Math.abs(p.w) * 2.5) < 0.3 ? 0 : -1), // ribs, and a stem for a tail
+  bones(p) {
+    if (p.u > 0.78) return 0; // skull
+    if (p.u < 0.1) return frac(p.v * 12) < 0.5 ? 0 : -1; // tail
+    if (p.v < 0.34) return p.v > 0.04 ? 0 : -1; // leg bones
+    if (p.v > 0.62) return Math.abs(p.w) < 0.15 ? 0 : -1; // spine
+    if (p.u > 0.15 && p.u < 0.25 && p.v > 0.45) return 0; // hips
+    return p.u > 0.5 && p.u < 0.74 && p.v > 0.38 && frac(p.u * 14) < 0.5 ? 0 : -1; // ribs
+  },
+  wraps(p) {
+    const k = p.v < 0.34 ? p.v * 10 : p.u * 14 + p.v * 2; // strips round the legs and the body
+    return frac(k) < 0.4 ? 0 : -1;
+  },
+  stitch: (p) => (Math.abs(p.u - 0.77) < 0.025 || (p.u > 0.84 && p.u < 0.9 && p.v > 0.68) ? 0 : -1), // neck seam + forehead scar
+  shaggy: (p) => (p.v > 0.5 + p.h * 0.14 ? 0 : p.h < 0.25 ? 1 : -1),
+};
 
 export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   const root = gltf.scene;
@@ -75,9 +100,8 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   wrapper.updateMatrixWorld(true);
   const height = b2.max.y - b2.min.y;
 
-  // Outfit zones (Bikini Claw): sort every triangle by where it sits on the body in the bind pose
-  // (u: tail 0 -> nose 1, v: feet 0 -> ears 1). 0 = skin, 1 = top, 2 = bottoms; +4 marks a polka dot.
-  const zone = new Uint8Array(merged.geometry.getAttribute('position').count);
+  // Where every triangle sits on the body in the bind pose, for the skin paint patterns (PAINTS).
+  const spots = [];
   {
     const pos = merged.geometry.getAttribute('position');
     const m = merged.matrixWorld; // the wrapper has no parent yet, so this is wrapper space
@@ -85,6 +109,7 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
     const cs = [];
     let z0 = Infinity;
     let z1 = -Infinity;
+    let x1 = 0;
     for (let i = 0; i < pos.count; i += 3) {
       const c = new THREE.Vector3();
       for (let k = 0; k < 3; k++) c.add(a.fromBufferAttribute(pos, i + k).applyMatrix4(m));
@@ -92,17 +117,12 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
       cs.push(c);
       z0 = Math.min(z0, c.z);
       z1 = Math.max(z1, c.z);
+      x1 = Math.max(x1, Math.abs(c.x));
     }
-    cs.forEach((c, t) => {
-      const u = (c.z - z0) / (z1 - z0);
-      const v = c.y / height;
-      let zn = 0;
-      if (u > OUTFIT.top[0] && u < OUTFIT.top[1] && v > OUTFIT.top[2] && v < OUTFIT.top[3]) zn = 1;
-      else if (u > OUTFIT.bottom[0] && u < OUTFIT.bottom[1] && v > OUTFIT.bottom[2] && v < OUTFIT.bottom[3]) zn = 2;
-      // polka dots: a stable hash of the triangle's position
-      if (zn && Math.abs(Math.sin(c.x * 91.7 + c.y * 47.3 + c.z * 63.1) * 43758.5) % 1 < 0.22) zn |= 4;
-      zone[t * 3] = zone[t * 3 + 1] = zone[t * 3 + 2] = zn;
-    });
+    for (const c of cs) {
+      // h: a stable hash of the triangle's position (polka dots, shaggy edges)
+      spots.push({ u: (c.z - z0) / (z1 - z0), v: c.y / height, w: c.x / x1, h: Math.abs(Math.sin(c.x * 91.7 + c.y * 47.3 + c.z * 63.1) * 43758.5) % 1 });
+    }
   }
 
   // Head bone = the most forward bone in the upper half of the body.
@@ -128,22 +148,135 @@ export function makeCat(gltf, { length = 1, colors = {}, emissive } = {}) {
   // Repaint the cat: colours = [body, belly/paws, ears/nose].
   const colorAttr = merged.geometry.getAttribute('color');
   const pc = [new THREE.Color(), new THREE.Color(), new THREE.Color()];
-  const oMain = new THREE.Color();
-  const oDots = new THREE.Color();
-  // outfit: { main, dots } paints the outfit zones over the skin
-  function recolor(cols, outfit) {
+  const paintC = [];
+  // paint: a PAINTS pattern name, drawn over the skin in paintCols
+  function recolor(cols, paint, paintCols = []) {
     cols.forEach((c, i) => pc[i].set(c));
-    if (outfit) {
-      oMain.set(outfit.main);
-      oDots.set(outfit.dots || outfit.main);
-    }
-    for (let i = 0; i < parts.length; i++) {
-      const c = outfit && zone[i] ? (zone[i] & 4 ? oDots : oMain) : pc[parts[i]];
-      colorAttr.setXYZ(i, c.r, c.g, c.b);
+    paintCols.forEach((c, i) => (paintC[i] ||= new THREE.Color()).set(c));
+    const f = PAINTS[paint];
+    for (let t = 0; t < spots.length; t++) {
+      const k = f ? f(spots[t]) : -1;
+      for (let i = t * 3; i < t * 3 + 3; i++) {
+        const c = k >= 0 ? paintC[k] : pc[parts[i]];
+        colorAttr.setXYZ(i, c.r, c.g, c.b);
+      }
     }
     colorAttr.needsUpdate = true;
   }
   return { wrapper, root, mixer, actions, head, height, scale, mesh: merged, material, recolor };
+}
+
+// Spooky skin head accessories, in antenna space (on top of the head, +z = where the face looks).
+// userData: noStalks hides the antennae, facePart hides under the Cursed / Matt face decal,
+// faceOut pushes that decal forward.
+function spookyAccessories() {
+  const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.7, ...o });
+  const mesh = (geo, mat, x = 0, y = 0, z = 0) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    return m;
+  };
+  const acc = {};
+
+  // glowing yellow eyes with slit pupils (Black Cat, Mummy, Werewolf)
+  {
+    const g = new THREE.Group();
+    const eyeMat = std('#ffe23a', { emissive: '#ffc800', emissiveIntensity: 1.6 });
+    const pupilMat = std('#050505');
+    for (const sx of [-1, 1]) {
+      const eye = mesh(new THREE.SphereGeometry(0.024, 10, 8), eyeMat, sx * 0.045, 0, 0);
+      eye.scale.set(1.1, 0.8, 0.45);
+      const pupil = mesh(new THREE.SphereGeometry(0.024, 8, 6), pupilMat, sx * 0.045, 0, 0.006);
+      pupil.scale.set(0.25, 0.72, 0.4);
+      g.add(eye, pupil);
+    }
+    g.position.set(0, OUTFIT.shades[0], OUTFIT.shades[1]);
+    g.rotation.x = -0.25;
+    g.userData.facePart = g;
+    acc.cateyes = g;
+  }
+
+  // Witch: a tall pointy hat with a bent tip and a buckle
+  {
+    const g = new THREE.Group();
+    const hat = std('#2b1740');
+    g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.012, 16), hat));
+    g.add(mesh(new THREE.CylinderGeometry(0.04, 0.085, 0.16, 12), hat, 0, 0.085, 0));
+    const tip = mesh(new THREE.ConeGeometry(0.04, 0.12, 12), hat, -0.02, 0.2, -0.01);
+    tip.rotation.set(-0.35, 0, 0.45);
+    g.add(tip);
+    g.add(mesh(new THREE.CylinderGeometry(0.083, 0.086, 0.028, 12), std('#ff8a1f'), 0, 0.022, 0));
+    g.add(mesh(new THREE.BoxGeometry(0.035, 0.03, 0.01), std('#ffd23f', { metalness: 0.6, roughness: 0.3 }), 0, 0.022, 0.085));
+    g.position.set(0, 0.01, -0.02);
+    g.rotation.x = -0.18;
+    g.userData.noStalks = true;
+    acc.witchhat = g;
+  }
+
+  // Vampire: a high collar and a cape down the back, black outside, red inside
+  {
+    const g = new THREE.Group();
+    const out = std('#121014');
+    const lining = std('#b0102a', { side: THREE.BackSide });
+    const collarGeo = new THREE.CylinderGeometry(0.15, 0.08, 0.14, 12, 1, true, Math.PI * 0.55, Math.PI * 0.9);
+    g.add(mesh(collarGeo, out, 0, -0.02, -0.06), mesh(collarGeo, lining, 0, -0.02, -0.06));
+    const capeGeo = new THREE.CylinderGeometry(0.09, 0.18, 0.5, 14, 1, true, Math.PI * 0.4, Math.PI * 1.2);
+    for (const mat of [out, lining]) {
+      const c = mesh(capeGeo, mat, 0, -0.17, -0.33);
+      c.rotation.x = Math.PI / 2 - 0.25;
+      g.add(c);
+    }
+    acc.cape = g;
+  }
+
+  // Frankenclaw: two neck bolts
+  {
+    const g = new THREE.Group();
+    const metal = std('#a7b0ba', { metalness: 0.7, roughness: 0.35 });
+    for (const sx of [-1, 1]) {
+      const bolt = mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.07, 8), metal, sx * 0.09, 0, 0);
+      bolt.rotation.z = Math.PI / 2;
+      const nut = mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.022, 6), metal, sx * 0.125, 0, 0);
+      nut.rotation.z = Math.PI / 2;
+      g.add(bolt, nut);
+    }
+    g.position.set(0, -0.11, -0.07);
+    acc.bolts = g;
+  }
+
+  // Jack-o'-Claw: a ribbed carved pumpkin with a candle-lit face
+  {
+    const g = new THREE.Group();
+    const R = 0.15;
+    const sq = 0.82; // a bit squashed
+    const geo = new THREE.SphereGeometry(R, 16, 10);
+    const p = geo.getAttribute('position');
+    for (let i = 0; i < p.count; i++) {
+      const k = 1 - 0.09 * (0.5 - 0.5 * Math.cos(Math.atan2(p.getZ(i), p.getX(i)) * 8)); // 8 ribs
+      p.setXYZ(i, p.getX(i) * k, p.getY(i) * sq, p.getZ(i) * k);
+    }
+    g.add(mesh(geo, std('#ff7a1a')));
+    const stem = mesh(new THREE.CylinderGeometry(0.014, 0.024, 0.07, 6), std('#4f7a2a'), 0.01, R * sq + 0.02, 0);
+    stem.rotation.z = -0.35;
+    g.add(stem);
+    // carved holes: flat shapes bent onto the front of the pumpkin
+    const glow = new THREE.MeshBasicMaterial({ color: '#ffd23f' });
+    const carve = (pts) => {
+      const s = new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))));
+      const q = s.getAttribute('position');
+      for (let i = 0; i < q.count; i++) q.setZ(i, Math.sqrt(Math.max(0, R * R - q.getX(i) ** 2 - (q.getY(i) / sq) ** 2)) + 0.004);
+      g.add(new THREE.Mesh(s, glow));
+    };
+    carve([[-0.085, 0.015], [-0.025, 0.015], [-0.055, 0.065]]);
+    carve([[0.025, 0.015], [0.085, 0.015], [0.055, 0.065]]);
+    carve([[-0.015, -0.01], [0.015, -0.01], [0, 0.015]]);
+    carve([[-0.09, -0.03], [-0.06, -0.045], [-0.045, -0.03], [-0.02, -0.05], [0, -0.035], [0.02, -0.05], [0.045, -0.03], [0.06, -0.045], [0.09, -0.03], [0.06, -0.085], [0, -0.095], [-0.06, -0.085]]);
+    g.position.set(0, -0.06, -0.01);
+    g.userData.noStalks = true;
+    g.userData.faceOut = 0.07;
+    acc.pumpkinhead = g;
+  }
+  return acc;
 }
 
 // Collision groups ((membership << 16) | filter). Remote Claws are in group 4 and props don't
@@ -188,6 +321,14 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     stalks.push(g);
   }
   scene.add(antenna);
+  // antenna balls glow green, or in the skin's own colour (Werewolf Claw: two little full moons)
+  let glowOn = true;
+  const paintBalls = () => {
+    const c = st.skin?.balls;
+    ballMat.color.set(c || (glowOn ? '#b6ff5c' : '#7cd650'));
+    ballMat.emissive.set(c || '#7CFF4F');
+    ballMat.emissiveIntensity = glowOn ? (c ? 1.5 : 3) : 0;
+  };
 
   // Bikini Claw extras, riding on the head with the antennae: heart sunglasses + a hibiscus
   const outfit = new THREE.Group();
@@ -218,7 +359,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     shades.rotation.x = -0.25; // follows the slope of the face
     shades.scale.setScalar(0.9);
     outfit.add(shades);
-    outfit.userData.shades = shades;
+    outfit.userData.facePart = shades;
     // hibiscus by the right ear
     const flower = new THREE.Group();
     const petalMat = new THREE.MeshStandardMaterial({ color: '#ff2f6d', roughness: 0.6, flatShading: true });
@@ -238,6 +379,30 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     outfit.add(flower);
   }
   antenna.add(outfit);
+  // head accessories by name (skin.acc, or skin.outfit for Bikini Claw); one shows at a time
+  const accs = { bikini: outfit, ...spookyAccessories() };
+  for (const g of Object.values(accs)) {
+    g.visible = false;
+    antenna.add(g);
+  }
+  let acc = null;
+
+  // glowPaint skins: the glow follows the vertex colours (only the painted bones light up)
+  const glowPaint = { value: 0 };
+  {
+    const m = cat.material;
+    const rimHook = m.onBeforeCompile;
+    const rimKey = m.customProgramCacheKey;
+    m.onBeforeCompile = (shader, r) => {
+      rimHook(shader, r);
+      shader.uniforms.glowPaint = glowPaint;
+      shader.fragmentShader = 'uniform float glowPaint;\n' + shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\n totalEmissiveRadiance *= mix(vec3(1.0), vColor.rgb, glowPaint);'
+      );
+    };
+    m.customProgramCacheKey = () => rimKey() + 'glowPaint';
+  }
 
   // Cursed mode face decal
   const face = new THREE.Mesh(
@@ -421,8 +586,13 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
     setSkin(skin) {
       st.skin = skin;
       const m = cat.material;
-      cat.recolor([skin.body, skin.belly, skin.ears], skin.bikini);
-      outfit.visible = skin.outfit === 'bikini';
+      cat.recolor([skin.body, skin.belly, skin.ears], skin.paint, skin.paintCols);
+      if (acc) acc.visible = false;
+      acc = accs[skin.acc || skin.outfit] || null;
+      if (acc) acc.visible = true;
+      for (const s of stalks) s.visible = !acc?.userData.noStalks;
+      paintBalls();
+      glowPaint.value = skin.glowPaint ? 1 : 0;
       stalkMat.color.set(skin.body);
       m.metalness = skin.metal || 0;
       m.roughness = skin.rough ?? 0.8;
@@ -440,8 +610,8 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       st.skinT = 0;
     },
     setGlow(on) {
-      ballMat.emissiveIntensity = on ? 3 : 0;
-      ballMat.color.set(on ? '#b6ff5c' : '#7cd650');
+      glowOn = on;
+      paintBalls();
     },
 
     // Before the physics step: read input, set velocity.
@@ -605,10 +775,11 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       }
 
       face.visible = !!(mut.cursed || mut.matt || (st.skin && st.skin.mattFace));
-      if (outfit.visible) outfit.userData.shades.visible = !face.visible; // the face decal wins
+      // the face decal wins over shades and cat eyes, and sits on the pumpkin's front
+      if (acc?.userData.facePart) acc.userData.facePart.visible = !face.visible;
       if (face.visible) {
         fwdV.set(0, 0, 1).applyQuaternion(pivot.quaternion);
-        face.position.copy(antenna.position).addScaledVector(UP, -0.1 * st.scaleK).addScaledVector(fwdV, 0.1 * st.scaleK);
+        face.position.copy(antenna.position).addScaledVector(UP, -0.1 * st.scaleK).addScaledVector(fwdV, (0.1 + (acc?.userData.faceOut || 0)) * st.scaleK);
         face.quaternion.copy(pivot.quaternion);
       }
     },
