@@ -35,6 +35,8 @@ import { createHideSeek } from './hideseek.js';
 import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
 import { createDucky } from './ducky.js';
+import { buildSpooky, SPOOKY_LOOKS } from './spooky.js';
+import { isHalloween } from '../../season.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
 import { createEmotes } from './emotes.js';
@@ -109,7 +111,12 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   if (isCancelled()) return null;
   // the Hampter Works gallery (small, loaded alongside)
   // Clicky the wizard and Mega Matt (Kenney Mini Characters)
-  const [clickyGltf, megaMattGltf] = await Promise.all([loader.loadAsync('assets/models/wizard.glb'), loader.loadAsync('assets/models/megamatt.glb')]);
+  const spooky = isHalloween(); // Spooktober: A Hiss in the Hallway (October only)
+  const [clickyGltf, megaMattGltf, spookyGltf] = await Promise.all([
+    loader.loadAsync('assets/models/wizard.glb'),
+    loader.loadAsync('assets/models/megamatt.glb'),
+    spooky ? loader.loadAsync('assets/models/halloween.glb') : null,
+  ]);
   const hampterArt = await Promise.all([1, 2, 3, 4, 5].map((i) => loadTexture(`assets/sim-hampter-${i}.webp`)));
   const winterArt = await Promise.all([1, 2, 3, 4].map((i) => loadTexture(`assets/sim-winter-${i}.webp`)));
   onStatus('Building Ohio...');
@@ -165,6 +172,19 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   scene.traverse((o) => {
     if (o.isMesh) [].concat(o.material).forEach((m) => windy.has(m.name) && applyWind(m, m.name === 'plant' ? 0.05 : 0.02));
   });
+  // October: the graveyard, jack-o'-lanterns, dead trees (baked into a few meshes of their own)
+  const SP = spookyGltf
+    ? buildSpooky({
+        scene,
+        world,
+        RAPIER,
+        gltf: spookyGltf,
+        free: S.free,
+        lampSpots: [...S.lamps.positions, ...S.districts.lamps.positions],
+        porches: [[HOUSE.x, HOUSE.z + 5.5, 0, 2.9], [-21.1, -60.7], [MATT_HOUSE.x, MATT_HOUSE.z + 3.3], [HAMPTER_HOUSE.x - 1.1, HAMPTER_HOUSE.z + 3.3], [TOWERS.x - 1.1, TOWERS.z + 3.3]],
+        parks: [{ x: 106, z: 12, rad: 44, n: 14 }, { x: -80, z: 46, rad: 14, n: 6 }, { x: -48, z: 6, rad: 10, n: 4 }],
+      })
+    : null;
   // fewer draw calls: fold static code-built decoration into a few vertex-coloured meshes
   const merged = mergeStaticMeshes(scene, W, [sky]);
   if (debug) console.info('static merge', merged);
@@ -179,7 +199,9 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     lampSets: [S.districts.lamps, S.lamps],
     fireflyAt: [[4, 22, 16], [106, 12, 30], [-20, 30, 14]],
     snowAt: CASTLE,
+    looks: SP ? SPOOKY_LOOKS : null,
     glowSpots: [
+      ...(SP ? SP.glowSpots : []),
       { x: CASTLE.x + 15.2, y: 3.4, z: CASTLE.z - 2.3, color: '#9fd4ff', size: 2.5 },
       { x: CASTLE.x + 15.2, y: 3.4, z: CASTLE.z + 2.3, color: '#9fd4ff', size: 2.5 },
       { x: CASINO.x, y: 3.2, z: CASINO.z - 4.6, color: '#ff7bf2', size: 7 },

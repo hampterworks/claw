@@ -113,7 +113,9 @@ function makeFall({ count, size, speed, color, snow }) {
   return obj;
 }
 
-export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lampSets = [], fireflyAt = [], glowSpots = [], snowAt, quality = 'high' }) {
+export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lampSets = [], fireflyAt = [], glowSpots = [], snowAt, quality = 'high', looks = null }) {
+  // seasonal sky colours (spooky.js) override the defaults for this page load
+  if (looks) for (const [k, cols] of Object.entries(looks)) for (const [key, v] of Object.entries(cols)) LOOKS[k][key] = C(v);
   // Signs, posters and character cut-outs are unlit (MeshBasic / Sprite), so at night they would
   // glow like neon. Dim them with the light. Real neon has an over-bright colour (> 1): left alone.
   const unlit = [];

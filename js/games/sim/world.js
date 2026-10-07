@@ -706,6 +706,7 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
   lampSpots.push([MAZE.x - 19, MAZE.z - 3], [MAZE.x - 19, MAZE.z + 3], [MAZE.x + 1.1, MAZE.z + 1.1]);
   special.lamps = buildLamps({ scene, world, RAPIER, fixed, spots: lampSpots });
   special.windows = B.windows;
+  special.free = free; // (spooky.js keeps its decorations off paths and away from landmarks)
   special.trees.push(...park.trees);
 
   B.finalize();
