@@ -10,6 +10,7 @@ import { buildTown, MEOWTOWN } from './town.js';
 import { buildPark } from './park.js';
 import { applyDetail } from './detail.js';
 import { buildLamps, lampsAlong } from './lamps.js';
+import { isHalloween } from '../../season.js';
 import { ARENA, MAZE } from './park.js';
 
 export const HOUSE = new THREE.Vector3(-12, 0, -6);
@@ -560,6 +561,30 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
 
   // ---------- Baby Glorps ----------
   special.babies = [];
+  // October: each Baby Glorp hides under a little ghost sheet (eye holes, wobbly hem)
+  const sheetTex = isHalloween()
+    ? (() => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        const g = c.getContext('2d');
+        g.fillStyle = 'rgba(250, 250, 255, 0.93)';
+        g.beginPath();
+        g.moveTo(14, 120);
+        g.quadraticCurveTo(12, 14, 64, 10);
+        g.quadraticCurveTo(116, 14, 114, 120);
+        for (let x = 114; x >= 14; x -= 20) g.quadraticCurveTo(x - 5, 106, x - 10, 120);
+        g.fill();
+        g.fillStyle = '#141018';
+        for (const x of [46, 82]) {
+          g.beginPath();
+          g.ellipse(x, 52, 9, 13, 0, 0, Math.PI * 2);
+          g.fill();
+        }
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        return t;
+      })()
+    : null;
   if (textures.baby) {
     const spots = [
       new THREE.Vector3(H.x - 5.9, 2.5, H.z - 4.9),
@@ -573,6 +598,13 @@ export function buildWorld({ RAPIER, world, scene, models, catGltf, images, text
       s.scale.set(0.75, 0.75, 1);
       s.position.copy(p);
       s.userData.base = p.y;
+      if (sheetTex) {
+        const sheet = new THREE.Sprite(new THREE.SpriteMaterial({ map: sheetTex, transparent: true }));
+        sheet.scale.set(1.05, 0.95, 1); // relative to the baby: covers the head and body, feet peek out
+        sheet.position.y = 0.12;
+        sheet.renderOrder = 1;
+        s.add(sheet);
+      }
       scene.add(s);
       special.babies.push(s);
       animated.push((dt, t) => {

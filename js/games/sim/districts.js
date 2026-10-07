@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { signTexture, memeSpriteTexture, markerTexture, ropeTexture, checkerTexture } from './textures.js';
 import { waterMaterial } from './graphics.js';
 import { vashSword } from './vash.js';
+import { isHalloween } from '../../season.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const CAFE = new THREE.Vector3(-20, 0, -64);
 export const TOWERS = new THREE.Vector3(24, 0, -66);
@@ -108,7 +110,26 @@ export function buildDistricts(ctx) {
     prop('k_kitchenCoffeeMachine', C.x - 3.3, 0.98, C.z - 2.5, 0, { density: 0.4 });
     prop('k_kitchenCoffeeMachine', C.x - 1.1, 0.98, C.z - 2.5, 0, { density: 0.4 });
     const mugColors = ['#ff7bf2', '#7CFF4F', '#5ff2ff', '#ffe14d', '#ff9a1f', '#ffffff'];
+    const spooky = isHalloween(); // October: the mugs are mini cauldrons
+    const ironMat = new THREE.MeshStandardMaterial({ color: '#23202a', roughness: 0.55, metalness: 0.4 });
+    const brewMat = new THREE.MeshStandardMaterial({ color: '#7CFF4F', emissive: '#3cff3c', emissiveIntensity: 0.8, roughness: 0.3 });
+    const cauldron = (x, y, z) => {
+      const g = new THREE.Group();
+      const pot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), ironMat);
+      pot.position.y = 0.13;
+      pot.material.side = THREE.DoubleSide;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 6, 14), ironMat);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.205;
+      const brew = new THREE.Mesh(new THREE.CircleGeometry(0.1, 14), brewMat);
+      brew.rotation.x = -Math.PI / 2;
+      brew.position.y = 0.19;
+      g.add(pot, rim, brew);
+      g.traverse((o) => (o.castShadow = true));
+      return addBody(g, RAPIER.ColliderDesc.cylinder(0.11, 0.12), x, y, z, rand() * 6, 0.11, { density: 0.3, kind: 'mug' });
+    };
     const mug = (x, y, z, i) => {
+      if (spooky) return cauldron(x, y, z);
       const g = new THREE.Group();
       const mat = new THREE.MeshStandardMaterial({ color: mugColors[i % mugColors.length], roughness: 0.4 });
       const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.22, 10), mat);
@@ -1133,7 +1154,13 @@ export function buildDistricts(ctx) {
 
   // ---------- golden yarn collectibles ----------
   {
-    const geo = new THREE.SphereGeometry(0.32, 16, 12);
+    let geo = new THREE.SphereGeometry(0.32, 16, 12);
+    if (isHalloween()) {
+      // October: golden candy, a wrapped sweet with twisted ends
+      const sweet = new THREE.SphereGeometry(0.26, 14, 10).scale(1.25, 0.95, 0.95);
+      const ends = [-1, 1].map((s) => new THREE.ConeGeometry(0.15, 0.24, 8).rotateZ((s * Math.PI) / 2).translate(s * 0.42, 0, 0)); // tips point in, like a twisted wrapper
+      geo = mergeGeometries([sweet.toNonIndexed(), ...ends.map((e) => e.toNonIndexed())]);
+    }
     const mat = new THREE.MeshStandardMaterial({ color: '#ffd23f', metalness: 0.8, roughness: 0.25, emissive: '#ffb000', emissiveIntensity: 1.2 });
     const spots = [
       [CAFE.x + 1.3, 1.45, CAFE.z - 2.5],
