@@ -32,3 +32,14 @@ and only the clips Vash uses (idle, walk, sprint, jump, sit, emote-yes, emote-no
 
 `wizard.glb` and `megamatt.glb` are Mini Characters `character-male-e` and `character-male-c` with only the clips they
 use (gltf-transform `prune` + `dedup`, texture embedded). Not quantized (skinned).
+
+## Spooktober (`halloween.glb`, loaded only in October)
+
+- **Graveyard Kit** by [Kenney](https://kenney.nl/assets/graveyard-kit), CC0: gravestones, crypts, iron fences, coffins,
+  pumpkins, lanterns, crooked pines, and the animated ghost, skeleton, vampire, zombie and keeper characters (`h_*` nodes).
+- **Halloween Bits** by [Kay Lousberg (KayKit)](https://kaylousberg.itch.io/halloween-bits), CC0: jack-o'-lanterns,
+  skulls and bones, candles, dead and orange trees, arches and shrines (`y_*` nodes).
+
+Built with a one-off gltf-transform script: each pack's colour atlas baked into vertex colours, one named root node
+per model, character clips renamed `<model>|<clip>` (idle, walk, sprint, die, emote-yes, attack-melee-right), then
+`dedup`, `weld`, `prune`, normals and colours quantized, meshopt. Positions are not quantized (node animations).
