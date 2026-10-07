@@ -2,6 +2,7 @@
 // blue torso, green legs) with a banker's top hat. Talk to him to take out or repay a loan.
 import * as THREE from 'three';
 import { markerTexture } from './textures.js';
+import { isHalloween } from '../../season.js';
 
 function faceTexture() {
   const c = document.createElement('canvas');
@@ -30,6 +31,16 @@ const LINES = [
   "Bloxy cola? No. Only loans.",
   'Oof.',
 ];
+// October lines
+const SPOOKY_LINES = [
+  'Welcome to the Bank of Romni. Spooky season. Need some Glorp Coins?',
+  'Loans are 20%. You have 5 minutes. Then 30 seconds. Then Winty. Boo.',
+  'I am not a scam. I am a bank in a costume. Banks are never scams.',
+  'Candy? No. Only loans. Spooky loans.',
+  'OoOoOof.',
+];
+const SPOOKY = isHalloween();
+const SAY = SPOOKY ? SPOOKY_LINES : LINES;
 
 export function createRomni({ scene, world, RAPIER, hud, claw, at }) {
   const yellow = new THREE.MeshStandardMaterial({ color: '#f5cd30', roughness: 0.6 });
@@ -108,7 +119,7 @@ export function createRomni({ scene, world, RAPIER, hud, claw, at }) {
       if (d < 4.5 && st.talkCd <= 0) {
         st.talkCd = 25;
         st.wave = 1.6;
-        hud.say('ROMNI', LINES[st.line++ % LINES.length], { color: '#f5cd30', ms: 4500 });
+        hud.say('ROMNI', SAY[st.line++ % SAY.length], { color: '#f5cd30', ms: 4500 });
       }
     },
     dispose() {

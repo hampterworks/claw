@@ -2,27 +2,31 @@
 // on the same day), coins for each, a bonus for all three that grows with your streak.
 // Anything in the game reports progress with trackDaily(kind, amount).
 import { read, write } from '../../scores.js';
+import { isHalloween } from '../../season.js';
 
-// kind: what counts. goal: [min, max]. sec: measured in seconds (shown rounded).
+const SPOOKY = isHalloween();
+
+// kind: what counts. goal: [min, max]. sec: measured in seconds (shown rounded). spooky: the October text.
 const POOL = [
-  { id: 'knock', kind: 'knock', goal: [8, 15], reward: 120, text: (n) => `Knock ${n} things off tables` },
-  { id: 'mugs', kind: 'mug', goal: [4, 6], reward: 140, text: (n) => `Knock ${n} mugs off at the Glorp Café` },
-  { id: 'boil', kind: 'boil', goal: [1, 2], reward: 100, text: (n) => (n > 1 ? `Boil yourself ${n} times` : 'Boil yourself in the giant pot') },
-  { id: 'fish', kind: 'fish', goal: [2, 4], reward: 150, text: (n) => `Catch ${n} fish off the dock` },
-  { id: 'petwin', kind: 'petwin', goal: [1, 2], reward: 180, text: (n) => `Win ${n} pet battle${n > 1 ? 's' : ''} at the arena` },
-  { id: 'casino', kind: 'casino', goal: [3, 6], reward: 110, text: (n) => `Play ${n} games at the Glorp Casino` },
-  { id: 'hampter', kind: 'hampter', goal: [3, 5], reward: 100, text: (n) => `Pet Hampter ${n} times` },
-  { id: 'emote', kind: 'emote', goal: [4, 8], reward: 100, text: (n) => `Do ${n} emotes or dances (G)` },
-  { id: 'dance', kind: 'danceSec', goal: [25, 40], sec: true, reward: 120, text: (n) => `Dance for ${n} seconds` },
-  { id: 'tramp', kind: 'tramp', goal: [3, 5], reward: 110, text: (n) => `Bounce on the trampoline ${n} times` },
-  { id: 'hunt', kind: 'huntfind', goal: [3, 6], reward: 160, text: (n) => `Find ${n} hiding hampters (Hampter Hunt)` },
-  { id: 'night', kind: 'nightcastle', goal: [1, 1], reward: 150, text: () => "Visit Winter's Castle at night" },
-  { id: 'snow', kind: 'snowSec', goal: [20, 30], sec: true, reward: 100, text: (n) => `Catch snowflakes at Winter's Castle for ${n} seconds` },
-  { id: 'zoom', kind: 'zoomSec', goal: [15, 25], sec: true, reward: 100, text: (n) => `Do zoomies for ${n} seconds` },
-  { id: 'flop', kind: 'flopSec', goal: [10, 20], sec: true, reward: 100, text: (n) => `Flop around for ${n} seconds` },
-  { id: 'points', kind: 'points', goal: [1500, 3000], reward: 130, text: (n) => `Score ${n.toLocaleString()} Glorp Points` },
-  { id: 'lick', kind: 'lick', goal: [5, 10], reward: 100, text: (n) => `Lick ${n} things` },
+  { id: 'knock', kind: 'knock', goal: [8, 15], reward: 120, text: (n) => `Knock ${n} things off tables`, spooky: (n) => `Poltergeist time: knock ${n} things off tables` },
+  { id: 'mugs', kind: 'mug', goal: [4, 6], reward: 140, text: (n) => `Knock ${n} mugs off at the Glorp Café`, spooky: (n) => `Spook ${n} mugs off the tables at the Glorp Café` },
+  { id: 'boil', kind: 'boil', goal: [1, 2], reward: 100, text: (n) => (n > 1 ? `Boil yourself ${n} times` : 'Boil yourself in the giant pot'), spooky: (n) => (n > 1 ? `Brew yourself in the giant pot ${n} times` : "Witch's brew: boil yourself in the giant pot") },
+  { id: 'fish', kind: 'fish', goal: [2, 4], reward: 150, text: (n) => `Catch ${n} fish off the dock`, spooky: (n) => `Catch ${n} spooky fish off the dock` },
+  { id: 'petwin', kind: 'petwin', goal: [1, 2], reward: 180, text: (n) => `Win ${n} pet battle${n > 1 ? 's' : ''} at the arena`, spooky: (n) => `Win ${n} spooky pet battle${n > 1 ? 's' : ''} at the arena` },
+  { id: 'casino', kind: 'casino', goal: [3, 6], reward: 110, text: (n) => `Play ${n} games at the Glorp Casino`, spooky: (n) => `Play ${n} haunted games at the Glorp Casino` },
+  { id: 'hampter', kind: 'hampter', goal: [3, 5], reward: 100, text: (n) => `Pet Hampter ${n} times`, spooky: (n) => `Give Hampter ${n} spooky pets` },
+  { id: 'emote', kind: 'emote', goal: [4, 8], reward: 100, text: (n) => `Do ${n} emotes or dances (G)`, spooky: (n) => `Monster mash: do ${n} emotes or dances (G)` },
+  { id: 'dance', kind: 'danceSec', goal: [25, 40], sec: true, reward: 120, text: (n) => `Dance for ${n} seconds`, spooky: (n) => `Dance the Monster Mash for ${n} seconds` },
+  { id: 'tramp', kind: 'tramp', goal: [3, 5], reward: 110, text: (n) => `Bounce on the trampoline ${n} times`, spooky: (n) => `Bounce on the trampoline ${n} times like a bat` },
+  { id: 'hunt', kind: 'huntfind', goal: [3, 6], reward: 160, text: (n) => `Find ${n} hiding hampters (Hampter Hunt)`, spooky: (n) => `Find ${n} spooky hiding hampters (Hampter Hunt)` },
+  { id: 'night', kind: 'nightcastle', goal: [1, 1], reward: 150, text: () => "Visit Winter's Castle at night", spooky: () => "Visit Winter's Castle at the witching hour (night)" },
+  { id: 'snow', kind: 'snowSec', goal: [20, 30], sec: true, reward: 100, text: (n) => `Catch snowflakes at Winter's Castle for ${n} seconds`, spooky: (n) => `Catch ghostly snowflakes at Winter's Castle for ${n} seconds` },
+  { id: 'zoom', kind: 'zoomSec', goal: [15, 25], sec: true, reward: 100, text: (n) => `Do zoomies for ${n} seconds`, spooky: (n) => `Do haunted zoomies for ${n} seconds` },
+  { id: 'flop', kind: 'flopSec', goal: [10, 20], sec: true, reward: 100, text: (n) => `Flop around for ${n} seconds`, spooky: (n) => `Play dead: flop around for ${n} seconds` },
+  { id: 'points', kind: 'points', goal: [1500, 3000], reward: 130, text: (n) => `Score ${n.toLocaleString()} Glorp Points`, spooky: (n) => `Score ${n.toLocaleString()} spooky Glorp Points` },
+  { id: 'lick', kind: 'lick', goal: [5, 10], reward: 100, text: (n) => `Lick ${n} things`, spooky: (n) => `Trick or lick: lick ${n} things` },
 ];
+if (SPOOKY) for (const q of POOL) q.text = q.spooky;
 const STREAK_MAX = 7;
 
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -107,14 +111,14 @@ export function createDaily({ wrap, hud, sfx, wallet, onOpen, today = dayKey }) 
           q.done = true;
           wallet.add(d.reward);
           sfx.win();
-          hud.banner('📅 DAILY QUEST DONE', `${d.text(q.goal)} · +${d.reward} 🪙`);
+          hud.banner(SPOOKY ? '🎃 DAILY QUEST DONE' : '📅 DAILY QUEST DONE', `${d.text(q.goal)} · +${d.reward} 🪙`);
           if (st.list.every((x) => x.done) && !st.bonus) {
             st.bonus = true;
             st.streak = Math.min(STREAK_MAX * 52, st.streak + 1);
             st.lastFull = st.day;
             const bonus = 150 + 50 * Math.min(st.streak, STREAK_MAX) + (st.streak % STREAK_MAX === 0 ? 500 : 0);
             wallet.add(bonus);
-            setTimeout(() => hud.banner('ALL DAILY QUESTS DONE', `🔥 ${st.streak}-day streak · +${bonus} bonus 🪙${st.streak % STREAK_MAX === 0 ? ' (WEEK STREAK!)' : ''}`, { pog: true }), 3300);
+            setTimeout(() => hud.banner(SPOOKY ? 'ALL DAILY TREATS COLLECTED' : 'ALL DAILY QUESTS DONE', `🔥 ${st.streak}-day streak · +${bonus} bonus 🪙${st.streak % STREAK_MAX === 0 ? ' (WEEK STREAK!)' : ''}`, { pog: true }), 3300);
           }
           save();
           paint();
@@ -161,7 +165,9 @@ export function createDaily({ wrap, hud, sfx, wallet, onOpen, today = dayKey }) 
       }
       const foot = document.createElement('p');
       foot.className = 'fine';
-      foot.textContent = `Finish all three for a bonus (bigger every day of your streak, extra on day ${STREAK_MAX}). Everyone gets the same quests today.`;
+      foot.textContent = SPOOKY
+        ? `Finish all three for a treat bonus (bigger every day of your streak, extra on day ${STREAK_MAX}). Everyone gets the same spooky quests today.`
+        : `Finish all three for a bonus (bigger every day of your streak, extra on day ${STREAK_MAX}). Everyone gets the same quests today.`;
       box.appendChild(foot);
       return box;
     },
