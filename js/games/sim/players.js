@@ -12,7 +12,7 @@ import { sampleBuffer } from './net.js';
 const DELAY = 0.12; // render other players this far in the past, to interpolate smoothly
 export const FLAG = { grounded: 1, flopping: 2, zooming: 4, oiia: 8, cursed: 16, matt: 32, big: 64, tiny: 128, ducky: 256, zombie: 512 };
 
-export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, faceTex, mattTex, onHit, onFeed }) {
+export function createPlayers({ RAPIER, world, scene, net, petsGltf, spookyGltf, envMap, faceTex, mattTex, onHit, onFeed }) {
   const remotes = new Map();
   let clawBuf = null;
   const clawBufP = fetch('assets/models/claw.glb').then((r) => r.arrayBuffer()).then((b) => (clawBuf = b));
@@ -55,7 +55,7 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
     if (r.petCo) r.petCo.dispose();
     r.petCo = null;
     if (r.pet && petsGltf) {
-      r.petCo = createPetCompanion({ gltf: petsGltf, scene, world, RAPIER, claw: r.puppet });
+      r.petCo = createPetCompanion({ gltf: petsGltf, spookyGltf, scene, world, RAPIER, claw: r.puppet });
       r.petCo.set(r.pet);
     }
   }
