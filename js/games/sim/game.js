@@ -38,6 +38,7 @@ import { createDucky } from './ducky.js';
 import { buildSpooky, SPOOKY_LOOKS } from './spooky.js';
 import { createZombieTag } from './zombie.js';
 import { createSpookyQuests } from './spookyquests.js';
+import { createSpookyFx } from './spookyfx.js';
 import { isHalloween } from '../../season.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
@@ -243,6 +244,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     rung = i;
     gfx.setQuality(LADDER[i].q);
     env?.setQuality(LADDER[i].q);
+    sfx3?.setQuality(LADDER[i].q);
     renderer.setPixelRatio(LADDER[i].pr);
     resize();
   }
@@ -964,6 +966,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     hs.update(dt, t);
     zb?.update(dt, t);
     sq?.update(dt, t);
+    sfx3?.update(dt, t);
     if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(ducky.mode ? 'ducky' : null); // paid (or Ducky) while she was on the way
     ducky.update(dt, t);
     respectCd -= dt;
@@ -1073,6 +1076,10 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   // emote wheel (G) and dances
   var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen, onEmote: () => trackDaily('emote') });
+  // October atmosphere: bats, wandering ghosts, will-o'-wisps, ground fog, string lights, the witch's cauldron
+  var sfx3 = SP // var: setRung above may run first
+    ? createSpookyFx({ scene, gltf: spookyGltf, claw, env, lampSpots: [...S.lamps.positions, ...S.districts.lamps.positions], graveyard: SP.graveyard, quality: LADDER[rung].q })
+    : null;
   // Spooky Claw-lenges + the Gravekeeper's Spooky Crate (October)
   const sq = SP
     ? createSpookyQuests({
@@ -1810,6 +1817,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       hs.dispose();
       zb?.dispose();
       sq?.dispose();
+      sfx3?.dispose();
       battles.leaveFight();
       W.dispose();
       gfx.dispose();
