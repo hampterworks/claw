@@ -33,31 +33,55 @@ export const PETS = [
   { id: 'lion', name: 'Glorp King', rarity: 'legendary' },
   { id: 'tiger', name: 'Tiger King', rarity: 'legendary' },
   { id: 'cat', name: 'Lil Glorp', rarity: 'legendary', tint: [0.8, 2.6, 0.55] },
+  // Spooktober pets: models come from halloween.glb, so they only render when it is loaded
+  { id: 'ghost', name: 'Boo Glorp', rarity: 'epic', spooky: true, node: 'h_character_ghost', emoji: '👻', scale: 0.6 },
+  { id: 'skeleton', name: 'Mr Skelly', rarity: 'rare', spooky: true, node: 'h_character_skeleton', emoji: '💀', scale: 0.6 },
+  { id: 'vampire', name: 'Count Clawcula', rarity: 'epic', spooky: true, node: 'h_character_vampire', emoji: '🧛', scale: 0.6 },
+  { id: 'zombie', name: 'Braaains', rarity: 'rare', spooky: true, node: 'h_character_zombie', emoji: '🧟', scale: 0.6 },
+  { id: 'jack', name: 'Jack the Lantern', rarity: 'legendary', spooky: true, node: 'h_pumpkin_carved', emoji: '🎃', scale: 1.2, hop: true },
 ].map((p) => ({ ...p, icon: ATLAS.indexOf(p.id) }));
 
 export const petById = (id) => PETS.find((p) => p.id === id) || null;
 
-// DOM icon from the atlas
+// DOM icon from the atlas (or the emoji for pets that aren't in it)
 export function petIcon(pet, size = 56) {
   const d = document.createElement('div');
   d.className = 'pet-icon' + (pet && pet.tint ? ' glorp' : '');
   d.style.width = d.style.height = size + 'px';
-  if (pet) d.style.backgroundPosition = `${(pet.icon / (ATLAS.length - 1)) * 100}% 0`;
+  if (pet && pet.emoji) {
+    d.style.background = 'none';
+    d.style.fontSize = Math.round(size * 0.75) + 'px';
+    d.style.lineHeight = '1';
+    d.textContent = pet.emoji;
+  } else if (pet) d.style.backgroundPosition = `${(pet.icon / (ATLAS.length - 1)) * 100}% 0`;
   else d.textContent = '?';
   return d;
 }
 
 const FOLLOW = 1.3;
 const SCALE = 0.3;
+// pet animation -> Kenney Halloween character clip
+const SPOOKY_CLIPS = { idle: 'idle', walk: 'walk', run: 'sprint', dance: 'emote-yes' };
 
-// The pet that trails Claw. gltf: loaded pets.glb.
-export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
+// The pet that trails Claw. gltf: loaded pets.glb. spookyGltf: loaded halloween.glb, if any.
+export function createPetCompanion({ gltf, spookyGltf = null, scene, world, RAPIER, claw }) {
   const templates = {};
-  for (const pet of PETS) templates[pet.id] = gltf.scene.getObjectByName('p_' + pet.id);
   const clips = {};
   for (const a of gltf.animations) {
     const [id, name] = a.name.split('|');
     (clips[id] ||= {})[name] = a;
+  }
+  for (const pet of PETS) {
+    if (!pet.spooky) {
+      templates[pet.id] = gltf.scene.getObjectByName('p_' + pet.id);
+      continue;
+    }
+    if (!spookyGltf) continue;
+    templates[pet.id] = spookyGltf.scene.getObjectByName(pet.node);
+    for (const [name, clip] of Object.entries(SPOOKY_CLIPS)) {
+      const a = spookyGltf.animations.find((x) => x.name === pet.node + '|' + clip);
+      if (a) (clips[pet.id] ||= {})[name] = a;
+    }
   }
   let pet = null;
   let obj = null;
@@ -65,6 +89,8 @@ export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
   let actions = {};
   let current = null;
   let danceT = 0;
+  let hopT = 0;
+  let spin = 0;
   const pos = new THREE.Vector3();
   const target = new THREE.Vector3();
   const fwd = new THREE.Vector3();
@@ -90,7 +116,7 @@ export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
     if (!pet || !templates[pet.id]) return;
     obj = templates[pet.id].clone(true);
     obj.position.set(0, 0, 0);
-    obj.scale.setScalar(SCALE);
+    obj.scale.setScalar(pet.scale || SCALE);
     obj.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true;
@@ -105,6 +131,7 @@ export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
     mixer = new THREE.AnimationMixer(holder.children[0]);
     actions = {};
     current = null;
+    hopT = spin = 0;
     for (const [name, clip] of Object.entries(clips[pet.id] || {})) actions[name] = mixer.clipAction(clip);
     const p = claw.position();
     claw.forward(fwd);
@@ -113,6 +140,21 @@ export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
     obj.position.copy(pos);
     scene.add(obj);
     play('idle', 0);
+  }
+
+  // static models (the pumpkin) get their moves in code: hop while moving, bob when idle, spin to dance
+  function hop(dt, anim) {
+    const m = obj.children[0];
+    const s = pet.scale || SCALE;
+    const moving = anim === 'walk' || anim === 'run';
+    hopT += dt * (anim === 'run' ? 14 : moving ? 10 : 3);
+    const h = moving ? Math.abs(Math.sin(hopT)) : 0;
+    const sy = moving ? 0.85 + 0.3 * h : 1 + Math.sin(hopT * 2) * 0.03;
+    m.position.y = moving ? h * 0.3 : 0.03 + Math.sin(hopT) * 0.03;
+    m.scale.set(s / Math.sqrt(sy), s * sy, s / Math.sqrt(sy));
+    if (anim === 'dance') spin += dt * 9;
+    else spin += (Math.round(spin / (Math.PI * 2)) * Math.PI * 2 - spin) * Math.min(1, dt * 8);
+    m.rotation.y = spin;
   }
 
   return {
@@ -158,7 +200,9 @@ export function createPetCompanion({ gltf, scene, world, RAPIER, claw }) {
       obj.rotation.y = yaw;
       danceT -= dt;
       const moving = d > 0.6;
-      play(danceT > 0 && !moving ? 'dance' : moving ? (d > 4 ? 'run' : 'walk') : 'idle');
+      const anim = danceT > 0 && !moving ? 'dance' : moving ? (d > 4 ? 'run' : 'walk') : 'idle';
+      if (pet.hop) hop(dt, anim);
+      else play(anim);
       mixer.update(dt);
     },
     dispose() {
