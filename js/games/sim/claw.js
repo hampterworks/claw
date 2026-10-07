@@ -473,7 +473,7 @@ export function createClaw({ RAPIER, world, scene, gltf, faceTex, spawn, remote 
       else st.energy = Math.min(1, st.energy + dt * 0.12);
 
       if (!st.flopping) {
-        const speed = (st.zooming ? 9.5 : 4.8) * Math.sqrt(st.scaleK);
+        const speed = (st.zooming ? 9.5 : 4.8) * Math.sqrt(st.scaleK) * (st.speedK ?? 1); // speedK: Zombie Tag
         const accel = st.grounded ? 45 : 14;
         const nvx = approach(v.x, dx * speed, accel * dt);
         const nvz = approach(v.z, dz * speed, accel * dt);

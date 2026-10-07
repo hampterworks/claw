@@ -30,6 +30,8 @@ export const SKINS = [
   { id: 'rainbow', name: 'Nyan Mode', rarity: 'legendary', body: '#ff0000', belly: '#ffffff', ears: '#ffffff', anim: 'rainbow' },
   { id: 'galaxy', name: 'Galaxy Brain', rarity: 'legendary', body: '#2a0b5a', belly: '#7a3cff', ears: '#ff7bf2', emissive: '#7a3cff', glow: 0.4, anim: 'pulse' },
   { id: 'mattclaw', name: 'Mattpog Claw', rarity: 'legendary', body: '#f1c7a8', belly: '#ffe6d6', ears: '#d98c7a', mattFace: true },
+  // Spooktober (Spooky Crates in October; Zombie Claw is also the Zombie Tag look)
+  { id: 'zombie', name: 'Zombie Claw', rarity: 'epic', body: '#7f9b6e', belly: '#b7c4a3', ears: '#8a3b3b', emissive: '#2f5a1a', glow: 0.25, spooky: true },
   // free for everyone: heart shades, a hibiscus and a polka-dot bikini
   { id: 'bikini', name: 'Bikini Claw', rarity: 'epic', body: '#5fe03a', belly: '#d4ffad', ears: '#ff8fb1', outfit: 'bikini', bikini: { main: '#ff7ad0', dots: '#ffffff' }, free: true },
   // secret: only from paying respects at the Vash Shrine
@@ -130,6 +132,6 @@ export function rollRarity() {
 // Weighted rarity roll, then a random skin of that rarity.
 export function rollSkin() {
   const rarity = rollRarity();
-  const pool = SKINS.filter((s) => s.rarity === rarity && !s.secret && !s.free);
+  const pool = SKINS.filter((s) => s.rarity === rarity && !s.secret && !s.free && !s.spooky);
   return pool[Math.floor(Math.random() * pool.length)];
 }

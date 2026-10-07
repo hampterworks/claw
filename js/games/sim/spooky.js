@@ -59,6 +59,7 @@ export function buildSpooky({ scene, world, RAPIER, gltf, free, lampSpots = [], 
   const chunks = new Map();
   const glowSpots = [];
   const jacks = []; // jack-o'-lantern spots (quests use them later)
+  let board = null;
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -124,6 +125,7 @@ export function buildSpooky({ scene, world, RAPIER, gltf, free, lampSpots = [], 
     wall(G.x + GW, (G.z - GD + gz0) / 2, 0.1, (gz0 - (G.z - GD)) / 2);
     wall(G.x + GW, (gz0 + 2 * FS + G.z + GD) / 2, 0.1, (G.z + GD - gz0 - 2 * FS) / 2);
     const gateZ = gz0 + FS;
+    board = Object.assign(new THREE.Vector3(G.x + GW + 3.2, 0, gateZ + 4.2), { ry: Math.PI / 2 }); // Zombie Tag board, facing the road
     place('y_arch_gate', G.x + GW, gateZ, Math.PI / 2, 0.85, { collide: false });
     for (const s of [-1, 1]) place('y_post_lantern', G.x + GW + 1.2, gateZ + s * 2.6, -Math.PI / 2, 0.75);
     glowSpots.push({ x: G.x + GW + 1.2, y: 2.3, z: gateZ - 2.6, color: '#ffb347', size: 2.2 }, { x: G.x + GW + 1.2, y: 2.3, z: gateZ + 2.6, color: '#ffb347', size: 2.2 });
@@ -214,7 +216,7 @@ export function buildSpooky({ scene, world, RAPIER, gltf, free, lampSpots = [], 
     meshes.push(mesh);
   }
   for (const t of templates.values()) t.geo.dispose();
-  return { glowSpots, jacks, meshes, graveyard: GRAVEYARD };
+  return { glowSpots, jacks, meshes, graveyard: GRAVEYARD, board };
 }
 
 // Spooky sky: purple dusk, a sickly green-blue night, autumn-orange golden hour.

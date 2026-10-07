@@ -10,7 +10,7 @@ import { labelTexture, createBubble } from './speech.js';
 import { sampleBuffer } from './net.js';
 
 const DELAY = 0.12; // render other players this far in the past, to interpolate smoothly
-export const FLAG = { grounded: 1, flopping: 2, zooming: 4, oiia: 8, cursed: 16, matt: 32, big: 64, tiny: 128, ducky: 256 };
+export const FLAG = { grounded: 1, flopping: 2, zooming: 4, oiia: 8, cursed: 16, matt: 32, big: 64, tiny: 128, ducky: 256, zombie: 512 };
 
 export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, faceTex, mattTex, onHit, onFeed }) {
   const remotes = new Map();
@@ -50,7 +50,7 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
   function applyLook(r) {
     if (!r.puppet) return;
     const skin = skinById(r.skin);
-    r.puppet.setSkin(skin);
+    r.puppet.setSkin(r.zombie ? skinById('zombie') : skin);
     r.puppet.setFaceTexture((r.mut.matt || skin.mattFace) && mattTex ? mattTex : faceTex);
     if (r.petCo) r.petCo.dispose();
     r.petCo = null;
@@ -180,6 +180,11 @@ export function createPlayers({ RAPIER, world, scene, net, petsGltf, envMap, fac
           r.flags = fl;
           r.mut = { oiia: !!(fl & FLAG.oiia), cursed: !!(fl & FLAG.cursed), matt: !!(fl & FLAG.matt) };
           if (mattBefore !== r.mut.matt) r.puppet.setFaceTexture((r.mut.matt || skinById(r.skin).mattFace) && mattTex ? mattTex : faceTex);
+          // Zombie Tag: infected Claws wear the zombie look
+          if (!!(fl & FLAG.zombie) !== !!r.zombie) {
+            r.zombie = !!(fl & FLAG.zombie);
+            r.puppet.setSkin(skinById(r.zombie ? 'zombie' : r.skin));
+          }
           // Ducky Mode: their bodyguard waddles along
           const duck = !!(fl & FLAG.ducky);
           if (duck && !r.duck) r.duck = createDuckyFollower({ scene, world, RAPIER, target: r.puppet });

@@ -36,6 +36,7 @@ import { createClicky } from './wizard.js';
 import { createKaiju } from './kaiju.js';
 import { createDucky } from './ducky.js';
 import { buildSpooky, SPOOKY_LOOKS } from './spooky.js';
+import { createZombieTag } from './zombie.js';
 import { isHalloween } from '../../season.js';
 import { refreshDetailTextures } from './detail.js';
 import { createEnvironment } from './environment.js';
@@ -287,7 +288,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   function equipSkin(id) {
     wallet.equip(id);
-    claw.setSkin(skinById(id));
+    if (!zb?.zombie) claw.setSkin(skinById(id)); // (a Zombie Tag zombie keeps the zombie look until the round ends)
     refreshFace();
     net?.send({ t: 'look', skin: id, pet: wallet.pet });
   }
@@ -465,6 +466,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     title: 'HIDE AND SEEK',
     open: () => hs.panel(),
   };
+  MACHINES.zombie = { prompt: '🧟 ZOMBIE TAG', title: 'ZOMBIE TAG', open: () => zb.panel() };
   MACHINES.ducky = { prompt: '🦆 TALK TO DUCKY', title: 'DUCKY', open: () => ducky.panel() };
   MACHINES.throne = {
     prompt: () => ducky.thronePrompt(),
@@ -491,6 +493,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     if (!m && Math.hypot(p.x - pk.arenaDesk.x, p.z - pk.arenaDesk.z) < 2.2 && p.y < 2) m = 'arena';
     if (!m && Math.hypot(p.x - S.districts.clickyHome.x, p.z - S.districts.clickyHome.z) < 3.0 && p.y < 2.5) m = 'clicky';
     if (!m) m = ducky.machine(p);
+    if (!m && zb && Math.hypot(p.x - zb.board.x, p.z - zb.board.z) < 2.4 && p.y < 2.5) m = 'zombie';
     if (!m && Math.hypot(p.x - pk.hsBoard.x, p.z - pk.hsBoard.z) < 2.2 && p.y < 2) m = 'hideseek';
     const fs = S.districts.fishSpot;
     if (!m && Math.hypot(p.x - fs.x, p.z - fs.z) < 2.2 && p.y > 0.7) m = 'fish';
@@ -614,6 +617,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       for (const r of players.near(center, 0.9 * k)) {
         net.send({ t: 'hit', to: r.id, d: [fwd.x * 9 * k, 6 * k, fwd.z * 9 * k] });
         hs.onBonk(r); // Hide and Seek: a seeker found a hider
+        zb?.onBonk(r); // Zombie Tag: a zombie bit a survivor
         ch.chaos(25, `BONKED ${r.name.toUpperCase()}`, '#ff7bf2');
       }
     }
@@ -932,6 +936,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     castle.update(dt);
     loans.update(dt);
     hs.update(dt, t);
+    zb?.update(dt, t);
     if (winty?.mode === 'collect' && !loans.collecting) winty.stopCollect(ducky.mode ? 'ducky' : null); // paid (or Ducky) while she was on the way
     ducky.update(dt, t);
     respectCd -= dt;
@@ -1040,6 +1045,18 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   }
   // emote wheel (G) and dances
   var emotes = createEmotes({ wrap, scene, claw, hud, sfx, net, players, touch, hampter, isPlaying: () => playing, isPaused: () => menuOpen, onEmote: () => trackDaily('emote') });
+  // Zombie Tag (October: the board stands at the graveyard gate)
+  var zb = SP // var: equipSkin above may run first
+    ? createZombieTag({
+        scene, world, RAPIER, wrap, claw, hud, sfx, wallet, net, players,
+        gltf: spookyGltf,
+        board: SP.board,
+        feed: (t, c) => mpUi?.feed(t, c),
+        onFx: fx,
+        setLook: (skin) => claw.setSkin(skin || skinById(wallet.equipped)),
+        closePanel: () => closeMenu(),
+      })
+    : null;
   const hs = createHideSeek({ scene, wrap, claw, hud, sfx, ch, wallet, net, players, park: S.park, feed: (t, c) => mpUi?.feed(t, c), onFx: fx, closePanel: () => closeMenu() });
   if (net) {
     net.on('duel', (m) => battles.onDuel(m));
@@ -1078,7 +1095,8 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       (mut.oiia ? FLAG.oiia : 0) |
       (mut.cursed ? FLAG.cursed : 0) |
       (mut.matt ? FLAG.matt : 0) |
-      (ducky.mode ? FLAG.ducky : 0);
+      (ducky.mode ? FLAG.ducky : 0) |
+      (zb?.zombie ? FLAG.zombie : 0);
     const R2 = (x) => Math.round(x * 100) / 100;
     const R3 = (x) => Math.round(x * 1000) / 1000;
     net.send({ t: 'p', d: [R2(p.x), R2(p.y), R2(p.z), R3(c.yaw), R2(v.x), R2(v.y), R2(v.z), R3(r.x), R3(r.y), R3(r.z), R3(r.w), R2(c.scaleK), flags] });
@@ -1178,7 +1196,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
         input.moveX = input.moveY = 0;
         input.jump = input.bonk = input.lick = input.flop = input.zoom = false;
       }
-      if (hs.frozen) {
+      if (hs.frozen || zb?.frozen) {
         // the blindfolded Hide and Seek seeker waits (looking around is fine, it's all black anyway)
         input.moveX = input.moveY = 0;
         input.jump = input.bonk = input.lick = input.flop = input.zoom = false;
@@ -1653,7 +1671,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   document.addEventListener('visibilitychange', onVisibility);
 
   if (debug) {
-    window.__clawSim = { audio: { getVolume, setVolume, audioBus }, claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
+    window.__clawSim = { audio: { getVolume, setVolume, audioBus }, claw, W, ch, mut, cam, gfx, music, wallet, winty, ducky, zb, SP, vash, hampter, romni, castle, loans, battles, hs, clicky, kaiju, env, emotes, daily, sr, fishing, casino, pets, net, players, propSync, get mine() { return mine; }, equipSkin, equipPet, openPanel, openQuests, openControls, setRung, get rung() { return rung; }, applyMutators, world, camera, scene, renderer, openMenu, closeMenu, get state() { return st; } };
   }
 
   // compile every shader now (behind the loading screen) instead of hitching on first sight
@@ -1732,6 +1750,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
       romni.dispose();
       castle.dispose();
       hs.dispose();
+      zb?.dispose();
       battles.leaveFight();
       W.dispose();
       gfx.dispose();

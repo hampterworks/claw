@@ -175,6 +175,13 @@ export const sfx = {
     const a = audio();
     if (a) mrrp(a, audioBus('sfx'), a.currentTime, { pitch: 300 + Math.random() * 80 });
   },
+  // zombies: a low, wobbly moan
+  groan: () => {
+    const f = 95 + Math.random() * 30;
+    tone({ type: 'sawtooth', f, f2: f * 0.7, dur: 0.9, vol: 0.07 });
+    tone({ type: 'triangle', f: f * 1.5, f2: f * 1.1, dur: 0.8, vol: 0.05, delay: 0.05 });
+    noise({ dur: 0.7, type: 'bandpass', f: 500, f2: 260, q: 2, vol: 0.06 });
+  },
   // Ducky: a short nasal honk, twice
   quack: () => {
     for (const [d, f] of [[0, 1], [0.16, 0.92]]) {

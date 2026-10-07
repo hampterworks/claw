@@ -15,6 +15,10 @@ const HS_LOBBY = 20000;
 const HS_HIDE = 25000;
 const HS_SEEK = 150000;
 const HS_TAG_RANGE = 6; // metres; a little slack for latency
+// Zombie Tag round timings (ms): the whole map, bonks infect
+const ZB_LOBBY = 20000;
+const ZB_GRACE = 10000; // patient zero rises from the grave while everyone runs
+const ZB_PLAY = 180000;
 const DUEL_ACTS = ['ask', 'yes', 'no', 'mv', 'quit'];
 const EMOTE_IDS = ['chipi', 'spin', 'caramell', 'loaf', 'pog', 'wave', 'cry', 'scream']; // js/games/sim/emotes.js
 const DUEL_MOVES = ['bonk', 'guard', 'special'];
@@ -55,6 +59,7 @@ export class Ohio extends DurableObject {
     this.lastS = new Map(); // propId -> latest streamed transform (for releases on leave)
     this.rate = new Map(); // ws -> { n, t }
     this.hs = null; // the Hide and Seek round, if any (memory only: a hibernation just ends it)
+    this.zb = null; // the Zombie Tag round, same rules
     this.ev = null; // the Battle of Ohio, if one is on
     this.evNext = 0;
     // after hibernation, rebuild who is connected from the socket attachments
@@ -143,13 +148,14 @@ export class Ohio extends DurableObject {
       for (const [pid, o] of this.owners) owners[pid] = o.by;
       const players = [];
       for (const [pid, pl] of this.players) if (pid !== id) players.push({ id: pid, name: pl.name, skin: pl.skin, pet: pl.pet, d: pl.d });
-      this.send(ws, { t: 'welcome', you: id, players, owners, props, hs: this.hsSnap(), ev: this.evSnap(), now: Date.now() });
+      this.send(ws, { t: 'welcome', you: id, players, owners, props, hs: this.hsSnap(), zb: this.zbSnap(), ev: this.evSnap(), now: Date.now() });
       this.broadcast({ t: 'join', id, name: p.name, skin: p.skin, pet: p.pet }, ws);
       return;
     }
     if (!me) return; // everything else needs a hello first
     const id = me.id;
     this.hsTick();
+    this.zbTick();
     this.evTick();
 
     switch (m.t) {
@@ -251,6 +257,9 @@ export class Ohio extends DurableObject {
       }
       case 'hs':
         this.hsMessage(ws, id, m);
+        break;
+      case 'zb':
+        this.zbMessage(ws, id, m);
         break;
       case 'ev':
         this.evMessage(ws, id, m);
@@ -364,7 +373,7 @@ export class Ohio extends DurableObject {
     const now = Date.now();
     switch (m.a) {
       case 'start':
-        if (h) return this.send(ws, { t: 'hs', ev: 'state', s: this.hsSnap(), now });
+        if (h || this.zb) return this.send(ws, { t: 'hs', ev: 'state', s: this.hsSnap(), busy: !!this.zb, now });
         this.hs = { phase: 'lobby', host: id, ids: [id], seekers: [], lobbyEnd: now + HS_LOBBY };
         this.hsSend('open', { by: id });
         break;
@@ -402,6 +411,98 @@ export class Ohio extends DurableObject {
     }
   }
 
+  // ---------- Zombie Tag: the server is the referee ----------
+  zbSnap() {
+    const z = this.zb;
+    return z ? { phase: z.phase, host: z.host, ids: z.ids, zombies: z.zombies, first: z.first || null, lobbyEnd: z.lobbyEnd, graceEnd: z.graceEnd || 0, end: z.end || 0 } : null;
+  }
+
+  zbSend(ev, extra = {}) {
+    this.broadcast({ t: 'zb', ev, s: this.zbSnap(), now: Date.now(), ...extra });
+  }
+
+  zbEnd(win, why = '') {
+    const z = this.zb;
+    if (!z) return;
+    this.zb = null;
+    this.broadcast({ t: 'zb', ev: 'end', win, why, ids: z.ids, zombies: z.zombies, first: z.first || null, last: z.last || null, s: null, now: Date.now() });
+  }
+
+  zbTick() {
+    const z = this.zb;
+    if (!z) return;
+    const now = Date.now();
+    if (z.phase === 'lobby' && now >= z.lobbyEnd) {
+      if (z.ids.length < 2) return this.zbEnd(null, 'Not enough players joined.');
+      const first = z.ids[Math.floor(Math.random() * z.ids.length)];
+      Object.assign(z, { phase: 'play', zombies: [first], first, graceEnd: now + ZB_GRACE, end: now + ZB_GRACE + ZB_PLAY });
+      this.zbSend('begin', { first });
+    } else if (z.phase === 'play' && now >= z.end) this.zbEnd('survivors');
+  }
+
+  zbCheck() {
+    const z = this.zb;
+    if (!z || z.phase !== 'play') return;
+    const left = z.ids.filter((x) => !z.zombies.includes(x));
+    if (z.ids.length < 2) this.zbEnd(null, 'Not enough players left.');
+    else if (!z.zombies.length) this.zbEnd('survivors', 'The zombies left.');
+    else if (left.length === 1) z.last = left[0]; // the last one standing (wins if the clock runs out)
+    if (this.zb && !left.length) this.zbEnd('zombies');
+  }
+
+  zbDrop(id) {
+    const z = this.zb;
+    if (!z || !z.ids.includes(id)) return;
+    z.ids = z.ids.filter((x) => x !== id);
+    z.zombies = z.zombies.filter((x) => x !== id);
+    if (z.phase === 'lobby') {
+      if (!z.ids.length) this.zbEnd(null, 'Everyone left.');
+      else {
+        if (z.host === id) z.host = z.ids[0];
+        this.zbSend('state');
+      }
+      return;
+    }
+    this.zbSend('state');
+    this.zbCheck();
+  }
+
+  zbMessage(ws, id, m) {
+    const z = this.zb;
+    const now = Date.now();
+    switch (m.a) {
+      case 'start':
+        if (z || this.hs) return this.send(ws, { t: 'zb', ev: 'state', s: this.zbSnap(), busy: !!this.hs, now });
+        this.zb = { phase: 'lobby', host: id, ids: [id], zombies: [], lobbyEnd: now + ZB_LOBBY };
+        this.zbSend('open', { by: id });
+        break;
+      case 'join':
+        if (!z || z.phase !== 'lobby' || z.ids.includes(id)) return;
+        z.ids.push(id);
+        this.zbSend('join', { by: id });
+        break;
+      case 'leave':
+        this.zbDrop(id);
+        break;
+      case 'tag': {
+        // a zombie bonked a survivor
+        const who = ident(m.who);
+        if (!z || z.phase !== 'play' || now < z.graceEnd || !z.zombies.includes(id) || !z.ids.includes(who) || z.zombies.includes(who)) return;
+        const a = this.players.get(id)?.d;
+        const b = this.players.get(who)?.d;
+        if (a && b && Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) > HS_TAG_RANGE) return;
+        z.zombies.push(who);
+        this.zbSend('tag', { by: id, who });
+        this.zbCheck();
+        break;
+      }
+      case 'state':
+        this.send(ws, { t: 'zb', ev: 'state', s: this.zbSnap(), now });
+        break;
+      // 'tick' needs nothing: zbTick already ran
+    }
+  }
+
   async leave(ws) {
     const me = ws.deserializeAttachment();
     this.rate.delete(ws);
@@ -409,6 +510,7 @@ export class Ohio extends DurableObject {
     ws.serializeAttachment(null);
     this.players.delete(me.id);
     this.hsDrop(me.id);
+    this.zbDrop(me.id);
     // hand back everything they were holding, where it last was
     for (const [pid, o] of this.owners) {
       if (o.by !== me.id) continue;
