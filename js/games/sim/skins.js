@@ -32,8 +32,20 @@ export const SKINS = [
   { id: 'mattclaw', name: 'Mattpog Claw', rarity: 'legendary', body: '#f1c7a8', belly: '#ffe6d6', ears: '#d98c7a', mattFace: true },
   // Spooktober (Spooky Crates in October; Zombie Claw is also the Zombie Tag look)
   { id: 'zombie', name: 'Zombie Claw', rarity: 'epic', body: '#7f9b6e', belly: '#b7c4a3', ears: '#8a3b3b', emissive: '#2f5a1a', glow: 0.25, spooky: true },
+  // paint: a pattern drawn over the body in paintCols (claw.js PAINTS); acc: a head accessory
+  { id: 'pumpkin', name: 'Pumpkin Claw', rarity: 'rare', body: '#ff7a1a', belly: '#d9520a', ears: '#3f8a2a', paint: 'pumpkin', paintCols: ['#d9520a', '#3f8a2a'], spooky: true },
+  { id: 'blackcat', name: 'Black Cat', rarity: 'rare', body: '#151318', belly: '#232027', ears: '#2c2830', acc: 'cateyes', spooky: true },
+  { id: 'candycorn', name: 'Candy Corn Claw', rarity: 'rare', body: '#ff8a1f', belly: '#ffd23f', ears: '#fff8ea', paint: 'bands', paintCols: ['#fff8ea', '#ff8a1f', '#ffd23f'], spooky: true },
+  { id: 'skeleton', name: 'Skeleton Claw', rarity: 'epic', body: '#161616', belly: '#161616', ears: '#161616', paint: 'bones', paintCols: ['#f4f1e6'], spooky: true },
+  { id: 'mummy', name: 'Mummy Claw', rarity: 'epic', body: '#efe8d2', belly: '#f5f0e2', ears: '#efe8d2', paint: 'wraps', paintCols: ['#a39270'], acc: 'cateyes', spooky: true },
+  { id: 'franken', name: 'Frankenclaw', rarity: 'epic', body: '#79a85a', belly: '#a6cc86', ears: '#4d6e3a', paint: 'stitch', paintCols: ['#1d2618'], acc: 'bolts', spooky: true },
+  { id: 'werewolf', name: 'Werewolf Claw', rarity: 'epic', body: '#9a8a78', belly: '#c4b6a2', ears: '#3e3026', paint: 'shaggy', paintCols: ['#4a3a2e', '#7a6a5a'], balls: '#fff1c2', acc: 'cateyes', spooky: true },
+  { id: 'witch', name: 'Witch Claw', rarity: 'legendary', body: '#7a3cc8', belly: '#b98cff', ears: '#3a1a5a', acc: 'witchhat', spooky: true },
+  { id: 'vampire', name: 'Vampire Claw', rarity: 'legendary', body: '#d9d9e2', belly: '#f2f2f7', ears: '#8a2030', acc: 'cape', spooky: true },
+  { id: 'glowbones', name: 'Glow-in-the-Dark Bones', rarity: 'legendary', body: '#101010', belly: '#101010', ears: '#101010', paint: 'bones', paintCols: ['#4dff2a'], emissive: '#ffffff', glow: 0.8, glowPaint: true, spooky: true },
+  { id: 'jackoclaw', name: "Jack-o'-Claw", rarity: 'legendary', body: '#141216', belly: '#221f25', ears: '#141216', acc: 'pumpkinhead', spooky: true },
   // free for everyone: heart shades, a hibiscus and a polka-dot bikini
-  { id: 'bikini', name: 'Bikini Claw', rarity: 'epic', body: '#5fe03a', belly: '#d4ffad', ears: '#ff8fb1', outfit: 'bikini', bikini: { main: '#ff7ad0', dots: '#ffffff' }, free: true },
+  { id: 'bikini', name: 'Bikini Claw', rarity: 'epic', body: '#5fe03a', belly: '#d4ffad', ears: '#ff8fb1', outfit: 'bikini', paint: 'bikini', paintCols: ['#ff7ad0', '#ffffff'], free: true },
   // secret: only from paying respects at the Vash Shrine
   { id: 'vash', name: 'Vash Mode', rarity: 'legendary', body: '#3a2c34', belly: '#8a5cff', ears: '#b48cff', emissive: '#7a3cff', glow: 0.25, secret: true },
 ];
