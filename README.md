@@ -96,7 +96,7 @@ everyone into zombies across the whole map; solo, survive a zombie horde for 3 m
 **Spooky Crate** with 12 Halloween skins and 5 spooky pets (yours to keep after October), and every quest line in
 October dress.
 
-**Sound:** the P menu has volume sliders for master, music, sound effects and rain (saved between visits); the 🔊
+**Sound:** the P menu has volume sliders for master, music and sound effects (saved between visits); the 🔊
 button is still the quick mute.
 
 **Ducky:** outrun Winty's sales pitch 3 times and Ducky, her little brother (and Romni's oldest business

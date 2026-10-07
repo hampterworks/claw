@@ -29,8 +29,8 @@ function audio() {
 }
 
 // ---------- volume: a tiny mixer (sfx, music and ambience buses into a master bus) ----------
-const KINDS = ['master', 'music', 'sfx', 'ambient'];
-const volume = { master: 1, music: 1, sfx: 1, ambient: 1 };
+const KINDS = ['master', 'music', 'sfx'];
+const volume = { master: 1, music: 1, sfx: 1 };
 {
   const saved = read('volume', null);
   if (saved && typeof saved === 'object') for (const k of KINDS) if (typeof saved[k] === 'number') volume[k] = Math.min(1, Math.max(0, saved[k]));
@@ -44,7 +44,7 @@ function applyVolume() {
   for (const k of KINDS) buses[k].gain.setTargetAtTime(curve(volume[k]), ac.currentTime, 0.03);
 }
 
-// where sounds connect: 'sfx', 'music' or 'ambient' (rain); null when there is no audio at all
+// where sounds connect: 'sfx' or 'music' (null when there is no audio at all)
 export function audioBus(kind = 'sfx') {
   const a = getAudioContext();
   if (!a) return null;
@@ -57,7 +57,6 @@ export function audioBus(kind = 'sfx') {
     buses.master.connect(a.destination);
     buses.music.connect(buses.master);
     buses.sfx.connect(buses.master);
-    buses.ambient.connect(buses.master);
   }
   return buses[kind] || buses.sfx;
 }

@@ -1435,7 +1435,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
     box.appendChild(hv);
     const vol = document.createElement('div');
     vol.className = 'sim-volume';
-    for (const [kind, label] of [['master', '🔊 Master'], ['music', '🎵 Music'], ['sfx', '💥 Sound effects'], ['ambient', '🌧️ Rain & weather']]) {
+    for (const [kind, label] of [['master', '🔊 Master'], ['music', '🎵 Music'], ['sfx', '💥 Sound effects']]) {
       const row = document.createElement('label');
       row.className = 'sim-vol';
       const name = document.createElement('span');

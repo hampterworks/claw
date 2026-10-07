@@ -3,8 +3,6 @@
 // A day is 24 minutes: dawn, ~17 min of day, dusk, ~3.5 min of night. Owns the sky colours, fog
 // colour, sun/moon light, hemisphere light and exposure; the kaiju battle blends its storm on top.
 import * as THREE from 'three';
-import { getAudioContext, isMuted, audioBus } from '../../audio.js';
-import { noiseBuffer } from '../../catvoice.js';
 import { WATER_LIGHT } from './graphics.js';
 
 export const DAY_LEN = 24 * 60; // seconds
@@ -235,29 +233,6 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lam
     scene.add(snow);
   }
 
-  // rain sound: a filtered noise loop
-  let rainAudio = null;
-  function rainSound(level) {
-    if (!rainAudio && level <= 0.01) return; // (don't touch audio at all until it rains)
-    const ac = getAudioContext();
-    if (!ac) return;
-    if (!rainAudio && level > 0.01) {
-      const src = ac.createBufferSource();
-      src.buffer = noiseBuffer(ac);
-      src.loop = true;
-      const f = ac.createBiquadFilter();
-      f.type = 'bandpass';
-      f.frequency.value = 2400;
-      f.Q.value = 0.4;
-      const g = ac.createGain();
-      g.gain.value = 0;
-      src.connect(f).connect(g).connect(audioBus('ambient'));
-      src.start();
-      rainAudio = { src, g };
-    }
-    if (rainAudio) rainAudio.g.gain.setTargetAtTime(isMuted() ? 0 : level * 0.06, ac.currentTime, 0.4);
-  }
-
   const now = () => Date.now() / 1000 + st.offset;
   // 0..1 through the day; 0 = dawn begins
   const phase = () => (st.forced != null ? st.forced : ((now() % DAY_LEN) + DAY_LEN) % DAY_LEN / DAY_LEN);
@@ -407,19 +382,11 @@ export function createEnvironment({ scene, renderer, sky, sun, camera, claw, lam
         snow.material.uniforms.uTime.value = t;
         snow.geometry.setDrawRange(0, lowQ() ? 450 : Infinity);
       }
-      rainSound(R);
     },
     dispose() {
       scene.remove(sky2, rain, lantern, ...pools, ...glows);
       if (flies) scene.remove(flies);
       if (snow) scene.remove(snow);
-      if (rainAudio) {
-        try {
-          rainAudio.src.stop();
-        } catch {
-          /* already stopped */
-        }
-      }
       renderer.toneMappingExposure = 1.05;
     },
   };
