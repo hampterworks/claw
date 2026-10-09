@@ -8,6 +8,8 @@ const MAX_PLAYERS = 12;
 const RATE = 60; // messages per second per socket
 const CLAIM_TIMEOUT = 2000; // ms of owner silence before a prop can be taken over
 const RESET_AFTER = 15 * 60 * 1000; // Ohio resets this long after the last player leaves
+const IDLE_KICK = 5 * 60 * 1000; // a socket silent this long (hidden tab, dead phone) loses its slot
+const SWEEP = 60 * 1000; // how often the idle check runs while anyone is connected
 const BOUND = 200;
 const MAX_PROP = 5000;
 // Hide and Seek round timings (ms)
@@ -58,6 +60,7 @@ export class Ohio extends DurableObject {
     this.owners = new Map(); // propId -> { by, t }
     this.lastS = new Map(); // propId -> latest streamed transform (for releases on leave)
     this.rate = new Map(); // ws -> { n, t }
+    this.seen = new Map(); // ws -> time of its last message (memory; saved to the attachment on each sweep)
     this.hs = null; // the Hide and Seek round, if any (memory only: a hibernation just ends it)
     this.zb = null; // the Zombie Tag round, same rules
     this.ev = null; // the Battle of Ohio, if one is on
@@ -73,13 +76,14 @@ export class Ohio extends DurableObject {
     const sockets = this.ctx.getWebSockets();
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
-    this.ctx.acceptWebSocket(server);
+    this.ctx.acceptWebSocket(server, [String(Date.now())]); // tag = connect time, survives hibernation
     if (sockets.length >= MAX_PLAYERS) {
       server.send(JSON.stringify({ t: 'full' }));
       server.close(1013, 'Ohio is full');
-    } else {
-      await this.ctx.storage.deleteAlarm();
     }
+    // make sure an idle sweep is due soon, without pushing back one that already is
+    const at = await this.ctx.storage.getAlarm();
+    if (at === null || at > Date.now() + SWEEP) await this.ctx.storage.setAlarm(Date.now() + SWEEP);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -116,6 +120,7 @@ export class Ohio extends DurableObject {
   }
 
   async webSocketMessage(ws, raw) {
+    this.seen.set(ws, Date.now());
     if (typeof raw !== 'string' || raw.length > 16384 || this.limited(ws)) return;
     let m;
     try {
@@ -506,6 +511,7 @@ export class Ohio extends DurableObject {
   async leave(ws) {
     const me = ws.deserializeAttachment();
     this.rate.delete(ws);
+    this.seen.delete(ws);
     if (!me) return;
     ws.serializeAttachment(null);
     this.players.delete(me.id);
@@ -525,7 +531,10 @@ export class Ohio extends DurableObject {
     }
     this.broadcast({ t: 'leave', id: me.id }, ws);
     const left = this.ctx.getWebSockets().filter((s) => s !== ws && s.deserializeAttachment());
-    if (!left.length) await this.ctx.storage.setAlarm(Date.now() + RESET_AFTER);
+    if (!left.length) {
+      await this.ctx.storage.put('meta:empty', Date.now());
+      await this.ctx.storage.setAlarm(Date.now() + RESET_AFTER);
+    }
   }
 
   async webSocketClose(ws, code) {
@@ -541,10 +550,38 @@ export class Ohio extends DurableObject {
     await this.leave(ws);
   }
 
-  // nobody has played for a while: put Ohio back the way it was
+  // when this socket last said anything: memory, else the last sweep's save, else its connect time
+  lastSeen(ws, a) {
+    return this.seen.get(ws) ?? a?.seen ?? Number(this.ctx.getTags(ws)[0]);
+  }
+
+  // every SWEEP while anyone is connected: drop idle sockets. Then, once nobody has played for
+  // RESET_AFTER, put Ohio back the way it was.
   async alarm() {
-    const active = this.ctx.getWebSockets().filter((s) => s.deserializeAttachment());
-    if (active.length) return;
+    const now = Date.now();
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws.readyState !== 1 /* OPEN */) continue;
+      const a = ws.deserializeAttachment();
+      const seen = this.lastSeen(ws, a);
+      if (now - seen > IDLE_KICK) {
+        await this.leave(ws);
+        try {
+          ws.close(4000, 'idle'); // the client stays offline until its player is back
+        } catch {
+          /* already closed */
+        }
+      } else if (a && a.seen !== seen) ws.serializeAttachment({ ...a, seen });
+    }
+    if (this.ctx.getWebSockets().some((s) => s.readyState === 1)) {
+      await this.ctx.storage.setAlarm(now + SWEEP);
+      return;
+    }
+    const empty = await this.ctx.storage.get('meta:empty');
+    if (!empty) return;
+    if (now - empty < RESET_AFTER) {
+      await this.ctx.storage.setAlarm(empty + RESET_AFTER);
+      return;
+    }
     this.owners.clear();
     this.lastS.clear();
     await this.ctx.storage.deleteAll();

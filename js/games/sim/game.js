@@ -1130,6 +1130,7 @@ export async function startGame(wrap, { onStatus, isCancelled, fullscreen, exitT
   let netT = 0;
   function sendState(dt) {
     netT -= dt;
+    net?.wake();
     if (!net?.connected || netT > 0) return;
     netT = 0.1;
     const p = claw.position();

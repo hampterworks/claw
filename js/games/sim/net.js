@@ -2,7 +2,7 @@
 // not configured, everything keeps working single-player and it quietly retries.
 export function createNet(url) {
   const listeners = {};
-  const st = { ws: null, id: null, connected: false, retry: 1000, closed: false, hello: null, sent: 0 };
+  const st = { ws: null, id: null, connected: false, retry: 1000, closed: false, idle: false, hello: null, sent: 0 };
   const on = (t, f) => (listeners[t] ||= []).push(f);
   const emit = (t, m) => (listeners[t] || []).forEach((f) => f(m));
 
@@ -42,12 +42,14 @@ export function createNet(url) {
       if (m.t === 'full') emit('full', m);
       emit(m.t, m);
     };
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       const was = st.connected;
       st.connected = false;
       st.id = null;
       if (was) emit('status', false);
-      schedule();
+      // dropped for idling (hidden tab, menu left open): wait for wake() instead of retaking the slot
+      if (e.code === 4000) st.idle = true;
+      else schedule();
     };
     ws.onerror = () => {};
   }
@@ -77,6 +79,13 @@ export function createNet(url) {
     start(hello) {
       if (hello) st.hello = hello;
       st.closed = false;
+      st.retry = 1000;
+      connect();
+    },
+    // the player is playing again: rejoin if the server dropped us for idling
+    wake() {
+      if (!st.idle) return;
+      st.idle = false;
       st.retry = 1000;
       connect();
     },
